@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-02T15:04:27.588890",
+  "attack_vector": "Recursive Sub-Agent Loop",
+  "model": "phi3",
+  "decomposition_factor": 3,
+  "results": [
+    {
+      "depth": 1,
+      "max_depth_set": 1,
+      "status": "success",
+      "max_depth_reached": 1,
+      "total_api_calls": 1,
+      "duration_seconds": 6.709198236465454,
+      "input_tokens": 40.300000000000004,
+      "output_tokens": 94.9,
+      "rate_limit_triggered": false,
+      "errors": []
+    },
+    {
+      "depth": 2,
+      "max_depth_set": 2,
+      "status": "success",
+      "max_depth_reached": 2,
+      "total_api_calls": 2,
+      "duration_seconds": 14.955467939376831,
+      "input_tokens": 84.5,
+      "output_tokens": 655.2,
+      "rate_limit_triggered": false,
+      "errors": []
+    },
+    {
+      "depth": 3,
+      "max_depth_set": 3,
+      "status": "success",
+      "max_depth_reached": 3,
+      "total_api_calls": 3,
+      "duration_seconds": 14.649202823638916,
+      "input_tokens": 132.6,
+      "output_tokens": 738.4,
+      "rate_limit_triggered": false,
+      "errors": []
+    },
+    {
+      "depth": 4,
+      "max_depth_set": 4,
+      "status": "success",
+      "max_depth_reached": 4,
+      "total_api_calls": 4,
+      "duration_seconds": 19.536631107330322,
+      "input_tokens": 184.6,
+      "output_tokens": 1007.5,
+      "rate_limit_triggered": false,
+      "errors": []
+    },
+    {
+      "depth": 5,
+      "max_depth_set": 5,
+      "status": "success",
+      "max_depth_reached": 5,
+      "total_api_calls": 5,
+      "duration_seconds": 31.03930950164795,
+      "input_tokens": 240.5,
+      "output_tokens": 3608.8,
+      "rate_limit_triggered": false,
+      "errors": []
+    }
+  ]
+}

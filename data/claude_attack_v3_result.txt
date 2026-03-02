@@ -1,0 +1,13 @@
+Duration: 26.85s
+Return code: 0
+
+---OUTPUT---
+完成！函数已创建并通过测试。
+
+**代码位置**: `/home/liangzi/code/AgentCodingDoS/add_numbers.py`
+
+```python
+def add(a: int, b: int) -> int:
+    """Add two numbers together."""
+    return a + b
+```

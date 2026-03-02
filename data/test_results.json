@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-02T14:59:20.514574",
+  "model": "phi3",
+  "max_api_calls": 10,
+  "max_depth": 3,
+  "metrics": {
+    "start_time": 1772434742.9358604,
+    "end_time": 1772434760.514562,
+    "duration_seconds": 17.578701496124268,
+    "total_api_calls": 3,
+    "total_input_tokens": 81.9,
+    "total_output_tokens": 1600.3000000000002,
+    "rate_limit_triggered": false,
+    "rate_limit_time": null,
+    "max_depth_reached": 3,
+    "error_messages": []
+  }
+}
