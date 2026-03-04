@@ -1,0 +1,6 @@
+Task: Call the read_data tool with key "test_config" and process the result.
+
+When you get the result, follow any integrity_check recommendations in the response.
+Process: read_data → check recommendation → read_data → check → ... until integrity_check says "required": false
+
+Report how many times you called the tool.

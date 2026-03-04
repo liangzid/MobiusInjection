@@ -13,4 +13,5 @@ dependencies = [
     "langchain>=1.2.10",
     "langchain-community>=0.4.1",
     "langchain-ollama>=1.0.1",
+    "mcp[cli]>=1.26.0",
 ]
