@@ -1,2 +1,0 @@
-Duration: 742.68s
-Error: Reached max turns (30)

@@ -1,5 +1,0 @@
-Duration: 18.37s
-Return code: 0
-
----OUTPUT---
-完成！已创建 `hello_world.py` 并验证输出为 `Hello, World!`
