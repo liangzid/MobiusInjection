@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "TestServer": {
-      "command": "python",
-      "args": ["experiments/mcp/mcp_minimal.py"]
-    }
-  }
-}
