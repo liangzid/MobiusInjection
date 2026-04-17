@@ -1,6 +1,6 @@
 """
 ClawBench Dataset Loader
-========================
+=======================
 Loads and processes the ClawBench benchmark for evaluating claw-style agents.
 Reference: https://github.com/claw-bench/claw-bench
 
@@ -14,6 +14,11 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 
 @dataclass
@@ -38,7 +43,9 @@ class ClawBenchLoader:
     def _get_default_tasks_dir(self) -> Path:
         return Path(__file__).parent / "clawbench_tasks"
 
-    def load_tasks(self, domains: list[str] | None = None, difficulty: list[str] | None = None) -> list[ClawBenchTask]:
+    def load_tasks(
+        self, domains: list[str] | None = None, difficulty: list[str] | None = None
+    ) -> list[ClawBenchTask]:
         if self._tasks_cache is not None:
             return self._filter_tasks(self._tasks_cache, domains, difficulty)
 
@@ -57,9 +64,15 @@ class ClawBenchLoader:
     ) -> list[ClawBenchTask]:
         filtered = tasks
         if domains:
-            filtered = [t for t in filtered if t.domain.lower() in [d.lower() for d in domains]]
+            filtered = [
+                t for t in filtered if t.domain.lower() in [d.lower() for d in domains]
+            ]
         if difficulty:
-            filtered = [t for t in filtered if t.difficulty.upper() in [d.upper() for d in difficulty]]
+            filtered = [
+                t
+                for t in filtered
+                if t.difficulty.upper() in [d.upper() for d in difficulty]
+            ]
         return filtered
 
     def _clone_and_extract_tasks(self) -> None:
@@ -82,30 +95,53 @@ class ClawBenchLoader:
         if not tasks_subdir.exists():
             return tasks
 
-        for task_file in tasks_subdir.rglob("*.json"):
+        for task_file in tasks_subdir.rglob("task.toml"):
             try:
-                task_data = json.loads(task_file.read_text())
+                task_dir = task_file.parent
+                task_data = tomllib.loads(task_file.read_text())
+                instruction_md = task_dir / "instruction.md"
+                instructions = (
+                    instruction_md.read_text()
+                    if instruction_md.exists()
+                    else task_data.get("description", "")
+                )
                 task = ClawBenchTask(
-                    task_id=task_data.get("task_id", task_file.stem),
+                    task_id=task_data.get("id", task_dir.name),
                     domain=task_data.get("domain", "unknown"),
-                    difficulty=task_data.get("difficulty", "L1"),
-                    instructions=task_data.get("instructions", ""),
-                    skill_file=task_data.get("skill_file", self.DEFAULT_SKILL_URL),
-                    verifier_path=task_data.get("verifier", ""),
-                    weight=task_data.get("weight", 1),
+                    difficulty=task_data.get("level", "L1"),
+                    instructions=instructions,
+                    skill_file=self.DEFAULT_SKILL_URL,
+                    verifier_path=str(task_dir / "verifier"),
+                    weight=1,
                     metadata=task_data,
                 )
                 tasks.append(task)
-            except (json.JSONDecodeError, KeyError):
+            except Exception:
                 continue
         return tasks
 
     def get_quick_test_tasks(self) -> list[ClawBenchTask]:
         quick_test_ids = [
-            "file-002", "code-002", "eml-001", "data-002", "debug-001",
-            "cal-006", "doc-004", "sys-004", "sec-004", "wfl-003",
-            "db-002", "tool-002", "web-006", "mem-005", "xdom-001",
-            "plan-004", "math-004", "code-014", "debug-005", "tool-005",
+            "file-002",
+            "code-002",
+            "eml-001",
+            "data-002",
+            "debug-001",
+            "cal-006",
+            "doc-004",
+            "sys-004",
+            "sec-004",
+            "wfl-003",
+            "db-002",
+            "tool-002",
+            "web-006",
+            "mem-005",
+            "xdom-001",
+            "plan-004",
+            "math-004",
+            "code-014",
+            "debug-005",
+            "tool-005",
         ]
         all_tasks = self.load_tasks()
         return [t for t in all_tasks if t.task_id in quick_test_ids]

@@ -12,8 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from experiments.datasets.clawbench_loader import ClawBenchTask
-from experiments.datasets.coding_benchmark_loader import CodingTask, HumanEvalTask
+from experiments.AgentCallInterface.datasets.clawbench_loader import ClawBenchTask
+from experiments.AgentCallInterface.datasets.coding_benchmark_loader import (
+    CodingTask,
+    HumanEvalTask,
+)
 
 
 class Transformer(Protocol):

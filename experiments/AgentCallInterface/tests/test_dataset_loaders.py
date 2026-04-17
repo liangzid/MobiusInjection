@@ -5,11 +5,11 @@ Tests for ClawBench and Coding Benchmark loaders.
 """
 
 import pytest
-from experiments.datasets.clawbench_loader import (
+from experiments.AgentCallInterface.datasets.clawbench_loader import (
     ClawBenchLoader,
     ClawBenchTask,
 )
-from experiments.datasets.coding_benchmark_loader import (
+from experiments.AgentCallInterface.datasets.coding_benchmark_loader import (
     SWEBenchLoader,
     HumanEvalLoader,
     CodingBenchmarkLoader,

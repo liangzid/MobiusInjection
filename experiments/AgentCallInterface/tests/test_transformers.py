@@ -7,15 +7,15 @@ Tests for Claw-style and Coding-style agent transformers.
 import pytest
 from dataclasses import dataclass
 
-from experiments.transformers.agent_transformers import (
+from experiments.AgentCallInterface.transformers.agent_transformers import (
     get_transformer,
     CLAW_STYLE_TRANSFORMERS,
     CODING_STYLE_TRANSFORMERS,
     ClawStyleInput,
     CodingStyleInput,
 )
-from experiments.datasets.clawbench_loader import ClawBenchTask
-from experiments.datasets.coding_benchmark_loader import CodingTask
+from experiments.AgentCallInterface.datasets.clawbench_loader import ClawBenchTask
+from experiments.AgentCallInterface.datasets.coding_benchmark_loader import CodingTask
 
 
 class TestGetTransformer:

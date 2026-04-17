@@ -1,2 +1,3 @@
 *__pycache__*
 *.lock
+/privacy_secret_openrouter_API_key.txt
