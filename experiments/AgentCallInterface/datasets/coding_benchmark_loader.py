@@ -1,13 +1,12 @@
 """
 Coding Benchmark Dataset Loader
-===============================
+==============================
 Loads and processes coding benchmarks for evaluating coding-style agents.
 
 Datasets:
-- SWEBench Verified Mini
-- HumanEval
-- SWE-Bench Lite
-- CCbench
+- SWE-bench Lite (300 instances) - loaded from HuggingFace: SWE-bench/SWE-bench_Lite
+- SWE-bench Full (train split available)
+- HumanEval (164 Python coding problems)
 
 Agents evaluated: claude code, cursor, opencode, kilo code, codex, droid, zed
 """
