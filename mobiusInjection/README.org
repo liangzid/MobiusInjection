@@ -1,0 +1,31 @@
+#+title: Introducing Mobius Injection
+#+date: Fri Apr 17 19:33:27 2026
+#+author: Zi Liang
+#+email: zi1415926.liang@connect.polyu.hk
+#+latex_class: elegantpaper
+#+filetags: ::
+
+
+This projects contains th implementation of my new agent-oriented and -based DDoS attack prototype, named mobius injection.
+
+The core idea of mobius injection is to *create an infinite calling loops within the agent system, i.e., to create an infinite calling loops among agent components.*
+
+We call such an infinite calling loop as =mobius strip=, and the mobius injection indicates a method to design a /text/ to try to make the agent system create such an infinite connections.
+
+We define that the mobius injected text should at least contain the following parts:
+- Part I: A header. A header is an identifier to make the tail "program" find the entry. It contains some meta information of the injection, which is used for the seeking and re-direction.
+- Part II: A Tail. A tail is a text script to guide the LLM for re-call the malicious mobius injection. It may contains the instruction of LLM-oriented executations.
+- Part III: A Body. A body is the main payload of the malicious text, consisting of:
+  - A consumption module, which is the main part of the payload. This part contains the texts about how to propose DoS attacks to LLM APIs, MCP servers, or other AI infrastructures.
+  - A persistence module, which aims to persist the malicious injection. For instance, to divide and write the malicious segments into different files or skills of the project.
+  - A disguise module. This part aims to make the whole injection and the succeed mobius injection more stealthy. The core idea is to control the calling the frequency of the DoS attacks, and to print some good and ordinary fake results to users.
+
+
+
+
+
+
+
+
+
+
