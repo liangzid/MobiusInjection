@@ -116,7 +116,9 @@ class SWEBenchLoader:
 
 
 class HumanEvalLoader:
-    DEFAULT_URL = "https://huggingface.co/datasets/openai/gsm8k/resolve/main/data.json"
+    DEFAULT_URL = (
+        "https://huggingface.co/datasets/openai/human-eval/resolve/main/data.json"
+    )
 
     def __init__(self, data_dir: Path | str | None = None):
         self.data_dir = Path(data_dir) if data_dir else self._get_default_data_dir()
@@ -124,6 +126,46 @@ class HumanEvalLoader:
 
     def _get_default_data_dir(self) -> Path:
         return Path(__file__).parent / "humaneval_data"
+
+    def load_tasks(self) -> list[HumanEvalTask]:
+        if self._tasks_cache is not None:
+            return self._tasks_cache
+
+        data_file = self.data_dir / "humaneval_data.json"
+        if not data_file.exists():
+            self._download_dataset()
+
+        tasks = self._parse_humaneval(data_file)
+        self._tasks_cache = tasks
+        return tasks
+
+    def _download_dataset(self) -> None:
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        output_file = self.data_dir / "humaneval_data.json"
+        subprocess.run(
+            ["curl", "-L", "-o", str(output_file), self.DEFAULT_URL],
+            capture_output=True,
+            check=True,
+        )
+
+    def _parse_humaneval(self, data_file: Path) -> list[HumanEvalTask]:
+        tasks: list[HumanEvalTask] = []
+        try:
+            data = json.loads(data_file.read_text())
+            if isinstance(data, list):
+                for idx, item in enumerate(data):
+                    task = HumanEvalTask(
+                        task_id=item.get("task_id", f"humaneval-{idx}"),
+                        prompt=item.get("prompt", ""),
+                        canonical_solution=item.get("canonical_solution", ""),
+                        test=item.get("test", ""),
+                        entry_point=item.get("entry_point", ""),
+                        metadata=item,
+                    )
+                    tasks.append(task)
+        except json.JSONDecodeError:
+            pass
+        return tasks
 
 
 class CodingBenchmarkLoader:
