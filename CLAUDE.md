@@ -10,5 +10,10 @@ When you need to write or modify code, please strictly follow these rules:
 + For every feature you implement, you must write the corresponding test cases, and write code in the relevant area to test the functionality. Keep iterating until that part of the feature is successfully implemented.
 + **Never mock data under any circumstances**, even during debugging.
 
+
 If you are writing Python:
 Use `uv` to manage the entire project. uv is already installed by default.
+
+
+
+Everytime you execute the instructions from users, note to record the results (what the user lets to do, the corresponded files, and what you exactly do, as well as the results and internal results) into a file.

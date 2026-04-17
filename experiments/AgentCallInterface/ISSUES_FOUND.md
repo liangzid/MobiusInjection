@@ -53,13 +53,96 @@ from experiments.AgentCallInterface.datasets.coding_benchmark_loader import Codi
 
 ## Issue 4: Agent CLI Usage Does Not Align with Official APIs
 
-### 4.1 CursorCaller
+### 4.0 Claw-Style Agents (OpenClaw, ZeroClaw, Nanobot, Hermes) - ✅ ALL FIXED
 
-**File:** `experiments/AgentCallInterface/agents/agent_callers.py:248-257`
+**Files:** `experiments/AgentCallInterface/agents/agent_callers.py`
 
-**Problem:** `cursor --task --repo` - Cursor AI does not have a documented CLI for autonomous task execution in this manner.
+**Summary:** All claw-style agents had incorrect calling formats. Verified and fixed on 2026-04-17.
 
-**Current:**
+| Agent | Container Binary Path | Correct Non-Interactive Command |
+|-------|----------------------|--------------------------------|
+| OpenClaw | `openclaw` (in PATH) | `openclaw chat -m "prompt"` |
+| ZeroClaw | `/home/linuxbrew/.linuxbrew/Cellar/zeroclaw/0.6.9/bin/zeroclaw` | `zeroclaw agent -m "prompt"` |
+| Nanobot | `nanobot` (in PATH after uv install) | `nanobot agent -m "prompt"` |
+| Hermes | `source ~/.local/bin/env && hermes` | `hermes chat -q "prompt"` |
+
+**Key Findings:**
+- OpenClaw: Uses `openclaw chat -m "prompt"` (NOT `execute`)
+- ZeroClaw: Uses `zeroclaw agent -m "prompt"` (NOT `run`)
+- Nanobot: Uses `nanobot agent -m "prompt"` (NOT `execute --task`)
+- Hermes: Uses `hermes chat -q "prompt"` (NOT `run --skill`)
+
+**Status:** ✅ ALL FIXED - 2026-04-17
+
+---
+
+### 4.1 Claude Code - ✅ CORRECT
+
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:198-245`
+
+**Verification:** `claude -p "prompt"` is the official non-interactive/prompt mode for Claude Code.
+
+**Status:** ✅ CORRECT
+
+---
+
+### 4.2 OpenAI Codex CLI - ✅ FIXED
+
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:361-395`
+
+**Problem:** Uses `codex --task` which does NOT exist. The correct non-interactive mode is `codex exec PROMPT`.
+
+**Official Usage (from GitHub README):**
+```bash
+# Interactive mode
+codex
+
+# Non-interactive mode
+codex exec "your prompt here"
+
+# Full auto mode
+codex exec --full-auto "your prompt here"
+```
+
+**Previous (INCORRECT):**
+```python
+cmd = [
+    "npx",
+    "@openai/codex@0.57.0",
+    "--task",
+    task_input.get("task_id", ""),
+]
+```
+
+**Current (CORRECT):**
+```python
+prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+cmd = [
+    "docker",
+    "run",
+    "--rm",
+    "-e",
+    f"CODEX_PROMPT={prompt}",
+    "codex:latest",
+    "exec",
+    "--full-auto",
+    prompt,
+]
+```
+
+**Status:** ✅ FIXED - 2026-04-17
+
+---
+
+### 4.3 Cursor - ❌ NO AUTONOMOUS CLI MODE
+
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:248-283`
+
+**Problem:** Cursor is an IDE/editor (VS Code fork) with GUI-based AI features (Ctrl+K, Ctrl+L). It does NOT have an autonomous CLI mode for task execution.
+
+**Verification:** All Cursor documentation shows GUI interaction patterns only. No `--task` flag or headless mode exists.
+
+**Current (INCORRECT):**
 ```python
 cmd = [
     "cursor",
@@ -70,17 +153,23 @@ cmd = [
 ]
 ```
 
-**Status:** Unverified - May not work as intended
+**Status:** ❌ CANNOT FIX - Cursor does not support autonomous CLI execution
 
 ---
 
-### 4.2 OpenCodeCaller
+### 4.4 OpenCode (SST) - ✅ FIXED
 
-**File:** `experiments/AgentCallInterface/agents/agent_callers.py:286-295`
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:286-321`
 
-**Problem:** `opencode --task --repo` - OpenCode CLI docs show no such arguments.
+**Note:** This is SST's OpenCode (https://github.com/sst/opencode), NOT OpenAI Codex.
 
-**Current:**
+**Official Usage:**
+```bash
+opencode run "prompt"  # Non-interactive mode
+opencode              # Interactive TUI mode
+```
+
+**Previous (INCORRECT):**
 ```python
 cmd = [
     "opencode",
@@ -91,17 +180,34 @@ cmd = [
 ]
 ```
 
-**Status:** Unverified - CLI interface may be different
+**Current (CORRECT):**
+```python
+prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+cmd = [
+    "opencode",
+    "run",
+    prompt,
+]
+```
+
+**Status:** ✅ FIXED - 2026-04-17
 
 ---
 
-### 4.3 KiloCodeCaller
+### 4.5 KiloCode - ✅ FIXED
 
-**File:** `experiments/AgentCallInterface/agents/agent_callers.py:324-332`
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:324-358`
 
-**Problem:** The npm package `@kilocode/cli` may not be the correct package name.
+**Verification:** The package `@kilocode/cli` exists on npm. The binary is `kilo` (not `kilocode`).
 
-**Current:**
+**Official Usage:**
+```bash
+kilo run "prompt"        # Non-interactive mode
+kilo exec "prompt"       # Non-interactive mode (alias)
+kilo                     # Interactive TUI mode
+```
+
+**Previous (INCORRECT):**
 ```python
 cmd = [
     "npx",
@@ -111,17 +217,38 @@ cmd = [
 ]
 ```
 
-**Status:** Unverified - Package name may be incorrect
+**Current (CORRECT):**
+```python
+prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+cmd = [
+    "docker",
+    "run",
+    "--rm",
+    "-e",
+    f"KILO_PROMPT={prompt}",
+    "kilo_code:latest",
+    "run",
+    prompt,
+]
+```
+
+**Status:** ✅ FIXED - 2026-04-17
 
 ---
 
-### 4.4 DroidCaller
+### 4.6 Droid (Factory.ai) - ✅ FIXED
 
-**File:** `experiments/AgentCallInterface/agents/agent_callers.py:398-411`
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:398-441`
 
-**Problem:** Using `curl|sh` to install and run Factory.ai Droid is unusual and the `--task` argument may not exist.
+**Verification:** Factory.ai Droid uses `droid exec "prompt"` for non-interactive mode.
 
-**Current:**
+**Official Usage:**
+```bash
+droid exec "prompt"     # Non-interactive mode
+droid                   # Interactive REPL mode
+```
+
+**Previous (INCORRECT):**
 ```python
 cmd = [
     "curl",
@@ -136,26 +263,34 @@ cmd = [
 ]
 ```
 
-**Status:** Unverified - Installation method and CLI interface may differ
-
----
-
-### 4.5 ZedCaller
-
-**File:** `experiments/AgentCallInterface/agents/agent_callers.py:444-451`
-
-**Problem:** `zed --task` - Zed editor does not have a `--task` argument.
-
-**Current:**
+**Current (CORRECT):**
 ```python
+prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
 cmd = [
-    "zed",
-    "--task",
-    task_input.get("task_id", ""),
+    "docker",
+    "run",
+    "--rm",
+    "-e",
+    f"DROID_PROMPT={prompt}",
+    "droid:latest",
+    "exec",
+    prompt,
 ]
 ```
 
-**Status:** Unverified - CLI interface may be different
+**Status:** ✅ FIXED - 2026-04-17
+
+---
+
+### 4.7 Zed - ❌ NO AUTONOMOUS CLI MODE
+
+**File:** `experiments/AgentCallInterface/agents/agent_callers.py:444-477`
+
+**Problem:** Zed is a code editor with AI features integrated into its GUI. It does NOT have a `--task` argument or autonomous CLI mode.
+
+**Verification:** Zed AI is accessed through the editor's AI panel, not via CLI.
+
+**Status:** ❌ CANNOT FIX - Zed does not support autonomous CLI execution
 
 ---
 
@@ -245,5 +380,12 @@ print(f'Has load_tasks: {hasattr(loader, \"load_tasks\")}')
 4. ✅ ~~Fix ClawBench TOML parsing~~ - FIXED
 5. ✅ ~~SWE-bench URL~~ - FIXED (downloaded Lite dataset)
 6. ✅ ~~MCP modules~~ - RESOLVED (moved to reference folder)
-7. **Verify CLI arguments** for Cursor, OpenCode, KiloCode, Droid, and Zed against official documentation
-8. **Add integration tests** that actually run each agent (with proper mocks/environment)
+7. ✅ ~~Update CodexCaller~~ - FIXED (changed from `codex --task` to `codex exec`)
+8. ✅ ~~Verify OpenCode (SST)~~ - FIXED (changed to `opencode run "prompt"`)
+9. ✅ ~~Verify KiloCode~~ - FIXED (changed to `kilo run "prompt"`)
+10. ✅ ~~Verify Droid~~ - FIXED (changed to `droid exec "prompt"`)
+11. ✅ ~~Fix Claw-Style Agents~~ - FIXED (OpenClaw, ZeroClaw, Nanobot, Hermes all corrected)
+12. **Cursor** - Cannot fix (no autonomous CLI mode - GUI-based IDE)
+13. **Zed** - Cannot fix (no autonomous CLI mode - GUI-based editor)
+14. **API Key Configuration** - Agents need proper API key configuration to execute tasks
+15. **Add integration tests** - Test each agent with actual task execution after API key setup

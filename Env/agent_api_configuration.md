@@ -2,7 +2,52 @@
 
 This document describes how to configure LLM API keys and endpoints for all 11 agent tools in the Mobius Injection research project.
 
+## Important: API Key Management
+
+### For Python Code (Recommended)
+
+The project uses a centralized API key management approach. **Do NOT hardcode API keys in source code.** Instead, use the `api_keys.py` utility:
+
+```python
+from experiments.AgentCallInterface.utils.api_keys import get_openrouter_api_key
+
+# Read API key from privacy_secret_openrouter_API_key.txt
+api_key = get_openrouter_api_key()
+```
+
+**API Key File Location**: `privacy_secret_openrouter_API_key.txt` in project root (gitignored)
+
+### For Docker Containers
+
+Pass API keys at runtime using environment variables:
+
+```python
+cmd = [
+    "docker", "exec", "-e",
+    f"OPENROUTER_API_KEY={get_openrouter_api_key()}",
+    "container_name",
+    "command"
+]
+```
+
+See [docker_secrets_guide.md](docker_secrets_guide.md) for production best practices.
+
+### Model Parameter
+
+All agent callers support a `model` parameter (defaults to `openrouter/free`):
+
+```python
+from experiments.AgentCallInterface.agents.agent_callers import get_caller, DEFAULT_MODEL
+
+caller = get_caller('nanobot')
+response = caller.call(task_input, timeout=90)  # Uses DEFAULT_MODEL
+response = caller.call(task_input, timeout=90, model='anthropic/claude-sonnet-4.6')
+```
+
+---
+
 ## Table of Contents
+0. [Important: API Key Management](#important-api-key-management)
 1. [Claude Code](#1-claude-code)
 2. [OpenClaw](#2-openclaw)
 3. [OpenCode](#3-opencode)
@@ -15,6 +60,7 @@ This document describes how to configure LLM API keys and endpoints for all 11 a
 10. [Droid](#10-droid)
 11. [Zed](#11-zed)
 12. [OpenRouter Unified Configuration](#12-openrouter-unified-configuration)
+13. [New API Key Management (2026-04-17)](#new-api-key-management-2026-04-17)
 
 ---
 
@@ -641,3 +687,45 @@ For persistent API configuration in containers:
 echo 'export ANTHROPIC_API_KEY="your-key"' >> ~/.bashrc
 source ~/.bashrc
 ```
+
+---
+
+## New API Key Management (2026-04-17)
+
+### Overview
+
+The project now uses a centralized API key management approach:
+
+1. **API keys stored in**: `privacy_secret_openrouter_API_key.txt` (gitignored)
+2. **Read via utility**: `experiments.AgentCallInterface.utils.api_keys`
+3. **Pass to containers**: Via `-e` flag at runtime
+
+### Python Usage
+
+```python
+from experiments.AgentCallInterface.utils.api_keys import get_openrouter_api_key
+from experiments.AgentCallInterface.agents.agent_callers import get_caller
+
+api_key = get_openrouter_api_key()
+caller = get_caller('nanobot')
+response = caller.call(task_input, model='openrouter/free')
+```
+
+### Troubleshooting
+
+#### "API key file not found"
+- Ensure `privacy_secret_openrouter_API_key.txt` exists in project root
+- Run: `ls -la privacy_secret_openrouter_API_key.txt`
+
+#### "Permission denied" errors
+- Ensure the privacy file is readable: `chmod 644 privacy_secret_openrouter_API_key.txt`
+
+#### Container API key issues
+- Verify container has API key: `docker exec container env | grep OPENROUTER`
+- Check API key is passed correctly in Python code
+
+### Security Notes
+
+- Never commit `privacy_secret_openrouter_API_key.txt` to version control
+- The file is gitignored by default
+- For production, consider Docker Secrets or Kubernetes Secrets

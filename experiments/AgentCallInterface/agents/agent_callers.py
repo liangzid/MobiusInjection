@@ -1,10 +1,20 @@
 """
 Agent Caller Module
-===================
+==================
 Calls different agents via bash or python to execute tasks.
 
 Part I: Claw-Style Agents (openclaw, zeroclaw, nanobot, hermes)
 Part II: Coding-Style Agents (claude code, cursor, opencode, kilo code, codex, droid, zed)
+
+Usage:
+    from experiments.AgentCallInterface.agents.agent_callers import get_caller
+
+    caller = get_caller('nanobot')
+    response = caller.call({
+        'task_id': 'test-001',
+        'problem_statement': 'What is 2+2?',
+        'model': 'openrouter/free'  # optional, defaults to 'openrouter/free'
+    }, timeout=90)
 """
 
 from __future__ import annotations
@@ -15,6 +25,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from experiments.AgentCallInterface.utils.api_keys import get_openrouter_api_key
+
+
+DEFAULT_MODEL = "openrouter/free"
 
 
 @dataclass
@@ -28,175 +43,133 @@ class AgentResponse:
 
 class AgentCaller(ABC):
     @abstractmethod
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse: ...
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse: ...
+
+
+def _run_command(cmd: list[str], task_id: str, timeout: int) -> AgentResponse:
+    import time
+
+    start = time.time()
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return AgentResponse(
+            success=result.returncode == 0,
+            output=result.stdout,
+            error=result.stderr if result.returncode != 0 else None,
+            duration=time.time() - start,
+            task_id=task_id,
+        )
+    except subprocess.TimeoutExpired:
+        return AgentResponse(
+            success=False,
+            output="",
+            error=f"Timeout after {timeout}s",
+            duration=timeout,
+            task_id=task_id,
+        )
 
 
 class OpenClawCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+        api_key = get_openrouter_api_key()
         cmd = [
             "docker",
+            "exec",
+            "-e",
+            f"OPENROUTER_API_KEY={api_key}",
+            "openclaw",
+            "openclaw",
+            "infer",
+            "model",
             "run",
-            "--rm",
-            "-e",
-            f"TASK_ID={task_input.get('task_id', '')}",
-            "-e",
-            f"SKILL_URL={task_input.get('skill_url', '')}",
-            "openclaw:latest",
-            "execute",
+            "--local",
+            "--model",
+            f"custom-openrouter-ai/{model}",
+            "--prompt",
+            prompt,
         ]
-        return self._run_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_command(self, cmd: list[str], task_id: str, timeout: int) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class ZeroClawCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         cmd = [
             "docker",
-            "run",
-            "--rm",
-            "-e",
-            f"TASK={task_input.get('task_id', '')}",
-            "zeroclaw:latest",
-            "run",
+            "exec",
+            "zeroclaw",
+            "/home/linuxbrew/.linuxbrew/Cellar/zeroclaw/0.6.9/bin/zeroclaw",
+            "agent",
+            "-m",
+            prompt,
         ]
-        return self._run_bash_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_bash_command(
-        self, cmd: list[str], task_id: str, timeout: int
-    ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class NanobotCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         cmd = [
             "docker",
-            "run",
-            "--rm",
-            "-e",
-            f"NANOBOT_TASK={task_input.get('task_id', '')}",
-            "nanobot:latest",
-            "execute",
-            "--task",
-            task_input.get("task_id", ""),
+            "exec",
+            "nanobot",
+            "nanobot",
+            "agent",
+            "-m",
+            prompt,
+            "--no-markdown",
         ]
-        return self._run_python_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_python_command(
-        self, cmd: list[str], task_id: str, timeout: int
-    ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class HermesCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+        api_key = get_openrouter_api_key()
         cmd = [
             "docker",
-            "run",
-            "--rm",
-            "-e",
-            f"TASK_ID={task_input.get('task_id', '')}",
-            "hermes-agent:latest",
-            "run",
-            "--skill",
-            task_input.get("skill_url", ""),
+            "exec",
+            "hermes",
+            "bash",
+            "-c",
+            f"export OPENROUTER_API_KEY=\"{api_key}\" && /root/.hermes/hermes-agent/venv/bin/hermes chat -q '{prompt}' --provider openrouter",
         ]
-        return self._run_sh_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_sh_command(
-        self, cmd: list[str], task_id: str, timeout: int
-    ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class ClaudeCodeCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(f"# Task: {task_input.get('task_id', '')}\n\n")
             f.write(f"## Problem\n{task_input.get('problem_statement', '')}\n\n")
@@ -246,7 +219,12 @@ class ClaudeCodeCaller(AgentCaller):
 
 
 class CursorCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
         cmd = [
             "cursor",
             "--task",
@@ -254,227 +232,118 @@ class CursorCaller(AgentCaller):
             "--repo",
             task_input.get("repo", ""),
         ]
-        return self._run_cursor_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_cursor_command(
-        self, cmd: list[str], task_id: str, timeout: int
-    ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class OpenCodeCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
-        cmd = [
-            "opencode",
-            "--task",
-            task_input.get("task_id", ""),
-            "--repo",
-            task_input.get("repo", ""),
-        ]
-        return self._run_opencode_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_opencode_command(
-        self, cmd: list[str], task_id: str, timeout: int
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+        api_key = get_openrouter_api_key()
+        cmd = [
+            "docker",
+            "exec",
+            "-e",
+            f"OPENROUTER_API_KEY={api_key}",
+            "opencode",
+            "/root/.opencode/bin/opencode",
+            "run",
+            "-m",
+            model,
+            prompt,
+        ]
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class KiloCodeCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
-        cmd = [
-            "npx",
-            "@kilocode/cli",
-            "--task",
-            task_input.get("task_id", ""),
-        ]
-        return self._run_npm_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_npm_command(
-        self, cmd: list[str], task_id: str, timeout: int
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+        cmd = [
+            "docker",
+            "exec",
+            "kilo_code",
+            "kilo",
+            "run",
+            "-m",
+            model,
+            "--auto",
+            prompt,
+        ]
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class CodexCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
-        cmd = [
-            "npx",
-            "@openai/codex@0.57.0",
-            "--task",
-            task_input.get("task_id", ""),
-        ]
-        return self._run_codex_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_codex_command(
-        self, cmd: list[str], task_id: str, timeout: int
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+        api_key = get_openrouter_api_key()
+        cmd = [
+            "docker",
+            "exec",
+            "-e",
+            f"OPENROUTER_API_KEY={api_key}",
+            "codex",
+            "codex",
+            "exec",
+            "--full-auto",
+            "--skip-git-repo-check",
+            "-c",
+            f"provider=openrouter",
+            "-c",
+            f"model={model}",
+            prompt,
+        ]
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class DroidCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
-        cmd = [
-            "curl",
-            "-fsSL",
-            "https://app.factory.ai/cli",
-            "|",
-            "sh",
-            "-s",
-            "--",
-            "task",
-            task_input.get("task_id", ""),
-        ]
-        return self._run_droid_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_droid_command(
-        self, cmd: list[str], task_id: str, timeout: int
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                " ".join(cmd),
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+        api_key = get_openrouter_api_key()
+        cmd = [
+            "docker",
+            "exec",
+            "-e",
+            f"FACTORY_API_KEY={api_key}",
+            "droid",
+            "droid",
+            "exec",
+            prompt,
+        ]
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class ZedCaller(AgentCaller):
-    def call(self, task_input: dict[str, Any], timeout: int = 300) -> AgentResponse:
+    def call(
+        self,
+        task_input: dict[str, Any],
+        timeout: int = 300,
+        model: str = DEFAULT_MODEL,
+    ) -> AgentResponse:
         cmd = [
             "zed",
             "--task",
             task_input.get("task_id", ""),
         ]
-        return self._run_zed_command(cmd, task_input.get("task_id", ""), timeout)
-
-    def _run_zed_command(
-        self, cmd: list[str], task_id: str, timeout: int
-    ) -> AgentResponse:
-        import time
-
-        start = time.time()
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-            )
-        except subprocess.TimeoutExpired:
-            return AgentResponse(
-                success=False,
-                output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
-                task_id=task_id,
-            )
+        return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 CLAW_STYLE_CALLERS = {
@@ -506,3 +375,4 @@ def get_caller(agent_type: str) -> AgentCaller:
 if __name__ == "__main__":
     print("Claw-style callers:", list(CLAW_STYLE_CALLERS.keys()))
     print("Coding-style callers:", list(CODING_STYLE_CALLERS.keys()))
+    print(f"Default model: {DEFAULT_MODEL}")
