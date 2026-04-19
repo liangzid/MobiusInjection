@@ -1,0 +1,30 @@
+
+
+
+
+
+At first, you need to know that we have succeessfully install several claw-style and coding-related LLM agents. These agents are constructed with the container and can be used or visited by the container.
+
+So, please read =~/AgentCodingDos/Env/*.md= to know the following three things:
++ What agents are used for the configuration?
++ How to config the API of these agents?
+
+
+Please refer to the web content to know how to config their LLM APIs, with the following targets:
+
+1. config the LLM API for these agents one by one.
+2. for the configed LLM API model, please use openrouter with the free model. The API key are stored in =~/AgentCodingDosprivacy_secret_openrouter_API_key.txt=.
+3. write the document to illustrate how to setup the LLM API backend for each agent. the document can be saved to =~/AgentCodingDos/Env/=.
+
+
+
+
+
+
+
+
+
+
+
+
+

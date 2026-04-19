@@ -1,0 +1,28 @@
+#+title: Research Plan: Check the Correctness of Agent Calling.
+#+date: Fri Apr 17 17:42:55 2026
+#+author: Zi Liang
+#+email: zi1415926.liang@connect.polyu.hk
+#+latex_class: elegantpaper
+#+filetags: ::
+
+
+
+
+At first, you need to know that we have successfully install many of the claw-style and coding-style agents into different containers and have configured the LLM APIs for them.
+
+You can read the following md files in ~/AgentCodingDos/Env/ to know which agents are configured:
++ agent_containers_quickref.md
++ agent_containers.sh
++ agent_containers_usage.md
+
+However, we didn't ensure the following things:
+1. We didn't know whether our current way to call this agent tools are correct.
+   1. In ~/AgentCodingDos/experiments/AgentCallInterface/agents, we have write some code and functions to try to call these agent under an non-interactive mode. However, we are not sure whether this way is correct. We have identified this problem before, in ISSUES_FOUND.md at the path of ~/AgentCodingDos/experiments/AgentCallInterface/. But this issues found file is not accurate, so you need to recheck for each agents again.
+   2. More detailly, for each agent, you should web search to lookup the official API document or use the --help to see whether the calling format is correct or not or whether this agent support the non-interaction calling under bash scripts of pythons or not.
+2. After the document check, you also need to CALL these agents based on the python code after your revision. I have already configure the LLM APIs with openrouter model for you, but not very sure whether they are effective or not.
+   1. You may need to first directly use a bash web visit to the openrouter to validate that the API key is correct. (The key is in privacy_secret_openrouter_API_key.txt).
+   2. Then, you need to check whether these agents are correct via function execuation.
+
+
+
+Note: I am very open and kind though sometimes not very patient. If you suffer from anything that you are not sure, or you have other discovery, feel free to ask me and let's discuss together.

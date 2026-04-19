@@ -1,0 +1,41 @@
+#+title: Research Plan: Preparing Datasets.
+#+date: Thu Apr 16 18:56:56 2026
+#+author: Zi Liang
+#+email: zi1415926.liang@connect.polyu.hk
+#+latex_class: elegantpaper
+#+filetags: ::
+
+
+Rules you need to follow:
++ Firstly, reading =intro.tex= and =related.tex= and =method.tex= to understand the target of this project.
++ Then, please read the =overall_exper_settings.org= to understand the experimental settings.
+
+
+I now have the plan for preparing the datasets.
+
+Please write the code for the following two categorizes.
+
+* Part I: For Claw-Style Experiments
+
+Evaluation object: claw style agents, including openclaw, zeroclaw, nanobot, and hermes agent.
+
+Evaluation dataset: named =clawbench=.
+Reference: https://github.com/claw-bench/claw-bench/blob/main/README.md
+
+* Part II: For Coding-Style experiments
+
++ Evaluation object: claude code, cursor, opencode, kilo code, codex, droid, zed.
++ Evaluation dataset:1. SWEBench Verified Mini, HumanEval, SWE-Bench Lite, and CCbench.
+
+
+
+* What you need to do:
+
+Write the code with corresponding environment (if you use python, please use =uv= to manage the python environment), including: 1. the source code of how to reading this datasets; 2. how to transfer the input dataset's task into the input of different agents. 3. how to call this agents with bash or python.
+
+
+* What you do not need to do:
+
++ At this time, it is not necessary to run the whole experiments. Just with two or three examples are enough.
++ You even do NOT need to run any agent tools unless the user explictly tell that you need to do this.
+

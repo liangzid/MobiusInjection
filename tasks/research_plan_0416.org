@@ -1,0 +1,136 @@
+#+title: Research Plan 0416 -- How to install all tools.
+#+date: Thu Apr 16 16:57:30 2026
+#+author: Zi Liang
+#+email: zi1415926.liang@connect.polyu.hk
+#+latex_class: elegantpaper
+#+filetags: ::
+
+
+
+Rule you should follow:
+1. At each time, finish one thing of the configuration
+2. After each configuration/install, evaluate and ask the user whether to continue or not.
+3. The web environment is not stable. It's a bad wifi. Sometimes you may failed. Just retry or do some modification of the install scripts until you success.
+4. You don't need to configure it. Just install them is sufficient.
+
+* Overview
+
+I want to configure the =docker= in this debian WSL for the target of my academic experiments on 14 agent tools. For the better management, I need to install each agent tools into a distinct and single docker environment, and thus to avoid the influence of them.
+
+After the experiments, I may need to provide some docker information with the source code as well as this document and the experiment results for the validation and reproduce of others.
+
+
+
+* Steps
+
+* Install Docker
+
+Reference: https://docs.docker.com/engine/install/debian/
+
+
+Please read this page and obtain the commands and execute them for the installation.
+
+
+The following sections,
+
+* Install Openclaw
+
+Reference: https://docs.openclaw.ai/install
+
+Please install openclaw into a container.
+No need for this turn of configuration.
+
+
+* Claude Code
+
+Firstly, install =brew= into a new container.
+
+#+begin_src sh
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+#+end_src
+
+
+Then, install claude code in this new container:
+
+#+begin_src sh
+  brew install --cask claude-code
+#+end_src
+
+Never use other methods to install it.
+
+* Zeroclaw
+
+Reference: https://github.com/zeroclaw-labs/zeroclaw
+
+Firstly, install =brew= in a new container.
+
+Then install the zeroclaw with =brew install zeroclaw=.
+
+* Nanobot
+
+In a new container, just run: =pip install nanobot-ai=
+
+* Hermes agent
+
+#+begin_src sh
+
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+
+#+end_src
+
+
+* OpenCode
+
+curl -fsSL https://opencode.ai/install | bash
+
+Use this command to install opencode into a new container.
+
+* kilo code
+
+On a new container, firstly install nodejs:
+
+#+begin_src sh
+  
+# Docker has specific installation instructions for each operating system.
+# Please refer to the official documentation at https://docker.com/get-started/
+
+# Pull the Node.js Docker image:
+docker pull node:24-slim
+
+# Create a Node.js container and start a Shell session:
+docker run -it --rm --entrypoint sh node:24-slim
+
+# Verify the Node.js version:
+node -v # Should print "v24.15.0".
+
+# Verify npm version:
+npm -v # Should print "11.12.1".
+#+end_src
+
+npm install -g @kilocode/cli
+
+* Grok cli
+
+In a new npm container, use: npm install -g @vibe-kit/grok-cli
+
+* Codex
+
+In a new npm container, use:
+
+# 建议使用 0.57.0 版本
+npm i -g @openai/codex@0.57.0
+
+
+* Droid
+
+In a new container, use:
+
+curl -fsSL https://app.factory.ai/cli | sh
+
+
+
+* Zed
+
+In a new container, use:
+
+curl -f https://zed.dev/install.sh | sh

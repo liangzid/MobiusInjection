@@ -1,0 +1,84 @@
+#+title: Overall Experiment Settings
+#+date: Thu Apr 16 18:59:02 2026
+#+author: Zi Liang
+#+email: zi1415926.liang@connect.polyu.hk
+#+latex_class: elegantpaper
+#+filetags: ::
+
+
+* Experimental Plan of Mobius Injection
+
+** 已选取clawbench作为evaluation benchmark
+** 需要搭建一个能够进行DoS攻击的环境。
++ 使用ollama来作为DoS攻击的测试（如支持多少并发等）。
++ 在现有的LLM API上做测试，证明这种注入可以被触发
++ 使用ollama来做DoS触发数的测试
++ 需要考虑到不同的Agent工具/系统
++ 对构建 evaluation benchmark的思考
+  + 需要有一个比较复杂的任务，该任务的中间过程中可以被插入这些恶意的代码
+  + 对应的task个数不能太少，太少则不具有可分析性
++ 考虑防御
+  + 现有的LLM API Server DoS Attack
+  + 现有的在Agent上面的安全控制/版本控制
+  + 现有的LLM agent系统上的防御与权限控制
+  + 现有的marketplace上相关防御的skills
+    
+** 实验部分outline
++ 实验设定
+  + Effectiveness of Injection：探究这种注入是否有效
+    + Context Injection
+      + 在不同任务上的注入结果是否存在明显差距 给出平均成功率和方差
+      + 在不同的淹没比（即injected text占完整text的比例）下的injection成功率
+  + Effectiveness of DDoS Attacks：探究DDoS如果实现拒绝服务的话需要多少资源
++ Effectiveness of Defenses （新章节）
+  + Baseline就是描述的那些防御。
+  + 提出新的防御 ACE
+  + 对应的实验
+
+
+** 最终选取的数据集
+
++ SWEBench Verified Mini (Start From this one)
++ HumanEval
++ SWE-Bench Lite
++ CCBench
+
+
+** Tools [33%]
+*** Claw-Style Agents [25%]
+**** DONE openclaw
+**** TODO zeroclaw
+**** TODO nanobot
+**** TODO hermes agent
+*** Coding-Style Agents [25%]
+**** DONE claude code
+CLOSED: [2026-04-16 Thu 16:39]
+**** DONE cursor
+CLOSED: [2026-04-16 Thu 16:47]
+**** TODO opencode
+**** TODO kilo code
+**** TODO Grok Cli
+**** TODO Codex
+**** TODO Droid
+**** TODO Zed
+*** DONE CC Switch
+CLOSED: [2026-04-16 Thu 15:57]
+** LLM APIs: Configure with OpenRouter [0/9]
+*** TODO anthropic/claude-opus-4.6
+*** TODO deepseek/deepseek-v3.2
+*** TODO minimax/minimax-m2.7
+*** TODO google/gemini-3-flash-preview
+*** TODO nvidia/nemotron-3-super-120b-a12b:free
+*** TODO openai/gpt-5.4
+*** TODO moonshotai/kimi-k2.5
+*** TODO z-ai/glm-5.1
+*** TODO qwen/qwen3.6-plus
+
+
+
+
+
+
+
+
+
