@@ -1,0 +1,33 @@
+
+
+
+#+title: Basic Evaluation on Agents.
+
+
+
+In this task, we want to do some basic injection experiments for my new paper.
+
+
+Before experiments, firstly read the following files:
++ =~/AgentCodingDos/Env/*.md= to understand our experimental targeted docker containers.
++ Read =~/AgentCodingDos/experiments/AgentCallInterface/= 's structure and the corresponding md file to know how to call this agents, which is the interface.
++ Read =~/AgentCodingDos/mobiusInjection/README.org= to know the injection method.
++ Use =~/AgentCodingDos/mobiusInjection/TEMPLATE_V2.py= as the injected text.
++ Read =~/paper_mobius/method.tex= to know the threat model.
+
+
+Then please accomplish the task by doing this:
+1. Write a bash script in =~/AgentCodingDos/experiments/scripts/1.0.0.run_basic_eval.sh=, to
+   1. use the injected text shown in =TEMPLATE_V2.py= as the prompt to execute all agents in containers, and save their container chekcpoints after running.
+   2. Regarding the model, you can temporarily use openrouter with =nvidia/nemotron-3-super-120b-a12b:free=.
+   3. In your bash scripts, please note to monitor the following indicators:
+      1. whether the skill is injected or not.
+      2. counting the function calling.
+      3. other corresponding indicators.
+2. Before executing the bash script 1.0.0, you may need to firstly modify the docker containers to ensure that the permission of editing files or create skills or others are open.
+3. When all these things get done. Please let me know and provide me a very brief instruction of how to do this test.
+
+Thanks.
+
+
+
