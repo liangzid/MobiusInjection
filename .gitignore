@@ -2,3 +2,4 @@
 *.lock
 /privacy_secret_openrouter_API_key.txt
 /experiments/logs/
+*.log

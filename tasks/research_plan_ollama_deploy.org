@@ -1,0 +1,18 @@
+
+
+#+title: Task- Ollama Deploy
+
+
+In this task, you need to successfully deploy the ollama-based LLM API service on this GPU server, and simply test it.
+
+Basically, we only need to use ONE GPU for this experiment. For instance, the GPU 1.
+
+The model can be =Qwen3.6-35B-A3B= for preliminary experiments.
+
+Corresponding files for this task can be placed in =~/AgentCodingDos/localserver/=.
+
+Please also consider some basic tests on this task.
+
+Feel free to ask me if there remain some other things needed to be identified.
+
+Thanks.
