@@ -51,12 +51,12 @@ class AgentCaller(ABC):
     ) -> AgentResponse: ...
 
 
-def _run_command(cmd: list[str], task_id: str, timeout: int) -> AgentResponse:
+def _run_command(cmd: list[str], task_id: str, timeout: int, env: dict = None) -> AgentResponse:
     import time
 
     start = time.time()
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
         return AgentResponse(
             success=result.returncode == 0,
             output=result.stdout,
@@ -95,7 +95,7 @@ class OpenClawCaller(AgentCaller):
             "run",
             "--local",
             "--model",
-            f"custom-openrouter-ai/{model}",
+            f"openrouter/{model}",
             "--prompt",
             prompt,
         ]
@@ -150,15 +150,17 @@ class HermesCaller(AgentCaller):
         timeout: int = 300,
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
+        import base64
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         api_key = get_openrouter_api_key()
+        encoded = base64.b64encode(prompt.encode()).decode()
         cmd = [
             "docker",
             "exec",
             "hermes",
             "bash",
             "-c",
-            f"export OPENROUTER_API_KEY=\"{api_key}\" && /root/.hermes/hermes-agent/venv/bin/hermes chat -q '{prompt}' --provider openrouter",
+            f"echo {encoded} | base64 -d > /tmp/prompt.txt && export OPENROUTER_API_KEY=\"{api_key}\" && /root/.hermes/hermes-agent/venv/bin/hermes chat -q \"$(cat /tmp/prompt.txt)\" --provider openrouter",
         ]
         return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
@@ -197,7 +199,7 @@ class ClaudeCodeCaller(AgentCaller):
         start = time.time()
         try:
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
+                cmd, capture_output=True, text=True, timeout=timeout, cwd="/tmp"
             )
             Path(temp_path).unlink(missing_ok=True)
             return AgentResponse(
@@ -253,7 +255,7 @@ class OpenCodeCaller(AgentCaller):
             "/root/.opencode/bin/opencode",
             "run",
             "-m",
-            model,
+            f"opencode/{model}",
             prompt,
         ]
         return _run_command(cmd, task_input.get("task_id", ""), timeout)
@@ -274,7 +276,7 @@ class KiloCodeCaller(AgentCaller):
             "kilo",
             "run",
             "-m",
-            model,
+            f"kilo/{model}",
             "--auto",
             prompt,
         ]
@@ -288,25 +290,43 @@ class CodexCaller(AgentCaller):
         timeout: int = 300,
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
+        import os
+        from pathlib import Path
+
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         api_key = get_openrouter_api_key()
+
+        codex_dir = Path.home() / ".codex"
+        codex_dir.mkdir(exist_ok=True)
+
+        config_toml = codex_dir / "config.toml"
+        config_toml.write_text(f'''model_provider = "openrouter"
+model = "{model}"
+disable_response_storage = true
+
+[model_providers.openrouter]
+name = "OpenRouter"
+base_url = "https://openrouter.ai/api/v1"
+wire_api = "responses"
+requires_openai_auth = true
+''')
+
+        auth_json = codex_dir / "auth.json"
+        auth_json.write_text(f'''{{
+  "OPENAI_API_KEY": "{api_key}"
+}}
+''')
+
+        env = os.environ.copy()
+        env["OPENROUTER_API_KEY"] = api_key
+        env["OPENAI_API_KEY"] = api_key
+
         cmd = [
-            "docker",
-            "exec",
-            "-e",
-            f"OPENROUTER_API_KEY={api_key}",
-            "codex",
-            "codex",
-            "exec",
-            "--full-auto",
-            "--skip-git-repo-check",
-            "-c",
-            f"provider=openrouter",
-            "-c",
-            f"model={model}",
-            prompt,
+            "codex", "exec",
+            "--full-auto", "--skip-git-repo-check",
+            "--", prompt,
         ]
-        return _run_command(cmd, task_input.get("task_id", ""), timeout)
+        return _run_command(cmd, task_input.get("task_id", ""), timeout, env=env)
 
 
 class DroidCaller(AgentCaller):

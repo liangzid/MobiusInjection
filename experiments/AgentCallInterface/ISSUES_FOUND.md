@@ -86,11 +86,13 @@ from experiments.AgentCallInterface.datasets.coding_benchmark_loader import Codi
 
 ---
 
-### 4.2 OpenAI Codex CLI - ✅ FIXED
+### 4.2 OpenAI Codex CLI - ✅ FIXED (HOST INSTALL)
 
 **File:** `experiments/AgentCallInterface/agents/agent_callers.py:361-395`
 
 **Problem:** Uses `codex --task` which does NOT exist. The correct non-interactive mode is `codex exec PROMPT`.
+
+**IMPORTANT:** Codex CLI must be installed on the HOST system (not in Docker) because the Docker container's sandbox blocks outgoing network connections to OpenRouter API.
 
 **Official Usage (from GitHub README):**
 ```bash
@@ -104,6 +106,30 @@ codex exec "your prompt here"
 codex exec --full-auto "your prompt here"
 ```
 
+**Installation:**
+```bash
+npm install -g @openai/codex
+```
+
+**Configuration:** Codex requires OpenRouter config in `~/.codex/`:
+```bash
+# config.toml
+model_provider = "openrouter"
+model = "nvidia/nemotron-3-super-120b-a12b:free"
+disable_response_storage = true
+
+[model_providers.openrouter]
+name = "OpenRouter"
+base_url = "https://openrouter.ai/api/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
+# auth.json
+{
+  "OPENAI_API_KEY": "your-openrouter-api-key"
+}
+```
+
 **Previous (INCORRECT):**
 ```python
 cmd = [
@@ -114,23 +140,51 @@ cmd = [
 ]
 ```
 
-**Current (CORRECT):**
+**Previous Docker approach (FAILED):**
 ```python
-prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
 cmd = [
-    "docker",
-    "run",
-    "--rm",
-    "-e",
-    f"CODEX_PROMPT={prompt}",
-    "codex:latest",
-    "exec",
-    "--full-auto",
+    "docker", "exec", "--env", f"OPENROUTER_API_KEY={api_key}",
+    "codex", "codex", "exec",
+    "--full-auto", "--skip-git-repo-check",
     prompt,
 ]
+# FAILED: Docker sandbox blocks outgoing network to OpenRouter API
 ```
 
-**Status:** ✅ FIXED - 2026-04-17
+**Current (CORRECT - Host-based):**
+```python
+prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
+api_key = get_openrouter_api_key()
+
+# Setup config in ~/.codex/
+config_toml.write_text(f'''model_provider = "openrouter"
+model = "{model}"
+disable_response_storage = true
+
+[model_providers.openrouter]
+name = "OpenRouter"
+base_url = "https://openrouter.ai/api/v1"
+wire_api = "responses"
+requires_openai_auth = true
+''')
+
+auth_json.write_text(f'''{{ "OPENAI_API_KEY": "{api_key}" }}''')
+
+env = os.environ.copy()
+env["OPENROUTER_API_KEY"] = api_key
+env["OPENAI_API_KEY"] = api_key
+
+cmd = ["codex", "exec", "--full-auto", "--skip-git-repo-check", "--", prompt]
+return _run_command(cmd, task_id, timeout, env=env)
+```
+
+**Key Findings:**
+- Codex CLI's sandbox blocks outgoing network connections to external APIs
+- Running `codex exec` inside Docker container fails with "Connection failed"
+- Running `codex exec` on host system works correctly
+- Codex creates skill files when given skill creation prompts
+
+**Status:** ✅ FIXED - 2026-04-20 (Changed to host-based installation)
 
 ---
 
