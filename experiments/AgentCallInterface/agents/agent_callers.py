@@ -22,6 +22,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import shlex
 import subprocess
 import time
@@ -301,6 +302,9 @@ class HermesCaller(AgentCaller):
 
 class ClaudeCodeCaller(AgentCaller):
     CONTAINER_NAME = "claude_code"
+    RUNTIME_USER = "zi"
+    RUN_ROOT = "/tmp/claude-code-runs"
+    DEFAULT_BASE_URL = "https://openrouter.ai/api"
 
     def call(
         self,
@@ -309,7 +313,9 @@ class ClaudeCodeCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = self._build_task_prompt(task_input)
-        cmd = self._build_claude_command(prompt)
+        run_id = str(task_input.get("run_id", task_input.get("task_id", "claude-code-run")))
+        api_key = get_openrouter_api_key()
+        cmd = self._build_claude_command(prompt, run_id, model, api_key)
         return self._run_claude_command(cmd, task_input.get("task_id", ""), timeout)
 
     def _build_task_prompt(self, task_input: dict[str, Any]) -> str:
@@ -324,16 +330,53 @@ class ClaudeCodeCaller(AgentCaller):
             prompt.extend(["", f"## Test Patch\n{task_input['test_patch']}"])
         return "\n".join(prompt)
 
-    def _build_claude_command(self, prompt: str) -> list[str]:
+    def _safe_run_id(self, run_id: str) -> str:
+        safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", run_id).strip("._-")
+        return safe[:80] or "claude-code-run"
+
+    def _build_claude_command(
+        self,
+        prompt: str,
+        run_id: str = "claude-code-run",
+        model: str = DEFAULT_MODEL,
+        api_key: str = "",
+    ) -> list[str]:
+        safe_run_id = self._safe_run_id(run_id)
+        run_dir = f"{self.RUN_ROOT}/{safe_run_id}"
+        runtime_home = f"{run_dir}/home"
+        runtime_workspace = f"{run_dir}/workspace"
         shell_command = (
-            'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)" && '
-            'claude --dangerously-skip-permissions -p "$1"'
+            'set -e; '
+            'export HOME="$CLAUDE_RUNTIME_HOME"; '
+            'mkdir -p "$HOME/.claude" "$HOME/.cache" "$HOME/.config" "$CLAUDE_WORKSPACE"; '
+            'if [ -f /home/zi/.claude/settings.json ] && [ ! -f "$HOME/.claude/settings.json" ]; then '
+            'cp /home/zi/.claude/settings.json "$HOME/.claude/settings.json"; '
+            'fi; '
+            'cd "$CLAUDE_WORKSPACE"; '
+            'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"; '
+            'claude --dangerously-skip-permissions --model "$CLAUDE_MODEL" -p "$1"'
         )
         return [
             "docker",
             "exec",
+            "-u",
+            self.RUNTIME_USER,
             "-w",
             "/tmp",
+            "-e",
+            f"HOME={runtime_home}",
+            "-e",
+            f"CLAUDE_RUNTIME_HOME={runtime_home}",
+            "-e",
+            f"CLAUDE_WORKSPACE={runtime_workspace}",
+            "-e",
+            f"ANTHROPIC_BASE_URL={self.DEFAULT_BASE_URL}",
+            "-e",
+            f"OPENROUTER_BASE_URL={self.DEFAULT_BASE_URL}",
+            "-e",
+            f"ANTHROPIC_AUTH_TOKEN={api_key}",
+            "-e",
+            f"CLAUDE_MODEL={model}",
             self.CONTAINER_NAME,
             "bash",
             "-lc",
