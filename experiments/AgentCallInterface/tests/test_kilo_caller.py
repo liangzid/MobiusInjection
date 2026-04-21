@@ -6,12 +6,13 @@ from experiments.AgentCallInterface.agents.agent_callers import KiloCodeCaller
 def test_kilo_model_normalization_adds_single_prefix():
     caller = KiloCodeCaller()
 
-    assert caller._normalize_model("openrouter/free") == "kilo/openrouter/free"
+    assert caller._normalize_model("openrouter/free") == "openrouter/free"
     assert caller._normalize_model("kilo/openrouter/free") == "kilo/openrouter/free"
     assert (
         caller._normalize_model("nvidia/nemotron-3-super-120b-a12b:free")
-        == "kilo/nvidia/nemotron-3-super-120b-a12b:free"
+        == "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
     )
+    assert caller._normalize_model("big-pickle") == "kilo/big-pickle"
 
 
 def test_kilo_build_command_uses_project_dir_and_prompt_env():
@@ -31,7 +32,7 @@ def test_kilo_build_command_uses_project_dir_and_prompt_env():
     assert command[8:11] == ["kilo_code", "bash", "-lc"]
     assert f"cd {caller.PROJECT_DIR}" in command[-1]
     assert f"kilo run --dir {caller.PROJECT_DIR}" in command[-1]
-    assert "-m kilo/openrouter/free" in command[-1]
+    assert "-m openrouter/free" in command[-1]
     assert "--title \"$KILO_EVAL_RUN_ID\"" in command[-1]
     assert "Say hello from a long prompt." not in command[-1]
 
