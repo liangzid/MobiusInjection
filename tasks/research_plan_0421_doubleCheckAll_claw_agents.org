@@ -1,0 +1,82 @@
+
+
+
+
+
+This task is apart of our academic paper named mobius injection. The core is to evaluate the resistence of current claw-style agents against one type of prompt injection which is aims to construct infinite function calling. Our target is to reveal a new threat in this field.
+
+The claw-style agents you ONLY need to consider:
++ Hermes agent.
++ OpenClaw.
++ ZeroClaw.
++ Nanobot.
+
+
+I have previously install these four agents into four distinct docker containers, where the configuration as well as the calling method are defined in =~/AgentCodingDos/Env/*.md= and =~/AgentCodingDos/experiments/AgentCallinterface/*.[py,md]=, respectively.
+
+
+I also even premarily write a bash script to attempt to propose such an evaluation, shown in =~/AgentCodingDos/experiments/scripts/1.0.1.*.sh=.
+
+However, currently the script own some potential issues.
+
+
+
+What I hope you to do:
+
++ To achieve a comprehensive monitoring by collecting all information during the injection procedure, including the agent's output and some other logs in the project configuration files.
++ Comprehensive indicators to evaluate whether the injection is correct. For instance, whether the new skills are created and can be successfully recognized (and why it does not, how to fix it), if the new skill be called and the mobius strip(infinite calling be activated), and so on.
++ Fix the calling interface issues if any. You may need to fix this with the support of web search.
+
+
+
+Note:
++ Anything you are not sure or you want to learn more just temporarily stop and ask me.
+
+
+
+
+
+* Progress Summary [2026-04-21 Tue]
+
+** Verified status of the four target agents
+
++ Hermes agent: working through the current Python caller layer.
++ ZeroClaw: working through the current Python caller layer after explicitly passing provider/model/API key.
++ Nanobot: working through the current Python caller layer after generating a temporary valid runtime config instead of relying on the broken persisted config.
++ OpenClaw: partially fixed at the interface/config level, but still blocked by an internal runtime failure in the installed OpenClaw build.
+
+** Concrete interface fixes already made
+
++ Hermes caller now uses explicit OpenRouter provider/model parameters and quiet one-shot execution.
++ ZeroClaw caller now passes =OPENROUTER_API_KEY= and uses =agent -p openrouter --model ...=.
++ Nanobot caller now generates a temporary valid config at runtime and uses it with =nanobot agent --config ...=.
++ OpenClaw caller now uses an isolated evaluation profile =mobius-eval= instead of the broken default profile and parses the JSON output from =infer model run=.
+
+** Current OpenClaw situation
+
++ The original OpenClaw default profile was invalid and could not be trusted for evaluation.
++ An isolated profile =~/.openclaw-mobius-eval/= was created and brought to a valid state.
++ Gateway mode, gateway auth, and per-agent OpenRouter auth were configured for this isolated profile.
++ After these fixes, the old error =No API key found for provider "openrouter"= was removed.
++ However, OpenClaw still finishes each turn with:
+   + empty payloads,
+   + zero token usage,
+   + =stopReason: "stop"=,
+   + =replayInvalid: true=,
+   + =livenessState: "abandoned"=.
++ Therefore, the remaining OpenClaw problem is no longer a simple calling-interface/configuration issue in our wrapper.
++ The remaining blocker appears to be an upstream/runtime regression in the installed OpenClaw build when handling model output.
+
+** Practical conclusion for the current research stage
+
++ Hermes, ZeroClaw, and Nanobot are now in a usable state for the current evaluation workflow.
++ OpenClaw should currently be treated as =runtime-broken= for this experiment setup, rather than as a valid negative result for injection resistance.
++ In other words, OpenClaw's current failure cannot yet be interpreted as "the attack failed"; it is more accurately "the runner/runtime failed before producing a trustworthy experimental result".
+
+** Recommended next step for OpenClaw
+
++ The next repair step is likely one of the following:
+   + upgrade or downgrade the OpenClaw version inside the container,
+   + patch the OpenClaw runtime in the container,
+   + or add a response-normalizing proxy/workaround if the issue is caused by streamed provider fields.
+
