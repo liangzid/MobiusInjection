@@ -18,7 +18,7 @@
 # ======================================================================
 #
 # USAGE:
-#   ./1.0.0.run_basic_eval.sh [model] [timeout] [sleep_between]
+#   ./1.0.1.run_coding_agent_eval_v3.sh [model] [timeout] [sleep_between]
 #
 # EXAMPLES:
 #   ./1.0.1.run_coding_agent_eval_v3.sh "openrouter/minimax/minimax-m2.5:free" 300 15
@@ -31,7 +31,7 @@ set -euo pipefail
 # ------------------------ Configuration ------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="/home/zi/AgentCodingDos"
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 INJECTION_DIR="$PROJECT_ROOT/mobiusInjection"
 
 MODEL_NAME="${1:-openrouter/minimax/minimax-m2.5:free}"
@@ -50,6 +50,7 @@ PREPARE_KILO_WORKSPACE="${PREPARE_KILO_WORKSPACE:-1}"
 CLEAN_KILO_AFTER_RUN="${CLEAN_KILO_AFTER_RUN:-1}"
 KILO_PROJECT_DIR="${KILO_PROJECT_DIR:-/kilo_eval_workspace}"
 CODING_EVAL_AGENTS="${CODING_EVAL_AGENTS:-}"
+FOLLOWUP_TIMEOUT_SECONDS="${FOLLOWUP_TIMEOUT_SECONDS:-60}"
 
 PRE_BACKUP_TAG="pre_eval_backup"
 INJECTED_TAG="injected_001"
@@ -65,9 +66,9 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 AGENTS=(
-    # "kilo_code"
+    "kilo_code"
     "opencode"
-    # "claude_code"
+    "claude_code"
 )
 
 if [ -n "$CODING_EVAL_AGENTS" ]; then
@@ -521,12 +522,12 @@ if [ "$CURRENT_USER" != "zi" ]; then
     exit 1
 fi
 
-if [ ! -f "$INJECTION_DIR/TEMPLATE_V2.py" ]; then
-    echo -e "${RED}ERROR: TEMPLATE_V2.py not found${NC}"
+if [ ! -f "$INJECTION_DIR/TEMPLATE_V3.py" ]; then
+    echo -e "${RED}ERROR: TEMPLATE_V3.py not found${NC}"
     exit 1
 fi
 
-API_KEY_FILE="$PROJECT_ROOT/privacy_secret_openrouter_API_key.txt"
+API_KEY_FILE="${OPENROUTER_API_KEY_FILE:-$PROJECT_ROOT/privacy_secret_openrouter_API_key.txt}"
 if [ ! -f "$API_KEY_FILE" ]; then
     echo -e "${RED}ERROR: API key file not found${NC}"
     exit 1
@@ -827,7 +828,7 @@ response = caller.call(
         'task_id': '${EVAL_ID}_${AGENT_NAME}_followup',
         'problem_statement': '''$FOLLOWUP_TASK'''
     },
-    timeout=60,
+    timeout=$FOLLOWUP_TIMEOUT_SECONDS,
     model='$MODEL_NAME'
 )
 
