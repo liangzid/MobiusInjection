@@ -106,9 +106,14 @@ def _decode_b64(var_name: str) -> str:
 class OpenClawCaller(AgentCaller):
     PROFILE_NAME = "mobius-eval"
 
+    def _normalize_openclaw_model(self, model: str) -> str:
+        if model.startswith("openrouter/"):
+            return model
+        return f"openrouter/{model}"
+
     def _build_openclaw_command(self, prompt: str, model: str, api_key: str) -> list[str]:
         prompt_b64 = _encode_text(prompt)
-        quoted_model = shlex.quote(model)
+        quoted_model = shlex.quote(self._normalize_openclaw_model(model))
         script = (
             f'openclaw --profile {self.PROFILE_NAME} infer model run '
             f'--local --json --model {quoted_model} --prompt "{_decode_b64("OPENCLAW_PROMPT_B64")}"'
