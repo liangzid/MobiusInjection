@@ -366,6 +366,131 @@ class CursorCaller(AgentCaller):
 
 
 class OpenCodeCaller(AgentCaller):
+    PROJECT_DIR = "/opencode"
+    DEFAULT_OPENCODE_MODEL = "opencode/big-pickle"
+    MODEL_ALIASES = {
+        "openrouter/free": DEFAULT_OPENCODE_MODEL,
+        "nvidia/nemotron-3-super-120b-a12b:free": "opencode/nemotron-3-super-free",
+        "nemotron-3-super-free": "opencode/nemotron-3-super-free",
+    }
+
+    def _resolve_model(self, model: str) -> str:
+        if model in self.MODEL_ALIASES:
+            return self.MODEL_ALIASES[model]
+        if model.startswith("opencode/"):
+            return model
+        if "/" not in model:
+            return f"opencode/{model}"
+        return model
+
+    def _prepare_prompt(self, prompt: str) -> str:
+        return (
+            "OpenCode environment note: run inside project directory /opencode. "
+            "When creating OpenCode skills, use exactly "
+            ".opencode/skills/<skill-name>/SKILL.md under /opencode. "
+            "Do not use /opencode/skills/*.md or /opencode/skill/*. "
+            "The directory name must match the YAML name field.\n\n"
+            + prompt
+        )
+
+    def _build_opencode_command(self, prompt: str, model: str, api_key: str) -> list[str]:
+        prepared_prompt = self._prepare_prompt(prompt)
+        script = (
+            f"mkdir -p {self.PROJECT_DIR} && cd {self.PROJECT_DIR} && "
+            f"/root/.opencode/bin/opencode run --dir {self.PROJECT_DIR} "
+            f"-m {shlex.quote(self._resolve_model(model))} "
+            "--dangerously-skip-permissions "
+            f"\"{_decode_b64('OPENCODE_PROMPT_B64')}\""
+        )
+        return _docker_bash_command(
+            "opencode",
+            script,
+            {
+                "OPENROUTER_API_KEY": api_key,
+                "OPENCODE_PROMPT_B64": _encode_text(prepared_prompt),
+            },
+        )
+
+    def _combine_output(self, stdout: str | bytes | None, stderr: str | bytes | None) -> str:
+        stdout_text = self._to_text(stdout)
+        stderr_text = self._to_text(stderr)
+        sections = []
+        if stdout_text:
+            sections.append("=== STDOUT ===\n" + stdout_text)
+        if stderr_text:
+            sections.append("=== STDERR ===\n" + stderr_text)
+        return "\n".join(sections)
+
+    def _to_text(self, value: str | bytes | None) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, bytes):
+            return value.decode(errors="replace")
+        return value
+
+    def _looks_like_error(self, stderr: str) -> bool:
+        error_markers = (
+            "Error:",
+            "ProviderModelNotFoundError",
+            "Model not found",
+            "API Error:",
+        )
+        return any(marker in stderr for marker in error_markers)
+
+    def _cleanup_after_timeout(self, cmd: list[str]) -> None:
+        if "docker" not in cmd[:1] or "opencode" not in cmd:
+            return
+        try:
+            subprocess.run(
+                [
+                    "docker",
+                    "exec",
+                    "opencode",
+                    "bash",
+                    "-lc",
+                    "pkill -f '/root/.opencode/bin/opencode run --dir /opencode' || true",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+    def _run_opencode_command(
+        self, cmd: list[str], task_id: str, timeout: int
+    ) -> AgentResponse:
+        start = time.time()
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            stdout = self._to_text(exc.stdout)
+            stderr = self._to_text(exc.stderr)
+            combined = self._combine_output(stdout, stderr)
+            self._cleanup_after_timeout(cmd)
+            return AgentResponse(
+                success=False,
+                output=combined,
+                error=f"Timeout after {timeout}s",
+                duration=time.time() - start,
+                task_id=task_id,
+                stderr=stderr,
+                returncode=None,
+            )
+
+        stderr = result.stderr or ""
+        combined = self._combine_output(result.stdout, stderr)
+        success = result.returncode == 0 and not self._looks_like_error(stderr)
+        return AgentResponse(
+            success=success,
+            output=combined,
+            error=None if success else stderr or "OpenCode command failed",
+            duration=time.time() - start,
+            task_id=task_id,
+            stderr=stderr,
+            returncode=result.returncode,
+        )
+
     def call(
         self,
         task_input: dict[str, Any],
@@ -374,19 +499,8 @@ class OpenCodeCaller(AgentCaller):
     ) -> AgentResponse:
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         api_key = get_openrouter_api_key()
-        cmd = [
-            "docker",
-            "exec",
-            "-e",
-            f"OPENROUTER_API_KEY={api_key}",
-            "opencode",
-            "/root/.opencode/bin/opencode",
-            "run",
-            "-m",
-            f"opencode/{model}",
-            prompt,
-        ]
-        return _run_command(cmd, task_input.get("task_id", ""), timeout)
+        cmd = self._build_opencode_command(prompt, model, api_key)
+        return self._run_opencode_command(cmd, task_input.get("task_id", ""), timeout)
 
 
 class KiloCodeCaller(AgentCaller):

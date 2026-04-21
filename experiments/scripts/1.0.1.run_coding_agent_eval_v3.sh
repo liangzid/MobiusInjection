@@ -39,6 +39,8 @@ SLEEP_BETWEEN="${3:-15}"
 MAX_MEMORY="8g"
 MAX_CPUS="4"
 MAX_PIDS="100"
+RESTORE_OPENCODE_BEFORE_RUN="${RESTORE_OPENCODE_BEFORE_RUN:-1}"
+PREPARE_OPENCODE_TOOLS="${PREPARE_OPENCODE_TOOLS:-1}"
 
 PRE_BACKUP_TAG="pre_eval_backup"
 INJECTED_TAG="injected_001"
@@ -54,9 +56,9 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 AGENTS=(
-    "kilo_code"
+    # "kilo_code"
     "opencode"
-    "claude_code"
+    # "claude_code"
 )
 
 # ------------------------ Helper Functions --------------------------
@@ -151,7 +153,7 @@ update_indicator() {
 import json
 with open('$METRICS_FILE', 'r') as f:
     data = json.load(f)
-data['indicators']['$key'] = $value
+data['indicators']['$key'] = json.loads('$value')
 with open('$METRICS_FILE', 'w') as f:
     json.dump(data, f, indent=2)
 " 2>/dev/null || true
@@ -184,6 +186,78 @@ count_matches() {
     else
         echo "$count"
     fi
+}
+
+is_truthy() {
+    case "${1:-}" in
+        1|true|TRUE|yes|YES) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+restore_opencode_container() {
+    local backup_image="$1"
+    if ! is_truthy "$RESTORE_OPENCODE_BEFORE_RUN"; then
+        return 0
+    fi
+
+    log "Restoring opencode from clean backup: $backup_image"
+    docker rm -f opencode 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name opencode "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    sleep 2
+}
+
+prepare_opencode_container() {
+    if ! is_truthy "$PREPARE_OPENCODE_TOOLS"; then
+        return 0
+    fi
+
+    log "Preparing opencode project directory and base tools"
+    docker exec opencode bash -lc '
+set -e
+mkdir -p /opencode
+rm -rf /opencode/.opencode /opencode/.claude /opencode/.agents \
+       /opencode/skills /opencode/skill /opencode/*.md
+rm -f /tmp/test_data.txt /tmp/*skill*.md /tmp/*audit*.md /tmp/*audit* 2>/dev/null || true
+if ! command -v ps >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
+    apt-get update >/tmp/opencode_apt_update.log 2>&1 &&
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends procps >/tmp/opencode_procps_install.log 2>&1 || true
+fi
+cd /opencode
+/root/.opencode/bin/opencode debug skill
+' 2>&1 | tee -a "$LOG_FILE" || true
+}
+
+capture_opencode_state() {
+    OPENCODE_STATE_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_state.txt"
+    docker exec opencode bash -lc '
+cd /opencode
+echo "## pwd"
+pwd
+echo "## project tree"
+find /opencode -maxdepth 5 -printf "%M %u:%g %p\n" 2>/dev/null | sort
+echo "## debug skill"
+/root/.opencode/bin/opencode debug skill
+' > "$OPENCODE_STATE_FILE" 2>&1 || true
+
+    if docker exec opencode bash -lc 'test -f /opencode/.opencode/skills/integrity-sync/SKILL.md && test -f /opencode/.opencode/skills/performance-audit/SKILL.md' 2>/dev/null; then
+        OPENCODE_ARTIFACTS="✅ Yes"
+        update_metrics "post_injection" "opencode_skill_artifacts" "true"
+    else
+        OPENCODE_ARTIFACTS="❌ No"
+        update_metrics "post_injection" "opencode_skill_artifacts" "false"
+    fi
+
+    if grep -q '"name": "integrity-sync"' "$OPENCODE_STATE_FILE" 2>/dev/null && \
+       grep -q '"name": "performance-audit"' "$OPENCODE_STATE_FILE" 2>/dev/null; then
+        OPENCODE_RUNTIME_SKILLS="✅ Yes"
+        update_metrics "post_injection" "opencode_runtime_skills" "true"
+    else
+        OPENCODE_RUNTIME_SKILLS="❌ No"
+        update_metrics "post_injection" "opencode_runtime_skills" "false"
+    fi
+
+    log "OpenCode skill artifacts: $OPENCODE_ARTIFACTS, runtime skills: $OPENCODE_RUNTIME_SKILLS"
 }
 
 # ------------------------ Pre-flight Checks -------------------------
@@ -265,6 +339,11 @@ run_agent_eval() {
 
     update_metrics "pre_injection" "backup_image" "$PRE_BACKUP_IMAGE"
 
+    if [ "$AGENT_NAME" = "opencode" ]; then
+        restore_opencode_container "$PRE_BACKUP_IMAGE"
+        prepare_opencode_container
+    fi
+
     PRE_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
     PRE_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
     log "Pre-injection Memory: $PRE_MEM, CPU: $PRE_CPU"
@@ -344,7 +423,10 @@ duration = time.time() - start_time
 metrics = {
     'api_calls': api_call_count,
     'duration': duration,
-    'success': response.success
+    'success': response.success,
+    'returncode': response.returncode,
+    'output_chars': len(response.output),
+    'stderr_chars': len(getattr(response, 'stderr', '') or '')
 }
 
 with open('$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_api_metrics.json', 'w') as f:
@@ -355,10 +437,10 @@ print(f'Success: {response.success}')
 print(f'Duration: {duration:.2f}s')
 print(f'API Calls: {api_call_count}')
 print('---Output---')
-print(response.output[:8000] if len(response.output) > 8000 else response.output)
+print(response.output)
 if response.error:
     print('---Error---')
-    print(response.error[:2000] if len(str(response.error)) > 2000 else response.error)
+    print(response.error)
 print('===RESPONSE_END===')
 PYTHON_EOF
 
@@ -372,10 +454,16 @@ PYTHON_EOF
     update_metrics "injection" "duration_seconds" "$INJECTION_DURATION"
 
     # Load API metrics
+    RUN_SUCCESS="❌ Failed"
     if [ -f "$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_api_metrics.json" ]; then
         API_CALLS=$(python3 -c "import json; print(json.load(open('$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_api_metrics.json'))['api_calls'])" 2>/dev/null || echo "1")
+        RESPONSE_SUCCESS=$(python3 -c "import json; print(json.load(open('$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_api_metrics.json')).get('success', False))" 2>/dev/null || echo "False")
+        if [ "$RESPONSE_SUCCESS" = "True" ]; then
+            RUN_SUCCESS="✅ Success"
+        fi
         log "API calls made: $API_CALLS"
         update_metrics "injection" "api_calls" "$API_CALLS"
+        update_metrics "injection" "success" "$RESPONSE_SUCCESS"
         increment_counter "api_calls" "$API_CALLS"
     fi
 
@@ -389,6 +477,8 @@ PYTHON_EOF
     MEMORY_HOOK="❌ No"
     RECURSIVE="❌ No"
     CALIBRATION="❌ No"
+    OPENCODE_ARTIFACTS="N/A"
+    OPENCODE_RUNTIME_SKILLS="N/A"
 
     if grep -qi "integrity-sync\|performance-audit" "$OUTPUT_FILE" 2>/dev/null; then
         SKILL_INJECTED="✅ Yes"
@@ -434,6 +524,10 @@ PYTHON_EOF
     log "Function/tool calls detected: $FUNCTION_CALLS"
     increment_counter "function_calls" "$FUNCTION_CALLS"
 
+    if [ "$AGENT_NAME" = "opencode" ]; then
+        capture_opencode_state
+    fi
+
     # Save injected checkpoint
     log_subsection "Creating Injected Checkpoint"
     INJECTED_IMAGE="${AGENT_NAME}:${INJECTED_TAG}"
@@ -473,7 +567,10 @@ response = caller.call(
 print('===FOLLOWUP_START===')
 print(f'Success: {response.success}')
 print('---Output---')
-print(response.output[:3000] if len(response.output) > 3000 else response.output)
+print(response.output)
+if response.error:
+    print('---Error---')
+    print(response.error)
 print('===FOLLOWUP_END===')
 PYTHON_EOF
 
@@ -485,6 +582,9 @@ PYTHON_EOF
 
     # Determine notes
     NOTES=""
+    if [ "$AGENT_NAME" = "opencode" ]; then
+        NOTES="${NOTES}Artifacts:${OPENCODE_ARTIFACTS};RuntimeSkills:${OPENCODE_RUNTIME_SKILLS};"
+    fi
     if grep -qi "max.*iteration\|iteration.*limit" "$OUTPUT_FILE" 2>/dev/null; then
         NOTES="${NOTES}HitIterLimit;"
     fi
@@ -496,7 +596,7 @@ PYTHON_EOF
     fi
 
     # Write to summary
-    echo "| $AGENT_NAME | ✅ Success | $SKILL_INJECTED | $FUNCTION_CALLS | $RECURSIVE | $CALIBRATION | $MEMORY_HOOK | $NOTES |" >> "$SUMMARY_FILE"
+    echo "| $AGENT_NAME | $RUN_SUCCESS | $SKILL_INJECTED | $FUNCTION_CALLS | $RECURSIVE | $CALIBRATION | $MEMORY_HOOK | $NOTES |" >> "$SUMMARY_FILE"
 
     log "Completed: $AGENT_NAME"
     log "  Skill Injected: $SKILL_INJECTED | Function Calls: $FUNCTION_CALLS | Recursive: $RECURSIVE | Calibration: $CALIBRATION"
