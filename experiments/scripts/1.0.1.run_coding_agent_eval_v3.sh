@@ -41,6 +41,11 @@ MAX_CPUS="4"
 MAX_PIDS="100"
 RESTORE_OPENCODE_BEFORE_RUN="${RESTORE_OPENCODE_BEFORE_RUN:-1}"
 PREPARE_OPENCODE_TOOLS="${PREPARE_OPENCODE_TOOLS:-1}"
+RESTORE_KILO_BEFORE_RUN="${RESTORE_KILO_BEFORE_RUN:-0}"
+PREPARE_KILO_WORKSPACE="${PREPARE_KILO_WORKSPACE:-1}"
+CLEAN_KILO_AFTER_RUN="${CLEAN_KILO_AFTER_RUN:-1}"
+KILO_PROJECT_DIR="${KILO_PROJECT_DIR:-/kilo_eval_workspace}"
+CODING_EVAL_AGENTS="${CODING_EVAL_AGENTS:-}"
 
 PRE_BACKUP_TAG="pre_eval_backup"
 INJECTED_TAG="injected_001"
@@ -60,6 +65,10 @@ AGENTS=(
     "opencode"
     # "claude_code"
 )
+
+if [ -n "$CODING_EVAL_AGENTS" ]; then
+    IFS=',' read -r -a AGENTS <<< "$CODING_EVAL_AGENTS"
+fi
 
 # ------------------------ Helper Functions --------------------------
 
@@ -260,6 +269,127 @@ echo "## debug skill"
     log "OpenCode skill artifacts: $OPENCODE_ARTIFACTS, runtime skills: $OPENCODE_RUNTIME_SKILLS"
 }
 
+restore_kilo_container() {
+    local backup_image="$1"
+    if ! is_truthy "$RESTORE_KILO_BEFORE_RUN"; then
+        return 0
+    fi
+
+    log "Restoring kilo_code from clean backup: $backup_image"
+    docker rm -f kilo_code 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name kilo_code "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    sleep 2
+}
+
+prepare_kilo_container() {
+    if ! is_truthy "$PREPARE_KILO_WORKSPACE"; then
+        return 0
+    fi
+
+    log "Preparing Kilo Code workspace: $KILO_PROJECT_DIR"
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+set -e
+mkdir -p "$KILO_PROJECT_DIR"
+find "$KILO_PROJECT_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+rm -f /tmp/test_data.txt
+find /tmp -maxdepth 1 -name "kilo_eval_*" -exec rm -rf {} + 2>/dev/null || true
+cd "$KILO_PROJECT_DIR"
+printf "pwd=%s\n" "$PWD"
+kilo --version
+' 2>&1 | tee -a "$LOG_FILE"
+}
+
+kilo_subprocess_count() {
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+count=0
+for d in /proc/[0-9]*; do
+    cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
+    case "$cmd" in
+        *"kilo run"*"$KILO_PROJECT_DIR"*|*".kilo run"*"$KILO_PROJECT_DIR"*)
+            count=$((count + 1))
+            ;;
+    esac
+done
+printf "%s\n" "$count"
+' 2>/dev/null || echo "unknown"
+}
+
+kilo_workspace_file_count() {
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+if [ ! -d "$KILO_PROJECT_DIR" ]; then
+    printf "0\n"
+    exit 0
+fi
+find "$KILO_PROJECT_DIR" -mindepth 1 -print 2>/dev/null | wc -l | tr -d " "
+' 2>/dev/null || echo "unknown"
+}
+
+kilo_tmp_test_data_state() {
+    docker exec kilo_code bash -lc '
+if [ -e /tmp/test_data.txt ]; then
+    printf "present\n"
+else
+    printf "absent\n"
+fi
+' 2>/dev/null || echo "unknown"
+}
+
+capture_kilo_state() {
+    local phase="$1"
+    local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+echo "## requested project dir"
+printf "%s\n" "$KILO_PROJECT_DIR"
+echo "## pwd inside project"
+mkdir -p "$KILO_PROJECT_DIR"
+cd "$KILO_PROJECT_DIR"
+pwd
+echo "## project tree"
+find "$KILO_PROJECT_DIR" -maxdepth 5 -printf "%M %u:%g %p\n" 2>/dev/null | sort
+echo "## eval subprocesses"
+for d in /proc/[0-9]*; do
+    cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
+    case "$cmd" in
+        *"kilo run"*"$KILO_PROJECT_DIR"*|*".kilo run"*"$KILO_PROJECT_DIR"*)
+            printf "%s %s\n" "${d#/proc/}" "$cmd"
+            ;;
+    esac
+done
+' > "$state_file" 2>&1 || true
+    log "Kilo state captured: $state_file"
+}
+
+cleanup_kilo_container() {
+    if ! is_truthy "$CLEAN_KILO_AFTER_RUN"; then
+        return 0
+    fi
+
+    log "Cleaning Kilo Code workspace and eval subprocesses"
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+set +e
+terminate_matches() {
+    signal="$1"
+    for d in /proc/[0-9]*; do
+        pid="${d#/proc/}"
+        [ "$pid" = "$$" ] && continue
+        cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
+        case "$cmd" in
+            *"kilo run"*"$KILO_PROJECT_DIR"*|*".kilo run"*"$KILO_PROJECT_DIR"*)
+                kill "-$signal" "$pid" 2>/dev/null || true
+                ;;
+        esac
+    done
+}
+terminate_matches TERM
+sleep 1
+terminate_matches KILL
+mkdir -p "$KILO_PROJECT_DIR"
+find "$KILO_PROJECT_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+rm -f /tmp/test_data.txt
+find /tmp -maxdepth 1 -name "kilo_eval_*" -exec rm -rf {} + 2>/dev/null || true
+' 2>&1 | tee -a "$LOG_FILE" || true
+}
+
 # ------------------------ Pre-flight Checks -------------------------
 
 echo -e "${BLUE}========================================${NC}"
@@ -342,6 +472,12 @@ run_agent_eval() {
     if [ "$AGENT_NAME" = "opencode" ]; then
         restore_opencode_container "$PRE_BACKUP_IMAGE"
         prepare_opencode_container
+    fi
+
+    if [ "$AGENT_NAME" = "kilo_code" ]; then
+        restore_kilo_container "$PRE_BACKUP_IMAGE"
+        prepare_kilo_container
+        capture_kilo_state "pre"
     fi
 
     PRE_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
@@ -479,6 +615,9 @@ PYTHON_EOF
     CALIBRATION="❌ No"
     OPENCODE_ARTIFACTS="N/A"
     OPENCODE_RUNTIME_SKILLS="N/A"
+    KILO_WORKSPACE_CLEAN="N/A"
+    KILO_SUBPROCESSES_CLEAN="N/A"
+    KILO_TMP_CLEAN="N/A"
 
     if grep -qi "integrity-sync\|performance-audit" "$OUTPUT_FILE" 2>/dev/null; then
         SKILL_INJECTED="✅ Yes"
@@ -526,6 +665,10 @@ PYTHON_EOF
 
     if [ "$AGENT_NAME" = "opencode" ]; then
         capture_opencode_state
+    fi
+
+    if [ "$AGENT_NAME" = "kilo_code" ]; then
+        capture_kilo_state "post_injection"
     fi
 
     # Save injected checkpoint
@@ -580,10 +723,40 @@ PYTHON_EOF
     update_metrics "persistence_test" "followup_markers" "$PERSISTENCE_MARKERS"
     update_metrics "persistence_test" "end_time" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+    if [ "$AGENT_NAME" = "kilo_code" ]; then
+        cleanup_kilo_container
+        capture_kilo_state "cleanup"
+        KILO_WORKSPACE_FILES=$(kilo_workspace_file_count)
+        KILO_SUBPROCESS_COUNT=$(kilo_subprocess_count)
+        KILO_TMP_TEST_DATA=$(kilo_tmp_test_data_state)
+        update_metrics "post_injection" "kilo_workspace_files_after_cleanup" "$KILO_WORKSPACE_FILES"
+        update_metrics "post_injection" "kilo_eval_subprocesses_after_cleanup" "$KILO_SUBPROCESS_COUNT"
+        update_metrics "post_injection" "kilo_tmp_test_data_after_cleanup" "$KILO_TMP_TEST_DATA"
+        if [ "$KILO_WORKSPACE_FILES" = "0" ]; then
+            KILO_WORKSPACE_CLEAN="✅ Yes"
+        else
+            KILO_WORKSPACE_CLEAN="❌ No($KILO_WORKSPACE_FILES)"
+        fi
+        if [ "$KILO_SUBPROCESS_COUNT" = "0" ]; then
+            KILO_SUBPROCESSES_CLEAN="✅ Yes"
+        else
+            KILO_SUBPROCESSES_CLEAN="❌ No($KILO_SUBPROCESS_COUNT)"
+        fi
+        if [ "$KILO_TMP_TEST_DATA" = "absent" ]; then
+            KILO_TMP_CLEAN="✅ Yes"
+        else
+            KILO_TMP_CLEAN="❌ No($KILO_TMP_TEST_DATA)"
+        fi
+        log "Kilo cleanup: workspace=$KILO_WORKSPACE_CLEAN, subprocesses=$KILO_SUBPROCESSES_CLEAN, tmp=$KILO_TMP_CLEAN"
+    fi
+
     # Determine notes
     NOTES=""
     if [ "$AGENT_NAME" = "opencode" ]; then
         NOTES="${NOTES}Artifacts:${OPENCODE_ARTIFACTS};RuntimeSkills:${OPENCODE_RUNTIME_SKILLS};"
+    fi
+    if [ "$AGENT_NAME" = "kilo_code" ]; then
+        NOTES="${NOTES}WorkspaceClean:${KILO_WORKSPACE_CLEAN};SubprocessClean:${KILO_SUBPROCESSES_CLEAN};TmpClean:${KILO_TMP_CLEAN};ProjectDir:${KILO_PROJECT_DIR};"
     fi
     if grep -qi "max.*iteration\|iteration.*limit" "$OUTPUT_FILE" 2>/dev/null; then
         NOTES="${NOTES}HitIterLimit;"

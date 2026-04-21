@@ -504,6 +504,148 @@ class OpenCodeCaller(AgentCaller):
 
 
 class KiloCodeCaller(AgentCaller):
+    CONTAINER_NAME = "kilo_code"
+    PROJECT_DIR = "/kilo_eval_workspace"
+    INNER_TIMEOUT_GRACE_SECONDS = 5
+    HOST_TIMEOUT_GRACE_SECONDS = 10
+
+    def _normalize_model(self, model: str) -> str:
+        if model.startswith("kilo/"):
+            return model
+        return f"kilo/{model}"
+
+    def _run_id(self, task_id: str) -> str:
+        safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in task_id)
+        return f"kilo-eval-{safe or 'task'}"
+
+    def _build_kilo_command(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        task_id: str,
+        timeout: int,
+    ) -> tuple[list[str], str]:
+        run_id = self._run_id(task_id)
+        project_dir = shlex.quote(self.PROJECT_DIR)
+        quoted_model = shlex.quote(self._normalize_model(model))
+        quoted_timeout = shlex.quote(str(timeout))
+        script = (
+            "set -u; "
+            f"mkdir -p {project_dir}; "
+            f"cd {project_dir}; "
+            'KILO_PROMPT="$(printf %s "$KILO_PROMPT_B64" | base64 -d)"; '
+            f"timeout --kill-after={self.INNER_TIMEOUT_GRACE_SECONDS}s {quoted_timeout}s "
+            f"kilo run --dir {project_dir} -m {quoted_model} --auto "
+            '--title "$KILO_EVAL_RUN_ID" "$KILO_PROMPT"'
+        )
+        return (
+            _docker_bash_command(
+                self.CONTAINER_NAME,
+                script,
+                {
+                    "OPENROUTER_API_KEY": api_key,
+                    "KILO_PROMPT_B64": _encode_text(prompt),
+                    "KILO_EVAL_RUN_ID": run_id,
+                },
+            ),
+            run_id,
+        )
+
+    def _to_text(self, value: str | bytes | None) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, bytes):
+            return value.decode(errors="replace")
+        return value
+
+    def _combine_output(self, stdout: str | bytes | None, stderr: str | bytes | None) -> str:
+        stdout_text = self._to_text(stdout)
+        stderr_text = self._to_text(stderr)
+        sections = []
+        if stdout_text:
+            sections.append("=== STDOUT ===\n" + stdout_text)
+        if stderr_text:
+            sections.append("=== STDERR ===\n" + stderr_text)
+        return "\n".join(sections)
+
+    def _cleanup_after_timeout(self, run_id: str) -> None:
+        script = r'''
+marker="${KILO_EVAL_RUN_ID:?}"
+terminate_matches() {
+    signal="$1"
+    for d in /proc/[0-9]*; do
+        pid="${d#/proc/}"
+        [ "$pid" = "$$" ] && continue
+        cmd="$(tr '\0' ' ' < "$d/cmdline" 2>/dev/null || true)"
+        case "$cmd" in
+            *"kilo run"*"$marker"*|*".kilo run"*"$marker"*)
+                kill "-$signal" "$pid" 2>/dev/null || true
+                ;;
+        esac
+    done
+}
+terminate_matches TERM
+sleep 1
+terminate_matches KILL
+'''
+        try:
+            subprocess.run(
+                _docker_bash_command(
+                    self.CONTAINER_NAME,
+                    script,
+                    {"KILO_EVAL_RUN_ID": run_id},
+                ),
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+    def _run_kilo_command(
+        self, cmd: list[str], task_id: str, timeout: int, run_id: str
+    ) -> AgentResponse:
+        start = time.time()
+        host_timeout = timeout + self.HOST_TIMEOUT_GRACE_SECONDS
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=host_timeout)
+        except subprocess.TimeoutExpired as exc:
+            stdout = self._to_text(exc.stdout)
+            stderr = self._to_text(exc.stderr)
+            self._cleanup_after_timeout(run_id)
+            return AgentResponse(
+                success=False,
+                output=self._combine_output(stdout, stderr),
+                error=f"Timeout after {timeout}s",
+                duration=time.time() - start,
+                task_id=task_id,
+                stderr=stderr,
+                returncode=None,
+            )
+
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        combined = self._combine_output(stdout, stderr)
+        timed_out = result.returncode in (124, 137)
+        if timed_out:
+            self._cleanup_after_timeout(run_id)
+        success = result.returncode == 0
+        error = None
+        if timed_out:
+            error = f"Timeout after {timeout}s"
+        elif not success:
+            error = stderr or stdout or "Kilo Code command failed"
+        return AgentResponse(
+            success=success,
+            output=combined,
+            error=error,
+            duration=time.time() - start,
+            task_id=task_id,
+            stderr=stderr,
+            returncode=result.returncode,
+        )
+
     def call(
         self,
         task_input: dict[str, Any],
@@ -511,18 +653,10 @@ class KiloCodeCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
-        cmd = [
-            "docker",
-            "exec",
-            "kilo_code",
-            "kilo",
-            "run",
-            "-m",
-            f"kilo/{model}",
-            "--auto",
-            prompt,
-        ]
-        return _run_command(cmd, task_input.get("task_id", ""), timeout)
+        task_id = task_input.get("task_id", "")
+        api_key = get_openrouter_api_key()
+        cmd, run_id = self._build_kilo_command(prompt, model, api_key, task_id, timeout)
+        return self._run_kilo_command(cmd, task_id, timeout, run_id)
 
 
 class CodexCaller(AgentCaller):
