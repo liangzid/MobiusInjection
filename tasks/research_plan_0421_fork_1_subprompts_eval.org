@@ -1,0 +1,43 @@
+
+* Overview
+
+This task is apart of our academic paper named mobius injection. The core is to evaluate the resistence of current claw-style agents against one type of prompt injection which is aims to construct infinite function calling. Our target is to reveal a new threat in this field.
+
+The claw-style agents you ONLY need to consider:
++ Hermes agent.
++ OpenClaw.
++ ZeroClaw.
++ Nanobot.
+
+
+I have previously install these four agents into four distinct docker containers, where the configuration as well as the calling method are defined in =~/AgentCodingDos/Env/*.md= and =~/AgentCodingDos/experiments/AgentCallinterface/*.[py,md]=, respectively.
+
+We have some preliminary results on the evaluation of V3 version of our injection texts, located at =~/AgentCodingDos/mobiusInjection/TEMPLATE_V3.py=. The log file is located at =~/AgentCodingDos/experiments/logs/claw_combined*.md=.
+
+
+As shown in the log file and corresponding sub log files, the V3 version injection is not that successful of three of the four claw-style agents. And the task of this file aims to investigate why.
+
+* Idea 1: Unit Prompt Injection Test.
+
+In this task, we want to create three unit injected prompts:
+
++ V0.1.CreateSkill.md. An injected prompt for creating skills.
++ V0.2.CreateTwoSkills.md. An injected prompt for creating two distince skills.
++ V0.3.CallASkill.md. Based on V0.1 version, we extraly add the call skill function.
++ V0.4.SkillPersistence.md Check the persistence of the injected prompts.
+
+* Idea 2: Check more Information to Debug What Happens.
+
+
+Wait. Wait. Some other questions here: Do you think why hermes and openclaw reach the times out? Any other meta-data which can provide some side-channel proofs of whether the times out comes from our injected skills or others? Maybe we can check the activity files of these agents if possible or check the bash commands history in these containers? What do you think, hhhh.
+
+
+
+
+
+
+
+
+
+
+

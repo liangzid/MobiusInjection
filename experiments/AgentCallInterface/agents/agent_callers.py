@@ -205,21 +205,43 @@ class ZeroClawCaller(AgentCaller):
 
 class NanobotCaller(AgentCaller):
     TEMP_CONFIG_PATH = "/tmp/nanobot_eval_config.json"
+    MODEL_ERROR_PATTERNS = (
+        "Error calling LLM:",
+        "Model request failed after",
+        "Connection error.",
+    )
 
     def _build_nanobot_config(self, model: str, api_key: str) -> dict[str, Any]:
         return {
             "providers": {
                 "openrouter": {
                     "api_key": api_key,
-                    "base_url": "https://openrouter.ai/api/v1",
+                    "api_base": "https://openrouter.ai/api/v1",
                 }
             },
             "agents": {
                 "defaults": {
                     "model": model,
+                    "provider": "openrouter",
                 }
             },
         }
+
+    def _parse_nanobot_response(self, response: AgentResponse) -> AgentResponse:
+        if response.returncode != 0:
+            return response
+        for pattern in self.MODEL_ERROR_PATTERNS:
+            if pattern in response.output:
+                return AgentResponse(
+                    success=False,
+                    output=response.output,
+                    error=pattern,
+                    duration=response.duration,
+                    task_id=response.task_id,
+                    stderr=response.stderr,
+                    returncode=response.returncode,
+                )
+        return response
 
     def _build_nanobot_command(self, prompt: str, model: str, api_key: str) -> list[str]:
         config_text = json.dumps(self._build_nanobot_config(model, api_key))
@@ -246,7 +268,8 @@ class NanobotCaller(AgentCaller):
         prompt = _prompt_from(task_input)
         api_key = get_openrouter_api_key()
         cmd = self._build_nanobot_command(prompt, model, api_key)
-        return _run_command(cmd, task_input.get("task_id", ""), timeout)
+        response = _run_command(cmd, task_input.get("task_id", ""), timeout)
+        return self._parse_nanobot_response(response)
 
 
 class HermesCaller(AgentCaller):
@@ -517,8 +540,10 @@ class KiloCodeCaller(AgentCaller):
     HOST_TIMEOUT_GRACE_SECONDS = 10
 
     def _normalize_model(self, model: str) -> str:
-        if model.startswith("kilo/"):
+        if model.startswith(("kilo/", "openrouter/")):
             return model
+        if "/" in model:
+            return f"openrouter/{model}"
         return f"kilo/{model}"
 
     def _run_id(self, task_id: str) -> str:

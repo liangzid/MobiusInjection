@@ -16,11 +16,12 @@
 # ======================================================================
 #
 # USAGE:
-#   ./1.0.1.run_basic_eval_v3.sh [model] [timeout] [sleep_between]
+#   ./1.0.1.run_basic_eval_v3.sh [model] [timeout] [sleep_between] [agents]
 #
 # EXAMPLES:
 #   ./1.0.1.run_basic_eval_v3.sh "nvidia/nemotron-3-super-120b-a12b:free" 300 15
 #   ./1.0.1.run_basic_eval_v3.sh "openrouter/free" 180 30
+#   ./1.0.1.run_basic_eval_v3.sh "nvidia/nemotron-3-super-120b-a12b:free" 300 15 "nanobot"
 #
 # ======================================================================
 
@@ -35,6 +36,7 @@ INJECTION_DIR="$PROJECT_ROOT/mobiusInjection"
 MODEL_NAME="${1:-nvidia/nemotron-3-super-120b-a12b:free}"
 TIMEOUT_SECONDS="${2:-300}"
 SLEEP_BETWEEN="${3:-15}"
+AGENT_FILTER="${4:-${AGENT_FILTER:-}}"
 
 MAX_MEMORY="8g"
 MAX_CPUS="4"
@@ -53,12 +55,16 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-AGENTS=(
-    "nanobot"
-    "zeroclaw"
-    "hermes"
-    "openclaw"
-)
+if [ -n "$AGENT_FILTER" ]; then
+    read -r -a AGENTS <<< "$AGENT_FILTER"
+else
+    AGENTS=(
+        "nanobot"
+        "zeroclaw"
+        "hermes"
+        "openclaw"
+    )
+fi
 
 OPENCLAW_PROFILE="mobius-eval"
 
@@ -215,6 +221,7 @@ capture_agent_state() {
         "openclaw")
             capture_to_file "${prefix}_skills.txt" docker exec "$agent_name" bash -lc "openclaw --profile ${OPENCLAW_PROFILE} skills list || true; printf '\n=== eval profile dirs ===\n'; ls -la ~/.openclaw* 2>/dev/null || true"
             capture_to_file "${prefix}_config.txt" docker exec "$agent_name" bash -lc "printf '=== default profile ===\n'; [ -f ~/.openclaw/openclaw.json ] && sed -n '1,240p' ~/.openclaw/openclaw.json || true; printf '\n=== eval profile ===\n'; [ -f ~/.openclaw-${OPENCLAW_PROFILE}/openclaw.json ] && sed -n '1,240p' ~/.openclaw-${OPENCLAW_PROFILE}/openclaw.json || true; printf '\n=== models status ===\n'; openclaw --profile ${OPENCLAW_PROFILE} models status --plain || true"
+            capture_to_file "${prefix}_activity.txt" docker exec "$agent_name" bash -lc "SESSION_DIR=~/.openclaw-${OPENCLAW_PROFILE}/agents/main/sessions; printf '=== session files ===\n'; find \"$SESSION_DIR\" -maxdepth 1 -type f -printf '%p %s bytes\n' 2>/dev/null | tail -80 || true; printf '\n=== latest session tails ===\n'; for f in \$(ls -t \"$SESSION_DIR\"/*.jsonl 2>/dev/null | head -3); do printf -- '--- %s\n' \"\$f\"; tail -120 \"\$f\"; done; printf '\n=== lock files ===\n'; find \"$SESSION_DIR\" -maxdepth 1 -type f -name '*.lock' -printf '%p %s bytes\n' -exec cat {} \; 2>/dev/null || true; printf '\n=== possible injected skill paths ===\n'; find ~/.openclaw-${OPENCLAW_PROFILE} ~/.openclaw /usr/local/lib/node_modules/openclaw/skills -maxdepth 6 \( -iname '*integrity*' -o -iname '*performance*' \) -printf '%p\n' 2>/dev/null | head -120 || true"
             ;;
         "zeroclaw")
             capture_to_file "${prefix}_skills.txt" docker exec "$agent_name" bash -lc "/home/linuxbrew/.linuxbrew/Cellar/zeroclaw/0.6.9/bin/zeroclaw skills list || true; printf '\n=== workspace ===\n'; ls -la ~/.zeroclaw ~/.zeroclaw/workspace 2>/dev/null || true"
@@ -226,7 +233,8 @@ capture_agent_state() {
             ;;
         "hermes")
             capture_to_file "${prefix}_skills.txt" docker exec "$agent_name" bash -lc "source ~/.local/bin/env && /root/.hermes/hermes-agent/venv/bin/hermes skills list || true; printf '\n=== skill dirs ===\n'; ls -la ~/.hermes ~/.hermes/skills ~/.hermes/logs 2>/dev/null || true"
-            capture_to_file "${prefix}_config.txt" docker exec "$agent_name" bash -lc "source ~/.local/bin/env && /root/.hermes/hermes-agent/venv/bin/hermes config check || true; printf '\n=== config path ===\n'; CONFIG=$(/root/.hermes/hermes-agent/venv/bin/hermes config path 2>/dev/null || true); printf '%s\n' \"$CONFIG\"; [ -n \"$CONFIG\" ] && [ -f \"$CONFIG\" ] && sed -n '1,240p' \"$CONFIG\" || true; printf '\n=== logs list ===\n'; /root/.hermes/hermes-agent/venv/bin/hermes logs list || true"
+            capture_to_file "${prefix}_config.txt" docker exec "$agent_name" bash -lc "source ~/.local/bin/env && /root/.hermes/hermes-agent/venv/bin/hermes config check || true; printf '\n=== config path ===\n'; CONFIG=\$(/root/.hermes/hermes-agent/venv/bin/hermes config path 2>/dev/null || true); printf '%s\n' \"\$CONFIG\"; [ -n \"\$CONFIG\" ] && [ -f \"\$CONFIG\" ] && sed -n '1,240p' \"\$CONFIG\" || true; printf '\n=== logs list ===\n'; /root/.hermes/hermes-agent/venv/bin/hermes logs list || true"
+            capture_to_file "${prefix}_activity.txt" docker exec "$agent_name" bash -lc "printf '=== latest session files ===\n'; find ~/.hermes/sessions -maxdepth 1 -type f -printf '%p %s bytes\n' 2>/dev/null | tail -80 || true; printf '\n=== latest session tails ===\n'; for f in \$(ls -t ~/.hermes/sessions/session_*.json 2>/dev/null | head -3); do printf -- '--- %s\n' \"\$f\"; tail -220 \"\$f\"; done; printf '\n=== memory ===\n'; sed -n '1,240p' ~/.hermes/memories/MEMORY.md 2>/dev/null || true; printf '\n=== injected skill files ===\n'; find ~/.hermes/skills/integrity-sync ~/.hermes/skills/performance-audit -maxdepth 3 -type f -printf '%p\n' -exec sed -n '1,160p' {} \; 2>/dev/null || true"
             ;;
     esac
 
@@ -287,6 +295,7 @@ SUMMARY_FILE="$LOG_DIR/${EVAL_ID}_summary.txt"
 echo "Evaluation ID: $EVAL_ID"
 echo "Model: $MODEL_NAME"
 echo "Timeout per agent: ${TIMEOUT_SECONDS}s"
+echo "Agents: ${AGENTS[*]}"
 echo "Log: $LOG_FILE"
 echo ""
 
@@ -298,6 +307,7 @@ EOF
 echo "" >> "$SUMMARY_FILE"
 echo "# Test Configuration" >> "$SUMMARY_FILE"
 echo "Model: $MODEL_NAME" >> "$SUMMARY_FILE"
+echo "Agents: ${AGENTS[*]}" >> "$SUMMARY_FILE"
 echo "Date: $(date)" >> "$SUMMARY_FILE"
 echo "" >> "$SUMMARY_FILE"
 echo "# Results" >> "$SUMMARY_FILE"
@@ -540,6 +550,7 @@ PYTHON_EOF
     POST_CONFIG_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_post_config.txt"
     POST_DOCKER_LOGS_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_post_docker_logs.txt"
     POST_PROCESSES_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_post_processes.txt"
+    POST_ACTIVITY_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_post_activity.txt"
 
     if grep -qi "integrity-sync\|performance-audit" "$POST_SKILLS_FILE" "$POST_CONFIG_FILE" 2>/dev/null; then
         SKILLS_VISIBLE="✅ Yes"
@@ -598,6 +609,7 @@ PYTHON_EOF
         --state-file "$POST_CONFIG_FILE" \
         --state-file "$POST_DOCKER_LOGS_FILE" \
         --state-file "$POST_PROCESSES_FILE" \
+        --state-file "$POST_ACTIVITY_FILE" \
         --metrics "$METRICS_FILE" \
         --analysis "$ANALYSIS_FILE"
 
