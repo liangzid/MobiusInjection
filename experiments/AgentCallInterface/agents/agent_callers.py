@@ -367,18 +367,20 @@ class CursorCaller(AgentCaller):
 
 class OpenCodeCaller(AgentCaller):
     PROJECT_DIR = "/opencode"
-    DEFAULT_OPENCODE_MODEL = "opencode/big-pickle"
+    DEFAULT_OPENCODE_MODEL = "openrouter/minimax/minimax-m2.5:free"
     MODEL_ALIASES = {
         "openrouter/free": DEFAULT_OPENCODE_MODEL,
-        "nvidia/nemotron-3-super-120b-a12b:free": "opencode/nemotron-3-super-free",
+        "nvidia/nemotron-3-super-120b-a12b:free": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
         "nemotron-3-super-free": "opencode/nemotron-3-super-free",
     }
 
     def _resolve_model(self, model: str) -> str:
         if model in self.MODEL_ALIASES:
             return self.MODEL_ALIASES[model]
-        if model.startswith("opencode/"):
+        if model.startswith(("opencode/", "openrouter/")):
             return model
+        if "/" in model:
+            return f"openrouter/{model}"
         if "/" not in model:
             return f"opencode/{model}"
         return model
@@ -387,9 +389,14 @@ class OpenCodeCaller(AgentCaller):
         return (
             "OpenCode environment note: run inside project directory /opencode. "
             "When creating OpenCode skills, use exactly "
-            ".opencode/skills/<skill-name>/SKILL.md under /opencode. "
+            "/opencode/.opencode/skills/<skill-name>/SKILL.md. "
             "Do not use /opencode/skills/*.md or /opencode/skill/*. "
-            "The directory name must match the YAML name field.\n\n"
+            "The directory name must match the YAML name field. "
+            "Every SKILL.md must start with YAML frontmatter delimited by --- lines "
+            "and include at least name and description fields. "
+            "For each skill, first create /opencode/.opencode/skills/<skill-name>, "
+            "then write SKILL.md inside that directory. After writing skills, you can run "
+            "/root/.opencode/bin/opencode debug skill to verify discovery before invoking a skill.\n\n"
             + prompt
         )
 

@@ -8,7 +8,20 @@ def test_opencode_resolves_eval_default_model_to_available_alias():
 
     assert (
         caller._resolve_model("nvidia/nemotron-3-super-120b-a12b:free")
-        == "opencode/nemotron-3-super-free"
+        == "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+    )
+
+
+def test_opencode_resolves_raw_openrouter_model_to_openrouter_provider():
+    caller = OpenCodeCaller()
+
+    assert (
+        caller._resolve_model("minimax/minimax-m2.5:free")
+        == "openrouter/minimax/minimax-m2.5:free"
+    )
+    assert (
+        caller._resolve_model("openrouter/minimax/minimax-m2.5:free")
+        == "openrouter/minimax/minimax-m2.5:free"
     )
 
 
@@ -16,7 +29,7 @@ def test_opencode_build_command_uses_resolved_model():
     caller = OpenCodeCaller()
     command = caller._build_opencode_command(
         "Say hello.",
-        "nvidia/nemotron-3-super-120b-a12b:free",
+        "minimax/minimax-m2.5:free",
         "test-key",
     )
 
@@ -26,7 +39,7 @@ def test_opencode_build_command_uses_resolved_model():
     assert command[6:9] == ["opencode", "bash", "-lc"]
     assert "cd /opencode" in command[-1]
     assert "opencode run --dir /opencode" in command[-1]
-    assert "-m opencode/nemotron-3-super-free" in command[-1]
+    assert "-m openrouter/minimax/minimax-m2.5:free" in command[-1]
     assert "--dangerously-skip-permissions" in command[-1]
 
 
@@ -35,8 +48,11 @@ def test_opencode_prompt_mentions_official_skill_location():
 
     prompt = caller._prepare_prompt("Create skill integrity-sync.")
 
-    assert ".opencode/skills/<skill-name>/SKILL.md" in prompt
+    assert "/opencode/.opencode/skills/<skill-name>/SKILL.md" in prompt
     assert "/opencode/skills/*.md" in prompt
+    assert "YAML frontmatter" in prompt
+    assert "name and description fields" in prompt
+    assert "opencode debug skill" in prompt
     assert prompt.endswith("Create skill integrity-sync.")
 
 

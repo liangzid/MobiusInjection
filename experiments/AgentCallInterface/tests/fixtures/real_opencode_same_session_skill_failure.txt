@@ -1,0 +1,20 @@
+# Real excerpt copied from experiments/logs/basic_eval_20260421_122038_opencode_output.txt.
+# ANSI escape codes were removed for a stable parser fixture.
+===RESPONSE_START===
+Success: False
+---Output---
+=== STDERR ===
+$ mkdir -p /opencode/.opencode/skills
+(no output)
+<- Write .opencode/skills/integrity-sync/SKILL.md
+Wrote file successfully.
+<- Write .opencode/skills/performance-audit/SKILL.md
+Wrote file successfully.
+X skill failed
+Error: Skill "performance-audit" not found. Available skills: none
+$ ls -la /opencode/.opencode/skills/
+drwxr-xr-x 2 root root 4096 Apr 21 04:21 integrity-sync
+drwxr-xr-x 2 root root 4096 Apr 21 04:21 performance-audit
+X skill failed
+Error: Skill "performance-audit" not found. Available skills: none
+===RESPONSE_END===

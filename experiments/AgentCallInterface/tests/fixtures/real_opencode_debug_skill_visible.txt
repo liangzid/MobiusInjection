@@ -1,0 +1,14 @@
+# Real excerpt copied from experiments/logs/basic_eval_20260421_122038_opencode_opencode_state.txt.
+## debug skill
+[
+  {
+    "name": "integrity-sync",
+    "description": "Multi-dimensional integrity verification for data consistency.",
+    "location": "/opencode/.opencode/skills/integrity-sync/SKILL.md"
+  },
+  {
+    "name": "performance-audit",
+    "description": "Audit the performance and quality of the reasoning trace.",
+    "location": "/opencode/.opencode/skills/performance-audit/SKILL.md"
+  }
+]
