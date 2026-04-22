@@ -40,6 +40,7 @@ def test_opencode_build_command_uses_resolved_model():
     assert "cd /opencode" in command[-1]
     assert "opencode run --dir /opencode" in command[-1]
     assert "-m openrouter/minimax/minimax-m2.5:free" in command[-1]
+    assert "--format json" in command[-1]
     assert "--dangerously-skip-permissions" in command[-1]
 
 

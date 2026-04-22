@@ -307,6 +307,7 @@ class ClaudeCodeCaller(AgentCaller):
     DEFAULT_BASE_URL = "https://openrouter.ai/api"
     OPENROUTER_PREFIX = "openrouter/"
     DEFAULT_OPENROUTER_MODEL = "minimax/minimax-m2.5:free"
+    DEFAULT_MAX_TURNS = "8"
 
     def call(
         self,
@@ -356,6 +357,7 @@ class ClaudeCodeCaller(AgentCaller):
         api_key: str = "",
     ) -> list[str]:
         safe_run_id = self._safe_run_id(run_id)
+        max_turns = os.environ.get("CLAUDE_CODE_MAX_TURNS", self.DEFAULT_MAX_TURNS)
         run_dir = f"{self.RUN_ROOT}/{safe_run_id}"
         runtime_home = f"{run_dir}/home"
         runtime_workspace = f"{run_dir}/workspace"
@@ -369,6 +371,7 @@ class ClaudeCodeCaller(AgentCaller):
             'cd "$CLAUDE_WORKSPACE"; '
             'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"; '
             'claude --dangerously-skip-permissions --verbose --model "$CLAUDE_MODEL" '
+            '--max-turns "$CLAUDE_CODE_MAX_TURNS" '
             '--output-format stream-json --include-partial-messages -p "$1"'
         )
         return [
@@ -408,6 +411,8 @@ class ClaudeCodeCaller(AgentCaller):
             f"CLAUDE_CODE_SUBAGENT_MODEL={model}",
             "-e",
             "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
+            "-e",
+            f"CLAUDE_CODE_MAX_TURNS={max_turns}",
             self.CONTAINER_NAME,
             "bash",
             "-lc",
@@ -605,6 +610,7 @@ class OpenCodeCaller(AgentCaller):
             f"mkdir -p {self.PROJECT_DIR} && cd {self.PROJECT_DIR} && "
             f"/root/.opencode/bin/opencode run --dir {self.PROJECT_DIR} "
             f"-m {shlex.quote(self._resolve_model(model))} "
+            "--format json "
             "--dangerously-skip-permissions "
             f"\"{_decode_b64('OPENCODE_PROMPT_B64')}\""
         )
@@ -745,6 +751,7 @@ class KiloCodeCaller(AgentCaller):
             'KILO_PROMPT="$(printf %s "$KILO_PROMPT_B64" | base64 -d)"; '
             f"timeout --kill-after={self.INNER_TIMEOUT_GRACE_SECONDS}s {quoted_timeout}s "
             f"kilo run --dir {project_dir} -m {quoted_model} --auto "
+            "--format json "
             '--title "$KILO_EVAL_RUN_ID" "$KILO_PROMPT"'
         )
         return (

@@ -40,8 +40,11 @@ def test_claude_code_command_uses_docker_exec():
     assert "ANTHROPIC_DEFAULT_HAIKU_MODEL=anthropic/claude-sonnet-4.6" in command
     assert "CLAUDE_CODE_SUBAGENT_MODEL=anthropic/claude-sonnet-4.6" in command
     assert "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1" in command
+    assert "CLAUDE_CODE_MAX_TURNS=8" in command
     assert command[-6:-3] == ["claude_code", "bash", "-lc"]
-    assert "claude --dangerously-skip-permissions --model" in command[-3]
+    assert "claude --dangerously-skip-permissions" in command[-3]
+    assert "--model \"$CLAUDE_MODEL\"" in command[-3]
+    assert "--max-turns \"$CLAUDE_CODE_MAX_TURNS\"" in command[-3]
     assert "--output-format stream-json" in command[-3]
     assert "--include-partial-messages" in command[-3]
     assert command[-2] == "claude-code-runner"

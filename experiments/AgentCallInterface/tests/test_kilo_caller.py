@@ -33,6 +33,8 @@ def test_kilo_build_command_uses_project_dir_and_prompt_env():
     assert f"cd {caller.PROJECT_DIR}" in command[-1]
     assert f"kilo run --dir {caller.PROJECT_DIR}" in command[-1]
     assert "-m openrouter/free" in command[-1]
+    assert "--auto" in command[-1]
+    assert "--format json" in command[-1]
     assert "--title \"$KILO_EVAL_RUN_ID\"" in command[-1]
     assert "Say hello from a long prompt." not in command[-1]
 
