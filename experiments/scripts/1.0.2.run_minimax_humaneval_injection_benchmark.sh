@@ -26,6 +26,7 @@ BENCHMARK_RUN_ID="${BENCHMARK_RUN_ID:-humaneval_minimax_$(date +%Y%m%d_%H%M%S)}"
 BENCHMARK_RUN_DIR="${BENCHMARK_RUN_DIR:-$BENCHMARK_ROOT/$BENCHMARK_RUN_ID}"
 MANIFEST_FILE="$BENCHMARK_RUN_DIR/manifest.json"
 WRAPPER_LOG="$BENCHMARK_RUN_DIR/wrapper.log"
+EVAL_SCRIPT_SNAPSHOT="$BENCHMARK_RUN_DIR/scripts/$(basename "$EVAL_SCRIPT")"
 
 is_truthy() {
     case "${1:-}" in
@@ -37,6 +38,7 @@ is_truthy() {
 print_config() {
     printf 'PROJECT_ROOT=%s\n' "$PROJECT_ROOT"
     printf 'EVAL_SCRIPT=%s\n' "$EVAL_SCRIPT"
+    printf 'EVAL_SCRIPT_SNAPSHOT=%s\n' "$EVAL_SCRIPT_SNAPSHOT"
     printf 'BENCHMARK_RUN_DIR=%s\n' "$BENCHMARK_RUN_DIR"
     printf 'MANIFEST_FILE=%s\n' "$MANIFEST_FILE"
     printf 'DATASET=%s\n' "$BENCHMARK_DATASET"
@@ -47,6 +49,12 @@ print_config() {
     printf 'TASK_IDS=%s\n' "${TASK_IDS:-}"
     printf 'PROMPT_ORDER=%s\n' "$PROMPT_ORDER"
     printf 'LOG_POLICY=%s\n' "$LOG_POLICY"
+}
+
+snapshot_eval_script() {
+    mkdir -p "$(dirname "$EVAL_SCRIPT_SNAPSHOT")"
+    cp "$EVAL_SCRIPT" "$EVAL_SCRIPT_SNAPSHOT"
+    chmod +x "$EVAL_SCRIPT_SNAPSHOT"
 }
 
 build_manifest() {
@@ -114,7 +122,7 @@ run_case() {
     PROMPT_ORDER="$prompt_order" \
     LOG_POLICY="$LOG_POLICY" \
     FOLLOWUP_TIMEOUT_SECONDS="$FOLLOWUP_TIMEOUT_SECONDS" \
-    bash "$EVAL_SCRIPT" "$model" "$TIMEOUT_SECONDS" "$SLEEP_BETWEEN" \
+    bash "$EVAL_SCRIPT_SNAPSHOT" "$model" "$TIMEOUT_SECONDS" "$SLEEP_BETWEEN" \
         2>&1 | tee -a "$WRAPPER_LOG"
 }
 
@@ -156,6 +164,7 @@ apply_retention_and_aggregate() {
 main() {
     print_config
     build_manifest
+    snapshot_eval_script
 
     if is_truthy "${DRY_RUN:-0}"; then
         printf 'DRY_RUN=1\n'

@@ -41,3 +41,36 @@ def test_humaneval_benchmark_wrapper_dry_run_lists_cases(tmp_path):
     assert "CASES=2" in result.stdout
     assert "HumanEval/0" in result.stdout
     assert "HumanEval/1" in result.stdout
+
+
+def test_humaneval_benchmark_wrapper_runs_eval_script_snapshot(tmp_path):
+    env = os.environ.copy()
+    env["DRY_RUN"] = "1"
+    env["LIMIT"] = "1"
+    env["CODING_EVAL_AGENTS"] = "opencode"
+    env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+    env["BENCHMARK_RUN_DIR"] = str(tmp_path / "run")
+
+    result = subprocess.run(
+        ["bash", str(SCRIPT_PATH)],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=15,
+    )
+
+    snapshot_path = (
+        tmp_path
+        / "run"
+        / "scripts"
+        / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert f"EVAL_SCRIPT_SNAPSHOT={snapshot_path}" in result.stdout
+    assert snapshot_path.read_text() == (
+        PROJECT_ROOT
+        / "experiments"
+        / "scripts"
+        / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+    ).read_text()
