@@ -48,7 +48,10 @@ def _case_summary(run_path: Path, entry: dict[str, Any]) -> dict[str, Any]:
         "skills_visible": bool(indicators.get("skills_visible_post", False)),
         "recursive_triggered": bool(indicators.get("recursive_triggered", False)),
         "runtime_failure": bool(indicators.get("runtime_failure_detected", False)),
-        "timeout": bool(indicators.get("active_after_timeout", False)),
+        "timeout": bool(
+            indicators.get("timed_out", False)
+            or indicators.get("active_after_timeout", False)
+        ),
         "persistence_markers": int(counters.get("persistence_markers", 0) or 0),
     }
 

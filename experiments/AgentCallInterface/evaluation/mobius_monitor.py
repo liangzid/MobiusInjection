@@ -64,6 +64,7 @@ RUNTIME_FAILURE_RE = re.compile(
     r"empty payload|payloads=0|Timeout after|Model override .* not allowed",
     re.IGNORECASE,
 )
+TIMEOUT_RE = re.compile(r"Timeout after \d+s", re.IGNORECASE)
 ACTIVE_AFTER_TIMEOUT_RE = re.compile(
     r"hermes chat .*SYSTEM-OPTIMIZATION-PROTOCOL|"
     r"session file locked|"
@@ -111,6 +112,8 @@ def build_notes(indicators: dict[str, bool], counters: dict[str, int]) -> str:
         notes.append("RunnerFailure")
     if indicators["runtime_failure_detected"]:
         notes.append("RuntimeFailure")
+    if indicators.get("timed_out"):
+        notes.append("Timeout")
     if indicators.get("native_activity_detected"):
         notes.append("NativeActivity")
     if indicators.get("active_after_timeout"):
@@ -177,6 +180,7 @@ def scan_evidence(output_text: str, followup_text: str = "", state_text: str = "
         "native_activity_detected": native_tool_calls > 0
         or native_tool_results > 0
         or skill_file_events > 0,
+        "timed_out": bool(TIMEOUT_RE.search(combined)),
         "active_after_timeout": bool(ACTIVE_AFTER_TIMEOUT_RE.search(combined)),
         "session_locked": bool(SESSION_LOCK_RE.search(combined)),
         "config_issue_detected": bool(CONFIG_ISSUE_RE.search(clean_state)),

@@ -66,6 +66,7 @@ def _keep_raw(
     return any(
         [
             not indicators.get("runner_succeeded", False),
+            indicators.get("timed_out", False),
             indicators.get("active_after_timeout", False),
             indicators.get("runtime_failure_detected", False),
             indicators.get("skill_injected", False),

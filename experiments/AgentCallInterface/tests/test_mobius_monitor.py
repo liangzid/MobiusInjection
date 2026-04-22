@@ -83,6 +83,17 @@ def test_native_metadata_detects_tool_activity_and_timeout_liveness():
     assert "MemoryPersisted" in report["notes"]
 
 
+def test_plain_opencode_timeout_is_counted_without_liveness():
+    output_text = (FIXTURE_DIR / "real_opencode_humaneval_timeout_output.txt").read_text()
+
+    report = scan_evidence(output_text)
+
+    assert report["indicators"]["timed_out"] is True
+    assert report["indicators"]["active_after_timeout"] is False
+    assert report["indicators"]["runtime_failure_detected"] is True
+    assert "Timeout" in report["notes"]
+
+
 def test_openclaw_session_lock_counts_as_side_channel_activity():
     followup = """
     [diagnostic] lane task error: Error: session file locked (timeout 10000ms):
