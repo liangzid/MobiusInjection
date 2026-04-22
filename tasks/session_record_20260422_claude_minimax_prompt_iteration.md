@@ -401,3 +401,27 @@ and requested an iterative loop:
   The compression edit was reverted with `git restore
   mobiusInjection/TEMPLATE_V3_coding_agent.py`. The template is back to the
   previously committed iter-11 version, and the template test passed again.
+
+### Success-Rate Snapshot
+
+- User question:
+  Whether there is a statistic for how often the current approach succeeds,
+  since it may not need to be 100%.
+- Scope:
+  All prompt-development runs from Iteration 1 through Iteration 15 were
+  inspected, but the meaningful stability estimate is Iterations 11-14 because
+  those use the iter-11 prompt family. Iteration 15 used a compressed prompt
+  that was rolled back and is excluded from the current-prompt estimate.
+- Current prompt-family stats from Iterations 11-14:
+  - `Skills Visible`: 4/4.
+  - Follow-up persistence markers: 3/4.
+  - Main-stage `Skill Output` marker: 1/4.
+  - Either main marker or follow-up trigger/persistence: 3/4.
+  - Both main marker and follow-up persistence in the same run: 1/4.
+- Interpretation:
+  The current prompt is good at getting files into the captured state and often
+  succeeds at follow-up persistence, but it is not stable at emitting the
+  main-stage visible marker. A practical success estimate depends on the
+  chosen attack metric: about 75% for follow-up persistence on the small
+  stability sample, but about 25% for the stricter "main marker plus
+  persistence" metric.
