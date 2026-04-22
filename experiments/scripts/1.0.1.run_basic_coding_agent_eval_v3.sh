@@ -56,11 +56,16 @@ CLEAN_CLAUDE_AFTER_RUN="${CLEAN_CLAUDE_AFTER_RUN:-1}"
 CLAUDE_RUN_ROOT="${CLAUDE_RUN_ROOT:-/tmp/claude-code-runs}"
 CODING_EVAL_AGENTS="${CODING_EVAL_AGENTS:-}"
 FOLLOWUP_TIMEOUT_SECONDS="${FOLLOWUP_TIMEOUT_SECONDS:-60}"
+BENCHMARK_TASK_ID="${BENCHMARK_TASK_ID:-}"
+BENCHMARK_TASK_PROMPT_FILE="${BENCHMARK_TASK_PROMPT_FILE:-}"
+BENCHMARK_DATASET="${BENCHMARK_DATASET:-}"
+PROMPT_ORDER="${PROMPT_ORDER:-task_before_injection}"
+LOG_POLICY="${LOG_POLICY:-compact}"
 
 PRE_BACKUP_TAG="pre_eval_backup"
 INJECTED_TAG="injected_001"
 
-LOG_DIR="$PROJECT_ROOT/experiments/logs"
+LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/experiments/logs}"
 mkdir -p "$LOG_DIR"
 
 RED='\033[0;31m'
@@ -168,6 +173,31 @@ data['phases']['$phase']['$key'] = '$value'
 with open('$METRICS_FILE', 'w') as f:
     json.dump(data, f, indent=2)
 " 2>/dev/null || true
+}
+
+update_benchmark_metadata() {
+    local metadata_file="$1"
+    python3 - "$METRICS_FILE" "$metadata_file" "$BENCHMARK_DATASET" "$BENCHMARK_TASK_ID" << 'PYTHON_EOF' 2>/dev/null || true
+import json
+import sys
+
+metrics_path, metadata_path, dataset, task_id = sys.argv[1:5]
+with open(metrics_path, "r") as handle:
+    data = json.load(handle)
+with open(metadata_path, "r") as handle:
+    metadata = json.load(handle)
+data["benchmark"] = {
+    "dataset": dataset,
+    "task_id": task_id,
+    "prompt_order": metadata["order"],
+    "delimiter": metadata["delimiter"],
+    "task_prompt_length": metadata["task_prompt_length"],
+    "injection_prompt_length": metadata["injection_prompt_length"],
+    "combined_prompt_length": metadata["combined_prompt_length"],
+}
+with open(metrics_path, "w") as handle:
+    json.dump(data, handle, indent=2)
+PYTHON_EOF
 }
 
 update_indicator() {
@@ -811,7 +841,7 @@ echo ""
 
 # ------------------------ Generate IDs ------------------------------
 
-EVAL_ID="basic_coding_eval_$(date +%Y%m%d_%H%M%S)"
+EVAL_ID="${EVAL_ID:-basic_coding_eval_$(date +%Y%m%d_%H%M%S)}"
 LOG_FILE="$LOG_DIR/${EVAL_ID}.log"
 METRICS_FILE="$LOG_DIR/${EVAL_ID}_metrics.json"
 SUMMARY_FILE="$LOG_DIR/${EVAL_ID}_summary.txt"
@@ -819,6 +849,11 @@ SUMMARY_FILE="$LOG_DIR/${EVAL_ID}_summary.txt"
 echo "Evaluation ID: $EVAL_ID"
 echo "Model: $MODEL_NAME"
 echo "Timeout per agent: ${TIMEOUT_SECONDS}s"
+if [ -n "$BENCHMARK_TASK_PROMPT_FILE" ]; then
+    echo "Benchmark dataset: ${BENCHMARK_DATASET:-unknown}"
+    echo "Benchmark task: ${BENCHMARK_TASK_ID:-unknown}"
+    echo "Prompt order: $PROMPT_ORDER"
+fi
 echo "Log: $LOG_FILE"
 echo ""
 
@@ -894,12 +929,43 @@ print(ctx)
 
     log "Injection context generated: ${#INJECTION_TEXT} characters"
     INJECTION_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_injection.txt"
-    echo "$INJECTION_TEXT" > "$INJECTION_FILE"
+    printf '%s\n' "$INJECTION_TEXT" > "$INJECTION_FILE"
 
     update_metrics "injection" "injection_length" "${#INJECTION_TEXT}"
 
     # Construct task input
-    TASK_INPUT="$INJECTION_TEXT"
+    TASK_INPUT_FILE="$INJECTION_FILE"
+    if [ -n "$BENCHMARK_TASK_PROMPT_FILE" ] && [ -f "$BENCHMARK_TASK_PROMPT_FILE" ]; then
+        log_subsection "Composing Benchmark Task Prompt"
+        COMBINED_PROMPT_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_combined_prompt.txt"
+        PROMPT_METADATA_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_prompt_metadata.json"
+        PYTHONPATH="$PROJECT_ROOT" python3 - \
+            "$BENCHMARK_TASK_PROMPT_FILE" \
+            "$INJECTION_FILE" \
+            "$PROMPT_ORDER" \
+            "$COMBINED_PROMPT_FILE" \
+            "$PROMPT_METADATA_FILE" << 'PYTHON_EOF'
+import json
+import sys
+from pathlib import Path
+
+from experiments.AgentCallInterface.evaluation.prompt_composer import (
+    compose_benchmark_injection_prompt,
+)
+
+task_path, injection_path, order, combined_path, metadata_path = sys.argv[1:6]
+result = compose_benchmark_injection_prompt(
+    Path(task_path).read_text(),
+    Path(injection_path).read_text(),
+    order=order,
+)
+Path(combined_path).write_text(result.combined_prompt)
+Path(metadata_path).write_text(json.dumps(result.metadata, indent=2) + "\n")
+PYTHON_EOF
+        TASK_INPUT_FILE="$COMBINED_PROMPT_FILE"
+        update_benchmark_metadata "$PROMPT_METADATA_FILE"
+        log "Benchmark prompt composed: $COMBINED_PROMPT_FILE"
+    fi
 
     OUTPUT_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_output.txt"
 
@@ -913,10 +979,12 @@ print(ctx)
 import sys
 import time
 import json
+from pathlib import Path
 sys.path.insert(0, '$PROJECT_ROOT')
 from experiments.AgentCallInterface.agents.agent_callers import get_caller, AgentResponse
 
 caller = get_caller('$AGENT_NAME')
+task_input = Path('$TASK_INPUT_FILE').read_text()
 
 api_call_count = 0
 function_call_count = 0
@@ -935,7 +1003,7 @@ start_time = time.time()
 response = caller.call(
     {
         'task_id': '${EVAL_ID}_${AGENT_NAME}',
-        'problem_statement': '''$TASK_INPUT'''
+        'problem_statement': task_input
     },
     timeout=$TIMEOUT_SECONDS,
     model='$MODEL_NAME'

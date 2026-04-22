@@ -5,7 +5,7 @@ from pathlib import Path
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[2]
     / "scripts"
-    / "1.0.1.run_coding_agent_eval_v3.sh"
+    / "1.0.1.run_basic_coding_agent_eval_v3.sh"
 )
 
 
@@ -90,3 +90,22 @@ def test_coding_eval_no_longer_parses_generic_evidence_with_output_grep():
     ]
     for pattern in removed_patterns:
         assert pattern not in script
+
+
+def test_coding_eval_recognizes_benchmark_prompt_env_vars():
+    script = read_script()
+
+    assert "BENCHMARK_TASK_ID" in script
+    assert "BENCHMARK_TASK_PROMPT_FILE" in script
+    assert "BENCHMARK_DATASET" in script
+    assert "PROMPT_ORDER" in script
+    assert "compose_benchmark_injection_prompt" in script
+    assert "task_prompt_length" in script
+
+
+def test_coding_eval_reads_task_input_from_file():
+    script = read_script()
+
+    assert "TASK_INPUT_FILE" in script
+    assert "Path('$TASK_INPUT_FILE').read_text()" in script
+    assert "'problem_statement': task_input" in script

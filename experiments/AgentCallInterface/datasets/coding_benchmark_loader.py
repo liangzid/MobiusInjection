@@ -45,6 +45,15 @@ class HumanEvalTask:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class BenchmarkTask:
+    dataset: str
+    task_id: str
+    prompt: str
+    entry_point: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
 class SWEBenchLoader:
     DEFAULT_REPO = "https://github.com/princeton-nlp/SWE-bench.git"
     VERIFIED_MINI_URL = "https://huggingface.co/datasets/princeton-nlp/SWE-bench/resolve/main/swebench_verified_mini.json"
@@ -130,13 +139,43 @@ class HumanEvalLoader:
         if self._tasks_cache is not None:
             return self._tasks_cache
 
-        data_file = self.data_dir / "humaneval_data.json"
-        if not data_file.exists():
-            self._download_dataset()
-
+        data_file = self._resolve_data_file()
         tasks = self._parse_humaneval(data_file)
         self._tasks_cache = tasks
         return tasks
+
+    def load_benchmark_tasks(
+        self,
+        limit: int | None = None,
+        offset: int = 0,
+        task_ids: list[str] | None = None,
+    ) -> list[BenchmarkTask]:
+        tasks = [
+            BenchmarkTask(
+                dataset="humaneval",
+                task_id=task.task_id,
+                prompt=task.prompt,
+                entry_point=task.entry_point,
+                metadata=task.metadata,
+            )
+            for task in self.load_tasks()
+        ]
+        return filter_benchmark_tasks(tasks, limit=limit, offset=offset, task_ids=task_ids)
+
+    def _resolve_data_file(self) -> Path:
+        candidates = [
+            self.data_dir / "HumanEval.jsonl",
+            Path(__file__).parent / "HumanEval.jsonl",
+            self.data_dir / "humaneval_data.json",
+            Path(__file__).parent / "humaneval_data" / "humaneval_data.json",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        raise FileNotFoundError(
+            "HumanEval data file not found. Expected an existing repo fixture, "
+            "for example experiments/AgentCallInterface/datasets/HumanEval.jsonl."
+        )
 
     def _download_dataset(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -150,21 +189,29 @@ class HumanEvalLoader:
     def _parse_humaneval(self, data_file: Path) -> list[HumanEvalTask]:
         tasks: list[HumanEvalTask] = []
         try:
-            data = json.loads(data_file.read_text())
-            if isinstance(data, list):
-                for idx, item in enumerate(data):
-                    task = HumanEvalTask(
-                        task_id=item.get("task_id", f"humaneval-{idx}"),
-                        prompt=item.get("prompt", ""),
-                        canonical_solution=item.get("canonical_solution", ""),
-                        test=item.get("test", ""),
-                        entry_point=item.get("entry_point", ""),
-                        metadata=item,
-                    )
-                    tasks.append(task)
+            data = self._read_records(data_file)
+            for idx, item in enumerate(data):
+                task = HumanEvalTask(
+                    task_id=item.get("task_id", f"humaneval-{idx}"),
+                    prompt=item.get("prompt", ""),
+                    canonical_solution=item.get("canonical_solution", ""),
+                    test=item.get("test", ""),
+                    entry_point=item.get("entry_point", ""),
+                    metadata=item,
+                )
+                tasks.append(task)
         except json.JSONDecodeError:
             pass
         return tasks
+
+    def _read_records(self, data_file: Path) -> list[dict[str, Any]]:
+        text = data_file.read_text()
+        if data_file.suffix == ".jsonl":
+            return [json.loads(line) for line in text.splitlines() if line.strip()]
+        data = json.loads(text)
+        if isinstance(data, list):
+            return data
+        return []
 
 
 class CodingBenchmarkLoader:
@@ -178,6 +225,21 @@ class CodingBenchmarkLoader:
     def load_humaneval(self, **kwargs) -> list[HumanEvalTask]:
         return self.humaneval.load_tasks(**kwargs)
 
+    def load_benchmark_tasks(
+        self,
+        dataset: str = "humaneval",
+        limit: int | None = None,
+        offset: int = 0,
+        task_ids: list[str] | None = None,
+    ) -> list[BenchmarkTask]:
+        return load_benchmark_tasks(
+            dataset=dataset,
+            limit=limit,
+            offset=offset,
+            task_ids=task_ids,
+            data_dir=self.humaneval.data_dir,
+        )
+
     def to_agent_input(self, task: CodingTask, agent_type: str) -> dict[str, Any]:
         return {
             "task_id": task.task_id,
@@ -187,6 +249,40 @@ class CodingBenchmarkLoader:
             "problem_statement": task.problem_statement,
             "test_patch": task.test_patch,
         }
+
+
+def filter_benchmark_tasks(
+    tasks: list[BenchmarkTask],
+    limit: int | None = None,
+    offset: int = 0,
+    task_ids: list[str] | None = None,
+) -> list[BenchmarkTask]:
+    if offset < 0:
+        raise ValueError("offset must be non-negative")
+    if limit is not None and limit < 0:
+        raise ValueError("limit must be non-negative")
+    if task_ids is not None:
+        requested = set(task_ids)
+        tasks = [task for task in tasks if task.task_id in requested]
+    if offset:
+        tasks = tasks[offset:]
+    if limit is not None:
+        tasks = tasks[:limit]
+    return tasks
+
+
+def load_benchmark_tasks(
+    dataset: str = "humaneval",
+    limit: int | None = None,
+    offset: int = 0,
+    task_ids: list[str] | None = None,
+    data_dir: Path | str | None = None,
+) -> list[BenchmarkTask]:
+    normalized = dataset.lower()
+    if normalized not in {"humaneval", "human_eval", "human-eval"}:
+        raise ValueError(f"Unsupported benchmark dataset: {dataset}")
+    loader = HumanEvalLoader(data_dir=data_dir)
+    return loader.load_benchmark_tasks(limit=limit, offset=offset, task_ids=task_ids)
 
 
 if __name__ == "__main__":

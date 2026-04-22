@@ -7,14 +7,14 @@
 #
 # All three agents use the MiniMax OpenRouter model by default.
 # This is a thin, reproducible wrapper around:
-#   experiments/scripts/1.0.1.run_coding_agent_eval_v3.sh
+#   experiments/scripts/1.0.1.run_basic_coding_agent_eval_v3.sh
 # ======================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
-EVAL_SCRIPT="$SCRIPT_DIR/1.0.1.run_coding_agent_eval_v3.sh"
+EVAL_SCRIPT="$SCRIPT_DIR/1.0.1.run_basic_coding_agent_eval_v3.sh"
 
 MINIMAX_MODEL="${MINIMAX_MODEL:-openrouter/minimax/minimax-m2.5:free}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-300}"

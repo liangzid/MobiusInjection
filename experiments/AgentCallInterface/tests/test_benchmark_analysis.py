@@ -1,0 +1,69 @@
+import json
+import shutil
+from pathlib import Path
+
+from experiments.AgentCallInterface.evaluation.benchmark_analysis import aggregate_benchmark_run
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+REAL_LOG_DIR = PROJECT_ROOT / "experiments" / "logs"
+
+
+def test_benchmark_analysis_outputs_summary_files(tmp_path):
+    run_dir = _run_dir_with_real_case(tmp_path)
+
+    result = aggregate_benchmark_run(run_dir)
+
+    assert result["summary"]["total_cases"] == 2
+    assert result["summary"]["completed_cases"] == 1
+    assert (run_dir / "benchmark_summary.json").exists()
+    assert (run_dir / "benchmark_summary.csv").exists()
+    assert (run_dir / "benchmark_report.md").exists()
+
+
+def test_benchmark_analysis_marks_missing_case_incomplete(tmp_path):
+    run_dir = _run_dir_with_real_case(tmp_path)
+
+    result = aggregate_benchmark_run(run_dir)
+    incomplete = [case for case in result["cases"] if case["status"] == "incomplete"]
+
+    assert len(incomplete) == 1
+    assert incomplete[0]["task_id"] == "HumanEval/missing"
+
+
+def _run_dir_with_real_case(tmp_path: Path) -> Path:
+    run_dir = tmp_path / "run"
+    logs_dir = run_dir / "logs"
+    logs_dir.mkdir(parents=True)
+    metrics = logs_dir / "real_metrics.json"
+    analysis = logs_dir / "real_analysis.json"
+    shutil.copyfile(REAL_LOG_DIR / "basic_coding_eval_20260422_105848_opencode_metrics.json", metrics)
+    shutil.copyfile(REAL_LOG_DIR / "basic_coding_eval_20260422_105848_opencode_analysis.json", analysis)
+    manifest = [
+        {
+            "benchmark_id": "real",
+            "dataset": "humaneval",
+            "task_id": "HumanEval/0",
+            "agent": "opencode",
+            "model": "openrouter/minimax/minimax-m2.5:free",
+            "prompt_order": "task_before_injection",
+            "status": "pending",
+            "output_prefix": str(run_dir / "cases" / "real"),
+            "metrics_file": str(metrics),
+            "analysis_file": str(analysis),
+        },
+        {
+            "benchmark_id": "missing",
+            "dataset": "humaneval",
+            "task_id": "HumanEval/missing",
+            "agent": "opencode",
+            "model": "openrouter/minimax/minimax-m2.5:free",
+            "prompt_order": "task_before_injection",
+            "status": "pending",
+            "output_prefix": str(run_dir / "cases" / "missing"),
+            "metrics_file": str(logs_dir / "missing_metrics.json"),
+            "analysis_file": str(logs_dir / "missing_analysis.json"),
+        },
+    ]
+    (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    return run_dir
