@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 
@@ -27,6 +28,54 @@ def test_coding_eval_summary_uses_mobius_monitor_fields():
         "| Agent | Run Status | Skill Output | Skills Visible | Config State | "
         "Function Calls | Recursive Loops | Persistence | Notes |"
     ) in script
+
+
+def test_coding_eval_script_has_valid_bash_syntax():
+    result = subprocess.run(["bash", "-n", str(SCRIPT_PATH)], capture_output=True, text=True)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_coding_eval_uses_unified_agent_lifecycle_hooks():
+    script = read_script()
+
+    expected_hooks = [
+        "restore_agent_container()",
+        "prepare_agent_container()",
+        "capture_agent_state()",
+        "cleanup_agent_container()",
+        "collect_agent_cleanup_metrics()",
+        "append_agent_lifecycle_notes()",
+    ]
+    for hook in expected_hooks:
+        assert hook in script
+
+    assert 'restore_agent_container "$AGENT_NAME" "$PRE_BACKUP_IMAGE"' in script
+    assert 'prepare_agent_container "$AGENT_NAME"' in script
+    assert 'capture_agent_state "$AGENT_NAME" "pre"' in script
+    assert 'capture_agent_state "$AGENT_NAME" "post_injection"' in script
+    assert 'cleanup_agent_container "$AGENT_NAME"' in script
+    assert 'capture_agent_state "$AGENT_NAME" "cleanup"' in script
+
+
+def test_coding_eval_threads_lifecycle_state_files_into_analysis():
+    script = read_script()
+
+    assert "AGENT_STATE_FILES=()" in script
+    assert 'remember_state_file "$state_file"' in script
+    assert 'for state_file in "${AGENT_STATE_FILES[@]}"' in script
+    assert 'STATE_ARGS+=(--state-file "$state_file")' in script
+
+
+def test_coding_eval_has_claude_lifecycle_coverage():
+    script = read_script()
+
+    assert "prepare_claude_container()" in script
+    assert "capture_claude_state()" in script
+    assert "cleanup_claude_container()" in script
+    assert "collect_claude_cleanup_metrics()" in script
+    assert "CLAUDE_RUN_ROOT" in script
+    assert "claude_run_files_after_cleanup" in script
 
 
 def test_coding_eval_no_longer_parses_generic_evidence_with_output_grep():

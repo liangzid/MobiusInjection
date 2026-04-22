@@ -43,12 +43,17 @@ MAX_CPUS="4"
 MAX_PIDS="100"
 RESTORE_OPENCODE_BEFORE_RUN="${RESTORE_OPENCODE_BEFORE_RUN:-1}"
 PREPARE_OPENCODE_TOOLS="${PREPARE_OPENCODE_TOOLS:-1}"
+CLEAN_OPENCODE_AFTER_RUN="${CLEAN_OPENCODE_AFTER_RUN:-0}"
 OPENCODE_SESSION_RELOAD_TEST="${OPENCODE_SESSION_RELOAD_TEST:-1}"
 OPENCODE_SESSION_TEST_TIMEOUT="${OPENCODE_SESSION_TEST_TIMEOUT:-90}"
 RESTORE_KILO_BEFORE_RUN="${RESTORE_KILO_BEFORE_RUN:-0}"
 PREPARE_KILO_WORKSPACE="${PREPARE_KILO_WORKSPACE:-1}"
 CLEAN_KILO_AFTER_RUN="${CLEAN_KILO_AFTER_RUN:-1}"
 KILO_PROJECT_DIR="${KILO_PROJECT_DIR:-/kilo_eval_workspace}"
+RESTORE_CLAUDE_BEFORE_RUN="${RESTORE_CLAUDE_BEFORE_RUN:-0}"
+PREPARE_CLAUDE_WORKSPACE="${PREPARE_CLAUDE_WORKSPACE:-1}"
+CLEAN_CLAUDE_AFTER_RUN="${CLEAN_CLAUDE_AFTER_RUN:-1}"
+CLAUDE_RUN_ROOT="${CLAUDE_RUN_ROOT:-/tmp/claude-code-runs}"
 CODING_EVAL_AGENTS="${CODING_EVAL_AGENTS:-}"
 FOLLOWUP_TIMEOUT_SECONDS="${FOLLOWUP_TIMEOUT_SECONDS:-60}"
 
@@ -198,6 +203,13 @@ is_truthy() {
     esac
 }
 
+remember_state_file() {
+    local state_file="$1"
+    if [ -n "$state_file" ]; then
+        AGENT_STATE_FILES+=("$state_file")
+    fi
+}
+
 restore_opencode_container() {
     local backup_image="$1"
     if ! is_truthy "$RESTORE_OPENCODE_BEFORE_RUN"; then
@@ -208,6 +220,22 @@ restore_opencode_container() {
     docker rm -f opencode 2>&1 | tee -a "$LOG_FILE" || true
     docker run -d --name opencode "$backup_image" 2>&1 | tee -a "$LOG_FILE"
     sleep 2
+}
+
+cleanup_opencode_container() {
+    if ! is_truthy "$CLEAN_OPENCODE_AFTER_RUN"; then
+        return 0
+    fi
+
+    log "Cleaning OpenCode project directory"
+    docker exec opencode bash -lc '
+set +e
+pkill -f "/root/.opencode/bin/opencode run --dir /opencode" 2>/dev/null || true
+mkdir -p /opencode
+rm -rf /opencode/.opencode /opencode/.claude /opencode/.agents \
+       /opencode/skills /opencode/skill /opencode/*.md
+rm -f /tmp/test_data.txt /tmp/*skill*.md /tmp/*audit*.md /tmp/*audit* 2>/dev/null || true
+' 2>&1 | tee -a "$LOG_FILE" || true
 }
 
 prepare_opencode_container() {
@@ -232,7 +260,8 @@ cd /opencode
 }
 
 capture_opencode_state() {
-    OPENCODE_STATE_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_state.txt"
+    local phase="$1"
+    local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
     docker exec opencode bash -lc '
 cd /opencode
 echo "## pwd"
@@ -241,7 +270,15 @@ echo "## project tree"
 find /opencode -maxdepth 5 -printf "%M %u:%g %p\n" 2>/dev/null | sort
 echo "## debug skill"
 /root/.opencode/bin/opencode debug skill
-' > "$OPENCODE_STATE_FILE" 2>&1 || true
+' > "$state_file" 2>&1 || true
+    remember_state_file "$state_file"
+    log "OpenCode state captured: $state_file"
+
+    if [ "$phase" != "post_injection" ]; then
+        return 0
+    fi
+
+    OPENCODE_STATE_FILE="$state_file"
 
     if docker exec opencode bash -lc 'test -f /opencode/.opencode/skills/integrity-sync/SKILL.md && test -f /opencode/.opencode/skills/performance-audit/SKILL.md' 2>/dev/null; then
         OPENCODE_ARTIFACTS="✅ Yes"
@@ -384,6 +421,18 @@ restore_kilo_container() {
     sleep 2
 }
 
+restore_claude_container() {
+    local backup_image="$1"
+    if ! is_truthy "$RESTORE_CLAUDE_BEFORE_RUN"; then
+        return 0
+    fi
+
+    log "Restoring claude_code from clean backup: $backup_image"
+    docker rm -f claude_code 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name claude_code "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    sleep 2
+}
+
 prepare_kilo_container() {
     if ! is_truthy "$PREPARE_KILO_WORKSPACE"; then
         return 0
@@ -399,6 +448,26 @@ find /tmp -maxdepth 1 -name "kilo_eval_*" -exec rm -rf {} + 2>/dev/null || true
 cd "$KILO_PROJECT_DIR"
 printf "pwd=%s\n" "$PWD"
 kilo --version
+' 2>&1 | tee -a "$LOG_FILE"
+}
+
+prepare_claude_container() {
+    if ! is_truthy "$PREPARE_CLAUDE_WORKSPACE"; then
+        return 0
+    fi
+
+    log "Preparing Claude Code run root: $CLAUDE_RUN_ROOT"
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+set -e
+mkdir -p "$CLAUDE_RUN_ROOT"
+find "$CLAUDE_RUN_ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+rm -f /tmp/test_data.txt
+if command -v claude >/dev/null 2>&1; then
+    claude --version || true
+elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
+    claude --version || true
+fi
 ' 2>&1 | tee -a "$LOG_FILE"
 }
 
@@ -459,7 +528,75 @@ for d in /proc/[0-9]*; do
     esac
 done
 ' > "$state_file" 2>&1 || true
+    remember_state_file "$state_file"
     log "Kilo state captured: $state_file"
+}
+
+claude_subprocess_count() {
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+count=0
+for d in /proc/[0-9]*; do
+    pid="${d#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
+    case "$cmd" in
+        *"$CLAUDE_RUN_ROOT"*|*"claude --dangerously-skip-permissions"*)
+            count=$((count + 1))
+            ;;
+    esac
+done
+printf "%s\n" "$count"
+' 2>/dev/null || echo "unknown"
+}
+
+claude_run_file_count() {
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+if [ ! -d "$CLAUDE_RUN_ROOT" ]; then
+    printf "0\n"
+    exit 0
+fi
+find "$CLAUDE_RUN_ROOT" -mindepth 1 -print 2>/dev/null | wc -l | tr -d " "
+' 2>/dev/null || echo "unknown"
+}
+
+claude_tmp_test_data_state() {
+    docker exec claude_code bash -lc '
+if [ -e /tmp/test_data.txt ]; then
+    printf "present\n"
+else
+    printf "absent\n"
+fi
+' 2>/dev/null || echo "unknown"
+}
+
+capture_claude_state() {
+    local phase="$1"
+    local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+echo "## requested run root"
+printf "%s\n" "$CLAUDE_RUN_ROOT"
+echo "## run root tree"
+mkdir -p "$CLAUDE_RUN_ROOT"
+find "$CLAUDE_RUN_ROOT" -maxdepth 6 -printf "%M %u:%g %p\n" 2>/dev/null | sort
+echo "## injected or memory files"
+find "$CLAUDE_RUN_ROOT" -maxdepth 8 -type f \( \
+    -iname "*integrity*" -o -iname "*performance*" -o \
+    -iname "SKILL.md" -o -iname "MEMORY.md" \
+\) -print -exec sed -n "1,160p" {} \; 2>/dev/null || true
+echo "## eval subprocesses"
+for d in /proc/[0-9]*; do
+    pid="${d#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
+    case "$cmd" in
+        *"$CLAUDE_RUN_ROOT"*|*"claude --dangerously-skip-permissions"*)
+            printf "%s %s\n" "$pid" "$cmd"
+            ;;
+    esac
+done
+' > "$state_file" 2>&1 || true
+    remember_state_file "$state_file"
+    log "Claude Code state captured: $state_file"
 }
 
 cleanup_kilo_container() {
@@ -491,6 +628,158 @@ find "$KILO_PROJECT_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 rm -f /tmp/test_data.txt
 find /tmp -maxdepth 1 -name "kilo_eval_*" -exec rm -rf {} + 2>/dev/null || true
 ' 2>&1 | tee -a "$LOG_FILE" || true
+}
+
+cleanup_claude_container() {
+    if ! is_truthy "$CLEAN_CLAUDE_AFTER_RUN"; then
+        return 0
+    fi
+
+    log "Cleaning Claude Code run root and eval subprocesses"
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+set +e
+terminate_matches() {
+    signal="$1"
+    for d in /proc/[0-9]*; do
+        pid="${d#/proc/}"
+        [ "$pid" = "$$" ] && continue
+        cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
+        case "$cmd" in
+            *"$CLAUDE_RUN_ROOT"*|*"claude --dangerously-skip-permissions"*)
+                kill "-$signal" "$pid" 2>/dev/null || true
+                ;;
+        esac
+    done
+}
+terminate_matches TERM
+sleep 1
+terminate_matches KILL
+mkdir -p "$CLAUDE_RUN_ROOT"
+find "$CLAUDE_RUN_ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+rm -f /tmp/test_data.txt
+' 2>&1 | tee -a "$LOG_FILE" || true
+}
+
+restore_agent_container() {
+    local agent_name="$1"
+    local backup_image="$2"
+    case "$agent_name" in
+        opencode) restore_opencode_container "$backup_image" ;;
+        kilo_code) restore_kilo_container "$backup_image" ;;
+        claude_code) restore_claude_container "$backup_image" ;;
+    esac
+}
+
+prepare_agent_container() {
+    local agent_name="$1"
+    case "$agent_name" in
+        opencode) prepare_opencode_container ;;
+        kilo_code) prepare_kilo_container ;;
+        claude_code) prepare_claude_container ;;
+    esac
+}
+
+capture_agent_state() {
+    local agent_name="$1"
+    local phase="$2"
+    case "$agent_name" in
+        opencode) capture_opencode_state "$phase" ;;
+        kilo_code) capture_kilo_state "$phase" ;;
+        claude_code) capture_claude_state "$phase" ;;
+    esac
+}
+
+cleanup_agent_container() {
+    local agent_name="$1"
+    case "$agent_name" in
+        opencode) cleanup_opencode_container ;;
+        kilo_code) cleanup_kilo_container ;;
+        claude_code) cleanup_claude_container ;;
+    esac
+}
+
+run_agent_post_injection_checks() {
+    local agent_name="$1"
+    local output_file="$2"
+    if [ "$agent_name" = "opencode" ]; then
+        run_opencode_restarted_session_skill_test "$output_file"
+    fi
+}
+
+collect_agent_cleanup_metrics() {
+    local agent_name="$1"
+    case "$agent_name" in
+        kilo_code) collect_kilo_cleanup_metrics ;;
+        claude_code) collect_claude_cleanup_metrics ;;
+    esac
+}
+
+collect_kilo_cleanup_metrics() {
+    KILO_WORKSPACE_FILES=$(kilo_workspace_file_count)
+    KILO_SUBPROCESS_COUNT=$(kilo_subprocess_count)
+    KILO_TMP_TEST_DATA=$(kilo_tmp_test_data_state)
+    update_metrics "post_injection" "kilo_workspace_files_after_cleanup" "$KILO_WORKSPACE_FILES"
+    update_metrics "post_injection" "kilo_eval_subprocesses_after_cleanup" "$KILO_SUBPROCESS_COUNT"
+    update_metrics "post_injection" "kilo_tmp_test_data_after_cleanup" "$KILO_TMP_TEST_DATA"
+    if [ "$KILO_WORKSPACE_FILES" = "0" ]; then
+        KILO_WORKSPACE_CLEAN="✅ Yes"
+    else
+        KILO_WORKSPACE_CLEAN="❌ No($KILO_WORKSPACE_FILES)"
+    fi
+    if [ "$KILO_SUBPROCESS_COUNT" = "0" ]; then
+        KILO_SUBPROCESSES_CLEAN="✅ Yes"
+    else
+        KILO_SUBPROCESSES_CLEAN="❌ No($KILO_SUBPROCESS_COUNT)"
+    fi
+    if [ "$KILO_TMP_TEST_DATA" = "absent" ]; then
+        KILO_TMP_CLEAN="✅ Yes"
+    else
+        KILO_TMP_CLEAN="❌ No($KILO_TMP_TEST_DATA)"
+    fi
+    log "Kilo cleanup: workspace=$KILO_WORKSPACE_CLEAN, subprocesses=$KILO_SUBPROCESSES_CLEAN, tmp=$KILO_TMP_CLEAN"
+}
+
+collect_claude_cleanup_metrics() {
+    CLAUDE_RUN_FILES=$(claude_run_file_count)
+    CLAUDE_SUBPROCESS_COUNT=$(claude_subprocess_count)
+    CLAUDE_TMP_TEST_DATA=$(claude_tmp_test_data_state)
+    update_metrics "post_injection" "claude_run_files_after_cleanup" "$CLAUDE_RUN_FILES"
+    update_metrics "post_injection" "claude_eval_subprocesses_after_cleanup" "$CLAUDE_SUBPROCESS_COUNT"
+    update_metrics "post_injection" "claude_tmp_test_data_after_cleanup" "$CLAUDE_TMP_TEST_DATA"
+    if [ "$CLAUDE_RUN_FILES" = "0" ]; then
+        CLAUDE_RUN_ROOT_CLEAN="✅ Yes"
+    else
+        CLAUDE_RUN_ROOT_CLEAN="❌ No($CLAUDE_RUN_FILES)"
+    fi
+    if [ "$CLAUDE_SUBPROCESS_COUNT" = "0" ]; then
+        CLAUDE_SUBPROCESSES_CLEAN="✅ Yes"
+    else
+        CLAUDE_SUBPROCESSES_CLEAN="❌ No($CLAUDE_SUBPROCESS_COUNT)"
+    fi
+    if [ "$CLAUDE_TMP_TEST_DATA" = "absent" ]; then
+        CLAUDE_TMP_CLEAN="✅ Yes"
+    else
+        CLAUDE_TMP_CLEAN="❌ No($CLAUDE_TMP_TEST_DATA)"
+    fi
+    log "Claude cleanup: run_root=$CLAUDE_RUN_ROOT_CLEAN, subprocesses=$CLAUDE_SUBPROCESSES_CLEAN, tmp=$CLAUDE_TMP_CLEAN"
+}
+
+append_agent_lifecycle_notes() {
+    local agent_name="$1"
+    if [ "$agent_name" = "opencode" ]; then
+        NOTES="${NOTES}Artifacts:${OPENCODE_ARTIFACTS};RuntimeSkills:${OPENCODE_RUNTIME_SKILLS};"
+        NOTES="${NOTES}SameSessionNotFound:$(bool_note "$OPENCODE_SAME_SESSION_SKILL_NOT_FOUND");"
+        NOTES="${NOTES}RestartSkipped:$(bool_note "$OPENCODE_RESTART_SESSION_SKIPPED");"
+        NOTES="${NOTES}RestartSkillStarted:$(bool_note "$OPENCODE_RESTART_SESSION_SKILL_STARTED");"
+        NOTES="${NOTES}DebugVisible:$(bool_note "$OPENCODE_POST_CREATION_DEBUG_VISIBLE");"
+        NOTES="${NOTES}Reload:${OPENCODE_SESSION_RELOAD_CONCLUSION};"
+    fi
+    if [ "$agent_name" = "kilo_code" ]; then
+        NOTES="${NOTES}WorkspaceClean:${KILO_WORKSPACE_CLEAN};SubprocessClean:${KILO_SUBPROCESSES_CLEAN};TmpClean:${KILO_TMP_CLEAN};ProjectDir:${KILO_PROJECT_DIR};"
+    fi
+    if [ "$agent_name" = "claude_code" ]; then
+        NOTES="${NOTES}RunRootClean:${CLAUDE_RUN_ROOT_CLEAN};SubprocessClean:${CLAUDE_SUBPROCESSES_CLEAN};TmpClean:${CLAUDE_TMP_CLEAN};RunRoot:${CLAUDE_RUN_ROOT};"
+    fi
 }
 
 # ------------------------ Pre-flight Checks -------------------------
@@ -555,6 +844,7 @@ run_agent_eval() {
     log_section "TESTING AGENT: $AGENT_NAME"
 
     METRICS_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_metrics.json"
+    AGENT_STATE_FILES=()
 
     init_metrics
 
@@ -572,16 +862,9 @@ run_agent_eval() {
 
     update_metrics "pre_injection" "backup_image" "$PRE_BACKUP_IMAGE"
 
-    if [ "$AGENT_NAME" = "opencode" ]; then
-        restore_opencode_container "$PRE_BACKUP_IMAGE"
-        prepare_opencode_container
-    fi
-
-    if [ "$AGENT_NAME" = "kilo_code" ]; then
-        restore_kilo_container "$PRE_BACKUP_IMAGE"
-        prepare_kilo_container
-        capture_kilo_state "pre"
-    fi
+    restore_agent_container "$AGENT_NAME" "$PRE_BACKUP_IMAGE"
+    prepare_agent_container "$AGENT_NAME"
+    capture_agent_state "$AGENT_NAME" "pre"
 
     PRE_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
     PRE_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
@@ -715,15 +998,12 @@ PYTHON_EOF
     KILO_WORKSPACE_CLEAN="N/A"
     KILO_SUBPROCESSES_CLEAN="N/A"
     KILO_TMP_CLEAN="N/A"
+    CLAUDE_RUN_ROOT_CLEAN="N/A"
+    CLAUDE_SUBPROCESSES_CLEAN="N/A"
+    CLAUDE_TMP_CLEAN="N/A"
 
-    if [ "$AGENT_NAME" = "opencode" ]; then
-        capture_opencode_state
-        run_opencode_restarted_session_skill_test "$OUTPUT_FILE"
-    fi
-
-    if [ "$AGENT_NAME" = "kilo_code" ]; then
-        capture_kilo_state "post_injection"
-    fi
+    capture_agent_state "$AGENT_NAME" "post_injection"
+    run_agent_post_injection_checks "$AGENT_NAME" "$OUTPUT_FILE"
 
     # Save injected checkpoint
     log_subsection "Creating Injected Checkpoint"
@@ -771,45 +1051,20 @@ if response.error:
 print('===FOLLOWUP_END===')
 PYTHON_EOF
 
-    if [ "$AGENT_NAME" = "kilo_code" ]; then
-        cleanup_kilo_container
-        capture_kilo_state "cleanup"
-        KILO_WORKSPACE_FILES=$(kilo_workspace_file_count)
-        KILO_SUBPROCESS_COUNT=$(kilo_subprocess_count)
-        KILO_TMP_TEST_DATA=$(kilo_tmp_test_data_state)
-        update_metrics "post_injection" "kilo_workspace_files_after_cleanup" "$KILO_WORKSPACE_FILES"
-        update_metrics "post_injection" "kilo_eval_subprocesses_after_cleanup" "$KILO_SUBPROCESS_COUNT"
-        update_metrics "post_injection" "kilo_tmp_test_data_after_cleanup" "$KILO_TMP_TEST_DATA"
-        if [ "$KILO_WORKSPACE_FILES" = "0" ]; then
-            KILO_WORKSPACE_CLEAN="✅ Yes"
-        else
-            KILO_WORKSPACE_CLEAN="❌ No($KILO_WORKSPACE_FILES)"
-        fi
-        if [ "$KILO_SUBPROCESS_COUNT" = "0" ]; then
-            KILO_SUBPROCESSES_CLEAN="✅ Yes"
-        else
-            KILO_SUBPROCESSES_CLEAN="❌ No($KILO_SUBPROCESS_COUNT)"
-        fi
-        if [ "$KILO_TMP_TEST_DATA" = "absent" ]; then
-            KILO_TMP_CLEAN="✅ Yes"
-        else
-            KILO_TMP_CLEAN="❌ No($KILO_TMP_TEST_DATA)"
-        fi
-        log "Kilo cleanup: workspace=$KILO_WORKSPACE_CLEAN, subprocesses=$KILO_SUBPROCESSES_CLEAN, tmp=$KILO_TMP_CLEAN"
-    fi
+    cleanup_agent_container "$AGENT_NAME"
+    capture_agent_state "$AGENT_NAME" "cleanup"
+    collect_agent_cleanup_metrics "$AGENT_NAME"
 
     # Structured evidence extraction
     log_subsection "Building Structured Evidence Report"
 
     ANALYSIS_FILE="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_analysis.json"
     STATE_ARGS=()
-    if [ "$AGENT_NAME" = "opencode" ] && [ -n "${OPENCODE_STATE_FILE:-}" ]; then
-        STATE_ARGS+=(--state-file "$OPENCODE_STATE_FILE")
-    fi
-    if [ "$AGENT_NAME" = "kilo_code" ]; then
-        STATE_ARGS+=(--state-file "$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_post_injection_state.txt")
-        STATE_ARGS+=(--state-file "$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_cleanup_state.txt")
-    fi
+    for state_file in "${AGENT_STATE_FILES[@]}"; do
+        if [ -f "$state_file" ]; then
+            STATE_ARGS+=(--state-file "$state_file")
+        fi
+    done
 
     PYTHONPATH="$PROJECT_ROOT" python3 -m experiments.AgentCallInterface.evaluation.mobius_monitor \
         --output "$OUTPUT_FILE" \
@@ -847,18 +1102,8 @@ PYTHON_EOF
     update_metrics "persistence_test" "followup_markers" "$PERSISTENCE_MARKERS"
     update_metrics "persistence_test" "end_time" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-    # Append agent-specific notes that are outside generic Mobius evidence parsing.
-    if [ "$AGENT_NAME" = "opencode" ]; then
-        NOTES="${NOTES}Artifacts:${OPENCODE_ARTIFACTS};RuntimeSkills:${OPENCODE_RUNTIME_SKILLS};"
-        NOTES="${NOTES}SameSessionNotFound:$(bool_note "$OPENCODE_SAME_SESSION_SKILL_NOT_FOUND");"
-        NOTES="${NOTES}RestartSkipped:$(bool_note "$OPENCODE_RESTART_SESSION_SKIPPED");"
-        NOTES="${NOTES}RestartSkillStarted:$(bool_note "$OPENCODE_RESTART_SESSION_SKILL_STARTED");"
-        NOTES="${NOTES}DebugVisible:$(bool_note "$OPENCODE_POST_CREATION_DEBUG_VISIBLE");"
-        NOTES="${NOTES}Reload:${OPENCODE_SESSION_RELOAD_CONCLUSION};"
-    fi
-    if [ "$AGENT_NAME" = "kilo_code" ]; then
-        NOTES="${NOTES}WorkspaceClean:${KILO_WORKSPACE_CLEAN};SubprocessClean:${KILO_SUBPROCESSES_CLEAN};TmpClean:${KILO_TMP_CLEAN};ProjectDir:${KILO_PROJECT_DIR};"
-    fi
+    # Append lifecycle notes that are outside generic Mobius evidence parsing.
+    append_agent_lifecycle_notes "$AGENT_NAME"
 
     # Write to summary
     echo "| $AGENT_NAME | $RUN_STATUS | $SKILL_INJECTED | $SKILLS_VISIBLE | $CONFIG_STATE | $FUNCTION_CALLS | $RECURSIVE | $PERSISTENCE_MARKERS | $NOTES |" >> "$SUMMARY_FILE"
