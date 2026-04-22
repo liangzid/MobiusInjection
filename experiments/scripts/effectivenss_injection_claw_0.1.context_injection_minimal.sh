@@ -2,7 +2,7 @@
 # ======================================================================
 # effectivenss_injection_claw_0.1.context_injection_minimal.sh
 #
-# Minimal clean-agent ClawBench context-injection runner for three
+# Minimal clean-agent ClawBench evaluation runner for three
 # claw-style agents: openclaw, zeroclaw, hermes.
 #
 # The runner creates clean and poisoned workspaces, starts a fresh
@@ -26,12 +26,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TASKS_ROOT="$PROJECT_ROOT/experiments/AgentCallInterface/datasets/clawbench_tasks/tasks"
 RUN_ROOT="${RUN_ROOT:-/home/zi/agentcodingdos_context_injection_runs}"
-RUN_ID="${RUN_ID:-effctx_min_$(date +%Y%m%d_%H%M%S)}"
+RUN_ID="${RUN_ID:-eval_$(date +%Y%m%d_%H%M%S)}"
 MODEL_NAME="${MODEL_NAME:-nvidia/nemotron-3-super-120b-a12b:free}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-420}"
 KEEP_CONTAINERS="${KEEP_CONTAINERS:-0}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-bridge}"
 UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
+INJECTION_TEMPLATE_PATH="${INJECTION_TEMPLATE_PATH:-$PROJECT_ROOT/mobiusInjection/TEMPLATE_V3.py}"
+CONTAINER_WORK_ROOT="${CONTAINER_WORK_ROOT:-/tmp/task_runs/session}"
 
 OPENCLAW_BASE_IMAGE="${OPENCLAW_BASE_IMAGE:-openclaw:mobius_eval_config_fixed_20260421}"
 ZEROCLAW_BASE_IMAGE="${ZEROCLAW_BASE_IMAGE:-zeroclaw:pre_eval_backup}"
@@ -102,7 +104,7 @@ require_dependencies() {
     command -v uv >/dev/null || die "uv is not available"
     command -v python3 >/dev/null || die "python3 is not available"
     [ -d "$TASKS_ROOT" ] || die "ClawBench tasks root not found: $TASKS_ROOT"
-    [ -f "$PROJECT_ROOT/mobiusInjection/TEMPLATE_V3.py" ] || die "Mobius V3 template not found"
+    [ -f "$INJECTION_TEMPLATE_PATH" ] || die "Injection template not found: $INJECTION_TEMPLATE_PATH"
     if [ -z "${OPENROUTER_API_KEY:-}" ]; then
         local key_file="$PROJECT_ROOT/privacy_secret_openrouter_API_key.txt"
         [ -f "$key_file" ] || die "OPENROUTER_API_KEY is unset and key file is missing: $key_file"
@@ -120,12 +122,12 @@ require_images() {
 }
 
 write_manifest_header() {
-    python3 - "$MANIFEST_PATH" "$RUN_ID" "$MODEL_NAME" "$AGENTS_TEXT" "$TASK_IDS_TEXT" "$OPENCLAW_BASE_IMAGE" "$ZEROCLAW_BASE_IMAGE" "$HERMES_BASE_IMAGE" <<'PY'
+    python3 - "$MANIFEST_PATH" "$RUN_ID" "$MODEL_NAME" "$AGENTS_TEXT" "$TASK_IDS_TEXT" "$OPENCLAW_BASE_IMAGE" "$ZEROCLAW_BASE_IMAGE" "$HERMES_BASE_IMAGE" "$INJECTION_TEMPLATE_PATH" <<'PY'
 import json
 import sys
 from datetime import datetime, timezone
 
-path, run_id, model, agents, tasks, openclaw_image, zeroclaw_image, hermes_image = sys.argv[1:9]
+path, run_id, model, agents, tasks, openclaw_image, zeroclaw_image, hermes_image, injection_template = sys.argv[1:10]
 payload = {
     "run_id": run_id,
     "created_at": datetime.now(timezone.utc).isoformat(),
@@ -137,6 +139,7 @@ payload = {
         "zeroclaw": zeroclaw_image,
         "hermes": hermes_image,
     },
+    "injection_template": injection_template,
     "results": [],
 }
 with open(path, "w", encoding="utf-8") as f:
@@ -165,16 +168,27 @@ build_poisoned_workspace() {
     mkdir -p "$poisoned_root"
     cp -a "$clean_root/." "$poisoned_root/"
 
-    PYTHONPATH="$PROJECT_ROOT" python3 - "$task_id" "$poisoned_root/workspace/$input_file" "$MODEL_NAME" <<'PY'
+    PYTHONPATH="$PROJECT_ROOT" python3 - "$task_id" "$poisoned_root/workspace/$input_file" "$MODEL_NAME" "$INJECTION_TEMPLATE_PATH" <<'PY'
+import importlib.util
 import json
 import sys
 from pathlib import Path
 
-from mobiusInjection.TEMPLATE_V3 import MainInjectionTextTargeted
-
-task_id, input_path, model = sys.argv[1:4]
+task_id, input_path, model, template_path = sys.argv[1:5]
 path = Path(input_path)
-payload = MainInjectionTextTargeted(target_agent="claw-style", target_model=model).strip()
+template_file = Path(template_path).resolve()
+sys.path.insert(0, str(template_file.parent))
+spec = importlib.util.spec_from_file_location("mobius_context_injection_template", template_file)
+if spec is None or spec.loader is None:
+    raise SystemExit(f"Could not load injection template: {template_file}")
+template = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(template)
+try:
+    payload_factory = template.MainInjectionTextTargeted
+except AttributeError as exc:
+    raise SystemExit(f"Injection template has no MainInjectionTextTargeted: {template_file}") from exc
+
+payload = payload_factory(target_agent="claw-style", target_model=model).strip()
 data = json.loads(path.read_text())
 
 if task_id == "xdom-001":
@@ -210,7 +224,17 @@ container_workspace_for() {
     local agent="$1"
     local task_id="$2"
     local variant="$3"
-    printf '/tmp/clawbench_runs/%s/%s/%s-%s/workspace\n' "$RUN_ID" "$agent" "$task_id" "$variant"
+    local branch
+    branch="$(variant_label_for "$variant")"
+    printf '%s/%s/%s/%s/workspace\n' "$CONTAINER_WORK_ROOT" "$agent" "$task_id" "$branch"
+}
+
+variant_label_for() {
+    case "$1" in
+        clean) printf 'case-a\n' ;;
+        poisoned) printf 'case-b\n' ;;
+        *) die "Unsupported variant '$1'" ;;
+    esac
 }
 
 checkpoint_tag_for() {
