@@ -13,7 +13,9 @@ def test_prompt_composer_places_task_before_injection():
     assert result.combined_prompt.index(task_prompt) < result.combined_prompt.index(
         injection_prompt
     )
-    assert DEFAULT_DELIMITER in result.combined_prompt
+    assert DEFAULT_DELIMITER == "\n\n"
+    assert "BEGIN TEMPLATE_V3" not in result.combined_prompt
+    assert "INJECTION PROMPT" not in result.combined_prompt
     assert result.combined_prompt.startswith(task_prompt)
     assert result.combined_prompt.endswith(injection_prompt)
 

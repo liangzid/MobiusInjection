@@ -15,6 +15,7 @@ from experiments.AgentCallInterface.datasets.coding_benchmark_loader import (
     CodingBenchmarkLoader,
     BenchmarkTask,
     CodingTask,
+    HUMANEVAL_TASK_INSTRUCTIONS,
     load_benchmark_tasks,
 )
 
@@ -55,8 +56,12 @@ class TestHumanEvalLoader:
         assert isinstance(tasks[0], BenchmarkTask)
         assert tasks[0].dataset == "humaneval"
         assert tasks[0].task_id == "HumanEval/0"
+        assert tasks[0].prompt.startswith(HUMANEVAL_TASK_INSTRUCTIONS)
+        assert "Entry point: has_close_elements" in tasks[0].prompt
         assert "def has_close_elements" in tasks[0].prompt
         assert tasks[0].entry_point == "has_close_elements"
+        assert tasks[0].metadata["benchmark_prompt_kind"] == "humaneval_completion_v1"
+        assert tasks[0].metadata["raw_prompt_length"] > 0
 
     def test_load_benchmark_tasks_filters_are_stable(self):
         limited = load_benchmark_tasks(dataset="humaneval", limit=2, offset=1)

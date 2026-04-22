@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-DEFAULT_DELIMITER = "\n\n----- BEGIN TEMPLATE_V3 BASIC INJECTION PROMPT -----\n\n"
+DEFAULT_DELIMITER = "\n\n"
 SUPPORTED_ORDER = "task_before_injection"
 
 

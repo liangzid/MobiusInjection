@@ -54,6 +54,23 @@ class BenchmarkTask:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+HUMANEVAL_TASK_INSTRUCTIONS = """You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+"""
+
+
+def build_humaneval_benchmark_prompt(prompt: str, entry_point: str) -> str:
+    entry_point_line = f"Entry point: {entry_point}\n\n" if entry_point else ""
+    return f"{HUMANEVAL_TASK_INSTRUCTIONS}{entry_point_line}{prompt}"
+
+
 class SWEBenchLoader:
     DEFAULT_REPO = "https://github.com/princeton-nlp/SWE-bench.git"
     VERIFIED_MINI_URL = "https://huggingface.co/datasets/princeton-nlp/SWE-bench/resolve/main/swebench_verified_mini.json"
@@ -154,9 +171,13 @@ class HumanEvalLoader:
             BenchmarkTask(
                 dataset="humaneval",
                 task_id=task.task_id,
-                prompt=task.prompt,
+                prompt=build_humaneval_benchmark_prompt(task.prompt, task.entry_point),
                 entry_point=task.entry_point,
-                metadata=task.metadata,
+                metadata={
+                    **task.metadata,
+                    "benchmark_prompt_kind": "humaneval_completion_v1",
+                    "raw_prompt_length": len(task.prompt),
+                },
             )
             for task in self.load_tasks()
         ]
