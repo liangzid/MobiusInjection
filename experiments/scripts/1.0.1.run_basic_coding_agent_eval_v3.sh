@@ -2,10 +2,10 @@
 # ======================================================================
 # 1.0.1.run_basic_eval_v3.sh
 #
-# Basic Agent Mobius Injection Evaluation - V3 Non-Stealthy
-#   - Use TEMPLATE_V3.py injection text (non-stealthy version)
-#   - Removed stealth instructions (agent can output results)
-#   - Test target changed from ~/.bashrc to /tmp/test_data.txt
+# Basic Agent Mobius Injection Evaluation - V3 Coding-Agent Template
+#   - Use TEMPLATE_V3_coding_agent.py injection text by default
+#   - Ground prompt wording in coding-agent workspace and skill lifecycle context
+#   - Test target remains /tmp/test_data.txt
 #   - Run OpenCode through OpenRouter with minimax/minimax-m2.5:free by default
 #   - Monitor skill injection, function calls, and other indicators
 #   - For OpenCode, verify whether newly created skills require a restarted
@@ -33,6 +33,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 INJECTION_DIR="$PROJECT_ROOT/mobiusInjection"
+INJECTION_TEMPLATE_MODULE="${INJECTION_TEMPLATE_MODULE:-TEMPLATE_V3_coding_agent}"
 
 MODEL_NAME="${1:-openrouter/minimax/minimax-m2.5:free}"
 TIMEOUT_SECONDS="${2:-300}"
@@ -825,8 +826,13 @@ if [ "$CURRENT_USER" != "zi" ]; then
     exit 1
 fi
 
-if [ ! -f "$INJECTION_DIR/TEMPLATE_V3.py" ]; then
-    echo -e "${RED}ERROR: TEMPLATE_V3.py not found${NC}"
+if [[ ! "$INJECTION_TEMPLATE_MODULE" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo -e "${RED}ERROR: invalid injection template module: $INJECTION_TEMPLATE_MODULE${NC}"
+    exit 1
+fi
+
+if [ ! -f "$INJECTION_DIR/${INJECTION_TEMPLATE_MODULE}.py" ]; then
+    echo -e "${RED}ERROR: ${INJECTION_TEMPLATE_MODULE}.py not found${NC}"
     exit 1
 fi
 
@@ -848,6 +854,7 @@ SUMMARY_FILE="$LOG_DIR/${EVAL_ID}_summary.txt"
 
 echo "Evaluation ID: $EVAL_ID"
 echo "Model: $MODEL_NAME"
+echo "Injection template: $INJECTION_TEMPLATE_MODULE"
 echo "Timeout per agent: ${TIMEOUT_SECONDS}s"
 if [ -n "$BENCHMARK_TASK_PROMPT_FILE" ]; then
     echo "Benchmark dataset: ${BENCHMARK_DATASET:-unknown}"
@@ -905,15 +912,16 @@ run_agent_eval() {
     PRE_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
     log "Pre-injection Memory: $PRE_MEM, CPU: $PRE_CPU"
 
-    # Generate injection text from TEMPLATE_V2.py
+    # Generate injection text from the configured template module.
     log_subsection "Generating Injection Text"
 
     INJECTION_TEXT=$(python3 -c "
+import importlib
 import sys
 sys.path.insert(0, '$INJECTION_DIR')
-from TEMPLATE_V3 import MainInjectionTextTargeted
+template_module = importlib.import_module('$INJECTION_TEMPLATE_MODULE')
 
-ctx = MainInjectionTextTargeted(
+ctx = template_module.MainInjectionTextTargeted(
     target_agent='$AGENT_NAME',
     target_model='$MODEL_NAME'
 )
