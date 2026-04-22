@@ -1,0 +1,45 @@
+
+* Overview
+
+As we successfully accomplish the injection experiments of the four claw-style agents before (see the file =~/AgentCodingDos/tasks/research_plan_0421_doubleCheckAll_claw_agents.org=), so now we want to evaluate the effectiveness of our injection in realistic contexts.
+
+Our experimental objectives consist of the following three claw-style agents:
++ ZeroClaw
++ OpenClaw
++ Hermes
+
+
+Yes. Just forget nanobot (we remove it as three agents are enough).
+
+And our preliminary CLEAN raw task cases is based on =clawbench=. I have previously write a interface about how to use clawbench to provide tasks, as shown in =~AgentCodingDos/experiments/AgentCallinterface/datasets/*clawbench*=. Feel free to check whether it is correct.
+
+Given these benign task descriptions, my first concern here is that /whether these tasks are suitable for the injection experiments./
+The Attack Scenario is that we assume our injection scripts (e.g., the V3 shown in mobiusInjection/TEMPLATE_V3.py) can be compatible to insert into the context of these tasks naturally. I hope you can check this. AND LET ME CHECK THIS.
+
+
+After that, we may write an injection function to insert the V3 version texts into the clean task descriptions (in a appropriate manner) to create our poisoned tasks.
+For these tasks, we can thus send them into the three claw-style agents we selected under different LLM APIs provided by openrouter for the experiments with a relatively higher timeout.
+WE MAY DISCUSS THIS BEFORE EXPERIMENTS.
+
+In this way, we can accomplish this part of experiments, that is, *to investigate the attack success rates of the mobius injection among different claw-style agents under various tasks supported by different LLM API models*.
+
+As this is a big task and any errors will waste many of the times as well as the money, so we may be cautious and do it one by one.
+
+* Reports to Overview
+
+* Rules to Obey
+
++ Never hurt the original clean agent containers
++ For each task, we may save an independent injected docker image checkpints for it.
+
+* Tasks 1: A minimal test
+
++ Just use two test cases in clawbench with a free openrouter model for test of effectiveness.
+
+
+
+
+
+
+
+
