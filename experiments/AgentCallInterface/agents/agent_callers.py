@@ -305,6 +305,8 @@ class ClaudeCodeCaller(AgentCaller):
     RUNTIME_USER = "zi"
     RUN_ROOT = "/tmp/claude-code-runs"
     DEFAULT_BASE_URL = "https://openrouter.ai/api"
+    OPENROUTER_PREFIX = "openrouter/"
+    DEFAULT_OPENROUTER_MODEL = "minimax/minimax-m2.5:free"
 
     def call(
         self,
@@ -312,11 +314,23 @@ class ClaudeCodeCaller(AgentCaller):
         timeout: int = 300,
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
+        task_id = task_input.get("task_id", "")
+        claude_model = self._resolve_claude_model(model)
+
         prompt = self._build_task_prompt(task_input)
         run_id = str(task_input.get("run_id", task_input.get("task_id", "claude-code-run")))
         api_key = get_openrouter_api_key()
-        cmd = self._build_claude_command(prompt, run_id, model, api_key)
-        return self._run_claude_command(cmd, task_input.get("task_id", ""), timeout)
+        cmd = self._build_claude_command(prompt, run_id, claude_model, api_key)
+        return self._run_claude_command(cmd, task_id, timeout)
+
+    def _resolve_claude_model(self, model: str) -> str:
+        if model.startswith(self.OPENROUTER_PREFIX):
+            model = model[len(self.OPENROUTER_PREFIX) :]
+
+        if model in {"free", "auto"}:
+            return self.DEFAULT_OPENROUTER_MODEL
+
+        return model
 
     def _build_task_prompt(self, task_input: dict[str, Any]) -> str:
         prompt = [
@@ -354,7 +368,8 @@ class ClaudeCodeCaller(AgentCaller):
             'fi; '
             'cd "$CLAUDE_WORKSPACE"; '
             'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"; '
-            'claude --dangerously-skip-permissions --model "$CLAUDE_MODEL" -p "$1"'
+            'claude --dangerously-skip-permissions --verbose --model "$CLAUDE_MODEL" '
+            '--output-format stream-json --include-partial-messages -p "$1"'
         )
         return [
             "docker",
@@ -376,7 +391,23 @@ class ClaudeCodeCaller(AgentCaller):
             "-e",
             f"ANTHROPIC_AUTH_TOKEN={api_key}",
             "-e",
+            "ANTHROPIC_API_KEY=",
+            "-e",
             f"CLAUDE_MODEL={model}",
+            "-e",
+            f"ANTHROPIC_MODEL={model}",
+            "-e",
+            f"ANTHROPIC_SMALL_FAST_MODEL={model}",
+            "-e",
+            f"ANTHROPIC_DEFAULT_OPUS_MODEL={model}",
+            "-e",
+            f"ANTHROPIC_DEFAULT_SONNET_MODEL={model}",
+            "-e",
+            f"ANTHROPIC_DEFAULT_HAIKU_MODEL={model}",
+            "-e",
+            f"CLAUDE_CODE_SUBAGENT_MODEL={model}",
+            "-e",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
             self.CONTAINER_NAME,
             "bash",
             "-lc",
@@ -388,30 +419,132 @@ class ClaudeCodeCaller(AgentCaller):
     def _run_claude_command(
         self, cmd: list[str], task_id: str, timeout: int
     ) -> AgentResponse:
-        import time
-
         start = time.time()
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-            return AgentResponse(
-                success=result.returncode == 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
-                duration=time.time() - start,
-                task_id=task_id,
-                stderr=result.stderr,
-                returncode=result.returncode,
+            return self._parse_claude_stream_response(
+                result.stdout,
+                result.stderr,
+                result.returncode,
+                time.time() - start,
+                task_id,
             )
-        except subprocess.TimeoutExpired:
-            # Path(temp_path).unlink(missing_ok=True)
+        except subprocess.TimeoutExpired as exc:
+            response = self._parse_claude_stream_response(
+                self._to_text(exc.stdout),
+                self._to_text(exc.stderr),
+                returncode=124,
+                duration=timeout,
+                task_id=task_id,
+            )
+            response.success = False
+            response.error = response.error or f"Timeout after {timeout}s"
+            response.returncode = None
+            return response
+
+    def _to_text(self, value: str | bytes | None) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, bytes):
+            return value.decode(errors="replace")
+        return value
+
+    def _parse_claude_stream_response(
+        self,
+        stdout: str,
+        stderr: str,
+        returncode: int,
+        duration: float,
+        task_id: str,
+    ) -> AgentResponse:
+        raw_output = stdout or ""
+        stderr = stderr or ""
+        if not raw_output.strip():
             return AgentResponse(
                 success=False,
                 output="",
-                error=f"Timeout after {timeout}s",
-                duration=timeout,
+                error=stderr.strip() or "Claude Code returned no stdout.",
+                duration=duration,
                 task_id=task_id,
-                returncode=None,
+                stderr=stderr,
+                returncode=returncode,
             )
+
+        text_parts: list[str] = []
+        assistant_texts: list[str] = []
+        final_payload: dict[str, Any] | None = None
+        parse_errors = 0
+
+        for line in raw_output.splitlines():
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                parse_errors += 1
+                continue
+
+            if payload.get("type") == "result":
+                final_payload = payload
+                continue
+
+            if payload.get("type") == "stream_event":
+                event = payload.get("event") or {}
+                if event.get("type") == "content_block_delta":
+                    delta = event.get("delta") or {}
+                    if delta.get("type") == "text_delta":
+                        text_parts.append(delta.get("text") or "")
+                continue
+
+            if payload.get("type") == "assistant":
+                message = payload.get("message") or {}
+                content = message.get("content") or []
+                texts = [
+                    item.get("text") or ""
+                    for item in content
+                    if isinstance(item, dict) and item.get("type") == "text"
+                ]
+                if texts:
+                    assistant_texts.append("".join(texts))
+
+        result_text = "".join(text_parts).strip()
+        if not result_text and assistant_texts:
+            result_text = "\n".join(text for text in assistant_texts if text.strip()).strip()
+        if not result_text and final_payload and final_payload.get("result"):
+            result_text = str(final_payload.get("result") or "").strip()
+
+        is_error = bool(final_payload and final_payload.get("is_error"))
+        success = returncode == 0 and not is_error and bool(result_text.strip())
+        error = None
+
+        if is_error:
+            error = (
+                (final_payload or {}).get("result")
+                or result_text
+                or stderr
+                or "Claude Code returned an error result."
+            )
+        elif returncode != 0:
+            error = stderr or result_text or "Claude Code command failed."
+        elif not result_text.strip():
+            used_models = ", ".join(((final_payload or {}).get("modelUsage") or {}).keys())
+            model_note = f" Used model(s): {used_models}." if used_models else ""
+            error = (
+                "Claude Code stream did not contain assistant text."
+                f"{model_note}"
+            )
+        elif parse_errors:
+            error = None
+
+        return AgentResponse(
+            success=success,
+            output=result_text,
+            error=error,
+            duration=duration,
+            task_id=task_id,
+            stderr=stderr,
+            returncode=returncode,
+        )
 
 
 class CursorCaller(AgentCaller):

@@ -6,15 +6,18 @@ This keeps sensitive credentials out of source code.
 
 from pathlib import Path
 from functools import lru_cache
+import os
 
 # Project root is AgentCodingDos (parent of experiments/AgentCallInterface)
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.absolute()
 PRIVACY_DIR = PROJECT_ROOT / "privacy_secret_openrouter_API_key.txt"
+OPENROUTER_API_KEY_FILE_ENV = "OPENROUTER_API_KEY_FILE"
+OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
 
 
 @lru_cache(maxsize=1)
 def get_openrouter_api_key() -> str:
-    """Read OpenRouter API key from privacy file.
+    """Read OpenRouter API key from env or privacy file.
 
     Returns:
         str: The OpenRouter API key
@@ -23,15 +26,21 @@ def get_openrouter_api_key() -> str:
         FileNotFoundError: If the privacy file doesn't exist
         ValueError: If the key file is empty
     """
-    if not PRIVACY_DIR.exists():
+    env_key = os.environ.get(OPENROUTER_API_KEY_ENV, "").strip()
+    if env_key:
+        return env_key
+
+    key_path = Path(os.environ.get(OPENROUTER_API_KEY_FILE_ENV, PRIVACY_DIR))
+    if not key_path.exists():
         raise FileNotFoundError(
-            f"OpenRouter API key file not found at {PRIVACY_DIR}. "
-            "Please create privacy_secret_openrouter_API_key.txt in the project root."
+            f"OpenRouter API key file not found at {key_path}. "
+            "Please create privacy_secret_openrouter_API_key.txt in the project root, "
+            f"set {OPENROUTER_API_KEY_FILE_ENV}, or set {OPENROUTER_API_KEY_ENV}."
         )
 
-    api_key = PRIVACY_DIR.read_text().strip()
+    api_key = key_path.read_text().strip()
     if not api_key:
-        raise ValueError(f"OpenRouter API key file at {PRIVACY_DIR} is empty.")
+        raise ValueError(f"OpenRouter API key file at {key_path} is empty.")
 
     return api_key
 
