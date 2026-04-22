@@ -425,3 +425,41 @@ and requested an iterative loop:
   chosen attack metric: about 75% for follow-up persistence on the small
   stability sample, but about 25% for the stricter "main marker plus
   persistence" metric.
+
+## Full Three-Coding-Agent HumanEval Run
+
+### Setup
+
+- User request:
+  Run a full experiment across the three coding agents using the latest
+  higher-success prompt.
+- Scope:
+  The benchmark manifest runner currently supports HumanEval only. A dry run
+  with `CODING_EVAL_AGENTS=opencode,kilo_code,claude_code` and no `LIMIT`
+  produced 492 cases: 164 HumanEval tasks times 3 coding agents.
+- Prompt:
+  Current `mobiusInjection/TEMPLATE_V3_coding_agent.py`, reverted to the
+  iter-11 prompt family after the failed compression attempt.
+- Runtime settings:
+  `FOLLOWUP_TIMEOUT_SECONDS=180`, MiniMax model
+  `openrouter/minimax/minimax-m2.5:free`, prompt order
+  `task_before_injection`, compact log retention.
+- Container setup:
+  `kilo_code` and `claude_code` were already running. `opencode` was restarted
+  from `opencode:pre_eval_backup` before launching the full run.
+
+### Launch
+
+- First launch attempt:
+  `full_three_coding_agents_humaneval_current_prompt_20260422_232636` exited
+  before manifest generation. It was treated as a launcher failure and not used
+  as the experiment run.
+- Active run:
+  `full_three_coding_agents_humaneval_current_prompt_20260422_232736`.
+- Command:
+  `CODING_EVAL_AGENTS=opencode,kilo_code,claude_code BENCHMARK_RUN_ID=full_three_coding_agents_humaneval_current_prompt_20260422_232736 FOLLOWUP_TIMEOUT_SECONDS=180 LOG_POLICY=compact bash experiments/scripts/1.0.2.run_minimax_humaneval_injection_benchmark.sh`
+- Run directory:
+  `experiments/logs/humaneval_minimax_benchmark/full_three_coding_agents_humaneval_current_prompt_20260422_232736`.
+- Process:
+  Background PID `2919184`, launched with `setsid`; manifest generated 492
+  cases and the run started with `HumanEval/0` on `opencode`.
