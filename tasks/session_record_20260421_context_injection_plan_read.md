@@ -2502,3 +2502,39 @@ Verification:
 
 - `uv run pytest experiments/AgentCallInterface/tests/test_mi_v35_openclaw_variants.py -q`
 - result: `4 passed in 0.02s`
+
+## 2026-04-23 - Rename V3.5 Variants to Claw-Style Generic and Update Prompts
+
+User request:
+
+- Rename the three V3.5 files and prompts because these are not OpenClaw-only injections.
+- Make them applicable to all claw-style agents.
+
+Changes:
+
+- Renamed and generalized variant files:
+  - `mobiusInjection/MI_V3.5a_openclaw_nopath.py`
+    -> `mobiusInjection/MI_V3.5a_claw_style_nopath.py`
+  - `mobiusInjection/MI_V3.5b_openclaw_softroot.py`
+    -> `mobiusInjection/MI_V3.5b_claw_style_softroot.py`
+  - `mobiusInjection/MI_V3.5c_openclaw_explicit_path.py`
+    -> `mobiusInjection/MI_V3.5c_claw_style_explicit_paths.py`
+
+- Prompt updates:
+  - Variant a: replaced OpenClaw-specific wording with generic “current claw-style agent normal skill creation workflow”.
+  - Variant b: replaced OpenClaw-only root placeholder with generic `<SKILL_ROOT>` and generic root inference language.
+  - Variant c: switched to cross-agent explicit root list:
+    - `/usr/local/lib/node_modules/openclaw/skills`
+    - `/root/.zeroclaw/workspace/skills`
+    - `/root/.hermes/skills`
+    and uses `<SKILL_ROOT>/...` for writes.
+
+- Renamed/updated test file:
+  - `experiments/AgentCallInterface/tests/test_mi_v35_openclaw_variants.py`
+    -> `experiments/AgentCallInterface/tests/test_mi_v35_claw_style_variants.py`
+  - Updated assertions to generic claw-style semantics.
+
+Verification:
+
+- `uv run pytest experiments/AgentCallInterface/tests/test_mi_v35_claw_style_variants.py -q`
+- result: `4 passed in 0.02s`
