@@ -92,6 +92,49 @@ def test_openclaw_command_accepts_context_injection_container_override():
     assert command[6:9] == ["ctx_openclaw_xdom_clean", "bash", "-lc"]
 
 
+def test_openclaw_command_can_disable_model_override():
+    caller = OpenClawCaller()
+    command = caller._build_openclaw_command(
+        "Report status.",
+        "openrouter/free",
+        "test-key",
+        allow_model_override=False,
+    )
+
+    assert "--model " not in command[-1]
+    assert "--local --json --prompt" in command[-1]
+
+
+def test_openclaw_set_primary_model_command_targets_profile_config():
+    caller = OpenClawCaller()
+    command = caller._build_openclaw_set_primary_model_command(
+        "qwen/qwen3.6-plus",
+        "test-key",
+    )
+
+    assert command[0:4] == ["docker", "exec", "-e", "OPENROUTER_API_KEY=test-key"]
+    assert command[4:7] == ["openclaw", "bash", "-lc"]
+    assert (
+        "openclaw --profile mobius-eval config set agents.defaults.model.primary "
+        "openrouter/qwen/qwen3.6-plus"
+    ) in command[-1]
+
+
+def test_openclaw_detects_profile_model_override_rejection():
+    caller = OpenClawCaller()
+    response = AgentResponse(
+        success=False,
+        output="",
+        error='Error: Model override "openrouter/qwen/qwen3.6-plus" is not allowed for agent "main".',
+        duration=0.1,
+        task_id="xdom-001",
+        stderr='Error: Model override "openrouter/qwen/qwen3.6-plus" is not allowed for agent "main".',
+        returncode=1,
+    )
+
+    assert caller._is_model_override_rejected(response) is True
+
+
 def test_openclaw_output_parser_extracts_text_and_failure_state():
     caller = OpenClawCaller()
     payload = {

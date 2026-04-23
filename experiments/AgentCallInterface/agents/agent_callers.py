@@ -118,6 +118,7 @@ def _toml_string_array(values: tuple[str, ...]) -> str:
 class OpenClawCaller(AgentCaller):
     CONTAINER_NAME = "openclaw"
     PROFILE_NAME = "mobius-eval"
+    MODEL_OVERRIDE_NOT_ALLOWED = "Model override"
 
     def _normalize_openclaw_model(self, model: str) -> str:
         if model.startswith("openrouter/"):
@@ -130,12 +131,16 @@ class OpenClawCaller(AgentCaller):
         model: str,
         api_key: str,
         container_name: str | None = None,
+        allow_model_override: bool = True,
     ) -> list[str]:
         prompt_b64 = _encode_text(prompt)
-        quoted_model = shlex.quote(self._normalize_openclaw_model(model))
+        model_option = ""
+        if allow_model_override:
+            quoted_model = shlex.quote(self._normalize_openclaw_model(model))
+            model_option = f" --model {quoted_model}"
         script = (
             f'openclaw --profile {self.PROFILE_NAME} infer model run '
-            f'--local --json --model {quoted_model} --prompt "{_decode_b64("OPENCLAW_PROMPT_B64")}"'
+            f'--local --json{model_option} --prompt "{_decode_b64("OPENCLAW_PROMPT_B64")}"'
         )
         return _docker_bash_command(
             container_name or self.CONTAINER_NAME,
@@ -144,6 +149,33 @@ class OpenClawCaller(AgentCaller):
                 "OPENROUTER_API_KEY": api_key,
                 "OPENCLAW_PROMPT_B64": prompt_b64,
             },
+        )
+
+    def _build_openclaw_set_primary_model_command(
+        self,
+        model: str,
+        api_key: str,
+        container_name: str | None = None,
+    ) -> list[str]:
+        normalized_model = self._normalize_openclaw_model(model)
+        quoted_model = shlex.quote(normalized_model)
+        script = (
+            f"openclaw --profile {self.PROFILE_NAME} config set "
+            f"agents.defaults.model.primary {quoted_model}"
+        )
+        return _docker_bash_command(
+            container_name or self.CONTAINER_NAME,
+            script,
+            {"OPENROUTER_API_KEY": api_key},
+        )
+
+    def _is_model_override_rejected(self, response: AgentResponse) -> bool:
+        if response.returncode == 0:
+            return False
+        haystack = "\n".join(part for part in (response.output, response.stderr, response.error or "") if part)
+        return (
+            self.MODEL_OVERRIDE_NOT_ALLOWED in haystack
+            and "not allowed for agent" in haystack
         )
 
     def _parse_openclaw_output(self, raw_output: str) -> tuple[bool, str, str | None]:
@@ -167,8 +199,31 @@ class OpenClawCaller(AgentCaller):
         prompt = _prompt_from(task_input)
         container_name = _container_name_from(task_input, self.CONTAINER_NAME)
         api_key = get_openrouter_api_key()
-        cmd = self._build_openclaw_command(prompt, model, api_key, container_name)
-        response = _run_command(cmd, task_input.get("task_id", ""), timeout)
+        task_id = task_input.get("task_id", "")
+        # OpenClaw eval profile may block runtime --model overrides.
+        # Set profile default model first, then run inference without --model.
+        set_model_cmd = self._build_openclaw_set_primary_model_command(model, api_key, container_name)
+        set_model_response = _run_command(set_model_cmd, task_id, min(timeout, 90))
+        if set_model_response.returncode != 0:
+            return AgentResponse(
+                success=False,
+                output=set_model_response.output,
+                error=set_model_response.error or "Failed to set OpenClaw primary model",
+                duration=set_model_response.duration,
+                task_id=task_id,
+                stderr=set_model_response.stderr,
+                returncode=set_model_response.returncode,
+            )
+
+        cmd = self._build_openclaw_command(
+            prompt,
+            model,
+            api_key,
+            container_name,
+            allow_model_override=False,
+        )
+        response = _run_command(cmd, task_id, timeout)
+
         if not response.output.strip():
             return response
         try:
