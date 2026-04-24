@@ -34,7 +34,7 @@ KEEP_CONTAINERS="${KEEP_CONTAINERS:-0}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-bridge}"
 UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 INJECTION_TEMPLATE_PATH="${INJECTION_TEMPLATE_PATH:-$PROJECT_ROOT/mobiusInjection/TEMPLATE_V3.py}"
-INJECTION_TARGET_AGENT="${INJECTION_TARGET_AGENT:-claw-style}"
+INJECTION_TARGET_AGENT="${INJECTION_TARGET_AGENT:-}"
 CONTAINER_WORK_ROOT="${CONTAINER_WORK_ROOT:-/tmp/task_runs/session}"
 
 OPENCLAW_BASE_IMAGE="${OPENCLAW_BASE_IMAGE:-openclaw:mobius_eval_config_fixed_20260421}"
@@ -177,17 +177,43 @@ build_clean_workspace() {
     cp "$task_dir/task.toml" "$variant_root/task.toml"
 }
 
+resolve_injection_target_agent() {
+    local agent="$1"
+    if [ -n "$INJECTION_TARGET_AGENT" ]; then
+        printf '%s\n' "$INJECTION_TARGET_AGENT"
+    else
+        printf '%s\n' "$agent"
+    fi
+}
+
+staging_variant_root_for() {
+    local task_id="$1"
+    local variant="$2"
+    local agent="${3:-}"
+    case "$variant" in
+        clean) printf '%s/%s/clean\n' "$STAGING_ROOT" "$task_id" ;;
+        poisoned)
+            [ -n "$agent" ] || die "poisoned staging root requires an agent"
+            printf '%s/%s/poisoned/%s\n' "$STAGING_ROOT" "$task_id" "$agent"
+            ;;
+        *) die "Unsupported variant '$variant'" ;;
+    esac
+}
+
 build_poisoned_workspace() {
     local task_id="$1"
-    local clean_root="$2"
-    local poisoned_root="$3"
+    local agent="$2"
+    local clean_root="$3"
+    local poisoned_root="$4"
     local input_file
+    local injection_target_agent
     input_file="$(task_input_file_for "$task_id")"
+    injection_target_agent="$(resolve_injection_target_agent "$agent")"
     rm -rf "$poisoned_root"
     mkdir -p "$poisoned_root"
     cp -a "$clean_root/." "$poisoned_root/"
 
-    PYTHONPATH="$PROJECT_ROOT" python3 - "$task_id" "$poisoned_root/workspace/$input_file" "$MODEL_NAME" "$INJECTION_TEMPLATE_PATH" "$INJECTION_TARGET_AGENT" <<'PY'
+    PYTHONPATH="$PROJECT_ROOT" python3 - "$task_id" "$poisoned_root/workspace/$input_file" "$MODEL_NAME" "$INJECTION_TEMPLATE_PATH" "$injection_target_agent" <<'PY'
 import importlib.util
 import json
 import sys
@@ -228,14 +254,16 @@ PY
 }
 
 build_all_workspaces() {
-    local task_id clean_root poisoned_root
+    local task_id clean_root poisoned_root agent
     for task_id in $TASK_IDS_TEXT; do
-        clean_root="$STAGING_ROOT/$task_id/clean"
-        poisoned_root="$STAGING_ROOT/$task_id/poisoned"
+        clean_root="$(staging_variant_root_for "$task_id" "clean")"
         log "Building clean workspace for $task_id"
         build_clean_workspace "$task_id" "$clean_root"
-        log "Building poisoned workspace for $task_id"
-        build_poisoned_workspace "$task_id" "$clean_root" "$poisoned_root"
+        for agent in $AGENTS_TEXT; do
+            poisoned_root="$(staging_variant_root_for "$task_id" "poisoned" "$agent")"
+            log "Building poisoned workspace for $task_id agent=$agent"
+            build_poisoned_workspace "$task_id" "$agent" "$clean_root" "$poisoned_root"
+        done
     done
 }
 
@@ -526,7 +554,7 @@ capture_agent_sessions() {
         docker exec "$container" bash -lc "
             if [ -d $root_q ]; then
                 find $root_q -maxdepth 10 -type f \\
-                    \\( -iname 'session*.json' -o -iname '*session*.json' -o -iname '*session*.jsonl' -o -iname '*conversation*.json' -o -iname '*chat*.json' -o -iname '*history*.json' -o -iname '*.log' \\) \\
+                    \\( -iname 'session*.json' -o -iname '*session*.json' -o -iname '*session*.jsonl' -o -path '*/sessions/*.jsonl' -o -iname '*.jsonl' -o -iname '*conversation*.json' -o -iname '*chat*.json' -o -iname '*history*.json' -o -iname '*.log' \\) \\
                     -printf '%T@\\t%s\\t%p\\n'
             fi
         " >>"$index_tsv" 2>/dev/null || true
@@ -691,7 +719,7 @@ run_one_variant() {
     local pre_image post_image task_log_dir verify_dir export_workspace prompt stdout_file stderr_file caller_rc verifier_rc run_start_epoch
     local output_file
 
-    host_variant_root="$STAGING_ROOT/$task_id/$variant"
+    host_variant_root="$(staging_variant_root_for "$task_id" "$variant" "$agent")"
     host_workspace="$host_variant_root/workspace"
     instruction_path="$host_variant_root/instruction.md"
     container_workspace="$(container_workspace_for "$agent" "$task_id" "$variant")"
