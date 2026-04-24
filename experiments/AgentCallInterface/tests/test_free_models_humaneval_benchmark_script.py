@@ -83,3 +83,18 @@ def test_free_models_humaneval_wrapper_snapshots_eval_script(tmp_path):
         / "scripts"
         / "1.0.1.run_basic_coding_agent_eval_v3.sh"
     ).read_text()
+
+
+def test_free_models_wrapper_supports_swebench_dataset(tmp_path):
+    result = run_dry_script(
+        tmp_path,
+        BENCHMARK_DATASET="swebench",
+        MODEL_NAMES="openrouter/qwen/qwen3.6-plus",
+        CODING_EVAL_AGENTS="opencode",
+        LIMIT="2",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "DATASET=swebench" in result.stdout
+    assert "MODEL=openrouter/qwen/qwen3.6-plus" in result.stdout
+    assert "CASES=2" in result.stdout

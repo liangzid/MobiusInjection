@@ -1,6 +1,6 @@
 #!/bin/bash
 # ======================================================================
-# Run HumanEval + TEMPLATE_V3 injection benchmarks across free models.
+# Run coding benchmark + TEMPLATE_V3 injection benchmarks across models.
 #
 # Concurrency model:
 #   - models run serially, so the same container names are not reused by
@@ -17,6 +17,7 @@ EVAL_SCRIPT="$SCRIPT_DIR/1.0.1.run_basic_coding_agent_eval_v3.sh"
 
 MODEL_NAMES="${MODEL_NAMES:-openrouter/minimax/minimax-m2.5:free,openrouter/qwen/qwen3-coder:free,openrouter/deepseek/deepseek-r1-distill-qwen-32b:free}"
 CODING_EVAL_AGENTS="${CODING_EVAL_AGENTS:-opencode,kilo_code,claude_code}"
+BENCHMARK_DATASET="${BENCHMARK_DATASET:-humaneval}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-300}"
 FOLLOWUP_TIMEOUT_SECONDS="${FOLLOWUP_TIMEOUT_SECONDS:-60}"
 SLEEP_BETWEEN="${SLEEP_BETWEEN:-0}"
@@ -26,9 +27,8 @@ LIMIT="${LIMIT:-50}"
 OFFSET="${OFFSET:-0}"
 TASK_IDS="${TASK_IDS:-}"
 
-BENCHMARK_DATASET="humaneval"
-BENCHMARK_ROOT="${BENCHMARK_ROOT:-$PROJECT_ROOT/experiments/logs/humaneval_free_models_benchmark}"
-BENCHMARK_RUN_ID="${BENCHMARK_RUN_ID:-humaneval_free_models_$(date +%Y%m%d_%H%M%S)}"
+BENCHMARK_ROOT="${BENCHMARK_ROOT:-$PROJECT_ROOT/experiments/logs/${BENCHMARK_DATASET}_model_benchmark}"
+BENCHMARK_RUN_ID="${BENCHMARK_RUN_ID:-${BENCHMARK_DATASET}_models_$(date +%Y%m%d_%H%M%S)}"
 BENCHMARK_RUN_DIR="${BENCHMARK_RUN_DIR:-$BENCHMARK_ROOT/$BENCHMARK_RUN_ID}"
 WRAPPER_LOG="$BENCHMARK_RUN_DIR/wrapper.log"
 EVAL_SCRIPT_SNAPSHOT="$BENCHMARK_RUN_DIR/scripts/$(basename "$EVAL_SCRIPT")"

@@ -16,6 +16,7 @@ from experiments.AgentCallInterface.datasets.coding_benchmark_loader import (
     BenchmarkTask,
     CodingTask,
     HUMANEVAL_TASK_INSTRUCTIONS,
+    SWEBENCH_TASK_INSTRUCTIONS,
     load_benchmark_tasks,
 )
 
@@ -42,6 +43,18 @@ class TestSWEBenchLoader:
     def test_init_with_custom_path(self, tmp_path):
         loader = SWEBenchLoader(data_dir=tmp_path)
         assert loader.data_dir == tmp_path
+
+    def test_load_benchmark_tasks_from_real_swebench_file(self):
+        tasks = load_benchmark_tasks(dataset="swebench", limit=2)
+
+        assert len(tasks) == 2
+        assert isinstance(tasks[0], BenchmarkTask)
+        assert tasks[0].dataset == "swebench"
+        assert tasks[0].prompt.startswith(SWEBENCH_TASK_INSTRUCTIONS)
+        assert "Repository:" in tasks[0].prompt
+        assert "Issue description:" in tasks[0].prompt
+        assert tasks[0].metadata["benchmark_prompt_kind"] == "swebench_issue_v1"
+        assert tasks[0].metadata["instance_id"]
 
 
 class TestHumanEvalLoader:
@@ -88,6 +101,13 @@ class TestCodingBenchmarkLoader:
         assert len(tasks) == 1
         assert tasks[0].dataset == "humaneval"
         assert tasks[0].task_id == "HumanEval/0"
+
+    def test_unified_loader_returns_swebench_records(self):
+        loader = CodingBenchmarkLoader()
+        tasks = loader.load_benchmark_tasks(dataset="swebench", limit=1)
+
+        assert len(tasks) == 1
+        assert tasks[0].dataset == "swebench"
 
 
 if __name__ == "__main__":

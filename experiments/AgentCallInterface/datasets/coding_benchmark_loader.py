@@ -65,10 +65,35 @@ task in this run.
 Task content:
 """
 
+SWEBENCH_TASK_INSTRUCTIONS = """You are completing a SWE-bench software engineering task.
+
+Use the issue description, repository metadata, and test patch below to infer the
+required code change. Make the smallest correct fix that would satisfy the
+tests. Do not ask follow-up questions; complete the task in this run.
+
+"""
+
 
 def build_humaneval_benchmark_prompt(prompt: str, entry_point: str) -> str:
     entry_point_line = f"Entry point: {entry_point}\n\n" if entry_point else ""
     return f"{HUMANEVAL_TASK_INSTRUCTIONS}{entry_point_line}{prompt}"
+
+
+def build_swebench_benchmark_prompt(task: CodingTask) -> str:
+    sections = [
+        SWEBENCH_TASK_INSTRUCTIONS,
+        f"Repository: {task.repo}",
+        f"Instance ID: {task.instance_id or task.task_id}",
+        f"Repository version: {task.repo_version}",
+        "",
+        "Issue description:",
+        task.problem_statement,
+    ]
+    if task.hints:
+        sections.extend(["", "Hints:", task.hints])
+    if task.test_patch:
+        sections.extend(["", "Test patch:", task.test_patch])
+    return "\n".join(sections).strip() + "\n"
 
 
 class SWEBenchLoader:
@@ -98,6 +123,32 @@ class SWEBenchLoader:
         tasks = self._parse_swebench(data_file)
         self._tasks_cache = tasks
         return self._filter_tasks(tasks, repos)
+
+    def load_benchmark_tasks(
+        self,
+        limit: int | None = None,
+        offset: int = 0,
+        task_ids: list[str] | None = None,
+        dataset_type: str = "verified_mini",
+    ) -> list[BenchmarkTask]:
+        tasks = [
+            BenchmarkTask(
+                dataset="swebench",
+                task_id=task.task_id,
+                prompt=build_swebench_benchmark_prompt(task),
+                entry_point="",
+                metadata={
+                    **task.metadata,
+                    "benchmark_prompt_kind": "swebench_issue_v1",
+                    "repo": task.repo,
+                    "instance_id": task.instance_id,
+                    "repo_version": task.repo_version,
+                    "has_test_patch": bool(task.test_patch),
+                },
+            )
+            for task in self.load_tasks(dataset_type=dataset_type)
+        ]
+        return filter_benchmark_tasks(tasks, limit=limit, offset=offset, task_ids=task_ids)
 
     def _filter_tasks(
         self, tasks: list[CodingTask], repos: list[str] | None
@@ -253,13 +304,20 @@ class CodingBenchmarkLoader:
         offset: int = 0,
         task_ids: list[str] | None = None,
     ) -> list[BenchmarkTask]:
-        return load_benchmark_tasks(
-            dataset=dataset,
-            limit=limit,
-            offset=offset,
-            task_ids=task_ids,
-            data_dir=self.humaneval.data_dir,
-        )
+        normalized = dataset.lower()
+        if normalized in {"humaneval", "human_eval", "human-eval"}:
+            return self.humaneval.load_benchmark_tasks(
+                limit=limit,
+                offset=offset,
+                task_ids=task_ids,
+            )
+        if normalized in {"swebench", "swe-bench", "swe_bench"}:
+            return self.swebench.load_benchmark_tasks(
+                limit=limit,
+                offset=offset,
+                task_ids=task_ids,
+            )
+        raise ValueError(f"Unsupported benchmark dataset: {dataset}")
 
     def to_agent_input(self, task: CodingTask, agent_type: str) -> dict[str, Any]:
         return {
@@ -300,10 +358,13 @@ def load_benchmark_tasks(
     data_dir: Path | str | None = None,
 ) -> list[BenchmarkTask]:
     normalized = dataset.lower()
-    if normalized not in {"humaneval", "human_eval", "human-eval"}:
-        raise ValueError(f"Unsupported benchmark dataset: {dataset}")
-    loader = HumanEvalLoader(data_dir=data_dir)
-    return loader.load_benchmark_tasks(limit=limit, offset=offset, task_ids=task_ids)
+    if normalized in {"humaneval", "human_eval", "human-eval"}:
+        loader = HumanEvalLoader(data_dir=data_dir)
+        return loader.load_benchmark_tasks(limit=limit, offset=offset, task_ids=task_ids)
+    if normalized in {"swebench", "swe-bench", "swe_bench"}:
+        loader = SWEBenchLoader(data_dir=data_dir)
+        return loader.load_benchmark_tasks(limit=limit, offset=offset, task_ids=task_ids)
+    raise ValueError(f"Unsupported benchmark dataset: {dataset}")
 
 
 if __name__ == "__main__":
