@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from experiments.AgentCallInterface.context_injection_add_s import (
@@ -75,6 +77,34 @@ def test_apply_injection_appends_to_json_field_by_match(tmp_path: Path) -> None:
     assert data[1]["body"].endswith("PAYLOAD")
 
 
+def test_apply_injection_appends_to_root_json_object_field(tmp_path: Path) -> None:
+    workspace = tmp_path
+    target = workspace / "message.json"
+    target.write_text(
+        json.dumps(
+            {
+                "subject": "hello",
+                "body": "existing body",
+                "sender": "alice@example.com",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    spec = InjectionSpec(
+        mode="json_field_append",
+        file="message.json",
+        target_field="body",
+        prepend_label="Channel ops note:",
+    )
+    apply_injection(workspace, spec, "PAYLOAD")
+
+    data = json.loads(target.read_text(encoding="utf-8"))
+    assert data["subject"] == "hello"
+    assert "Channel ops note:" in data["body"]
+    assert data["body"].endswith("PAYLOAD")
+
+
 def test_apply_injection_appends_python_comment_block(tmp_path: Path) -> None:
     workspace = tmp_path
     target = workspace / "pull_request.py"
@@ -138,3 +168,75 @@ def test_add_s_script_references_taskset_and_category_summary() -> None:
     assert "write_category_summary()" in script
     assert '"injection_observed": injection_flag == "1"' in script
     assert 'log "Category summary: $SUMMARY_MD"' in script
+
+
+def test_add_s_script_does_not_store_pre_run_checkpoints() -> None:
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert 'pre_image=""' in script
+    assert 'commit_checkpoint "$container" "$pre_image"' not in script
+    assert '"pre_run_image": None if pre_image == "" else pre_image' in script
+
+
+def test_plan_a_taskset_has_research_plan_a_sized_categories() -> None:
+    plan_a_path = (
+        PROJECT_ROOT / "experiments/configs/context_injection_add_s_taskset_plan_a.toml"
+    )
+
+    selections = load_taskset(plan_a_path)
+    counts: dict[str, int] = {}
+    for item in selections:
+        counts[item.category] = counts.get(item.category, 0) + 1
+
+    assert counts == {
+        "daily-life": 11,
+        "social": 11,
+        "office": 11,
+        "dev": 11,
+    }
+
+
+def test_plan_a_taskset_injection_targets_exist_after_setup() -> None:
+    plan_a_path = (
+        PROJECT_ROOT / "experiments/configs/context_injection_add_s_taskset_plan_a.toml"
+    )
+    tasks_root = (
+        PROJECT_ROOT / "experiments/AgentCallInterface/datasets/clawbench_tasks/tasks"
+    )
+
+    for selection in load_taskset(plan_a_path):
+        task_dir = tasks_root / selection.task_path
+        with tempfile.TemporaryDirectory(prefix="plan_a_taskset_") as tmp_dir:
+            variant_root = Path(tmp_dir)
+            explicit_workspace = variant_root / "workspace"
+            legacy_workspace = task_dir / "workspace"
+
+            subprocess.run(
+                ["bash", str(task_dir / "environment/setup.sh"), str(explicit_workspace)],
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+            if legacy_workspace != explicit_workspace and legacy_workspace.exists():
+                if not explicit_workspace.exists() or not any(explicit_workspace.iterdir()):
+                    explicit_workspace.mkdir(parents=True, exist_ok=True)
+                    for item in legacy_workspace.iterdir():
+                        destination = explicit_workspace / item.name
+                        if item.is_dir():
+                            shutil.copytree(item, destination, dirs_exist_ok=True)
+                        else:
+                            shutil.copy2(item, destination)
+
+            assert (
+                explicit_workspace / selection.injection.file
+            ).exists(), f"missing injection target for {selection.task_id}: {selection.injection.file}"
+
+
+def test_add_s_script_uses_broader_hermes_openclaw_detection() -> None:
+    script = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "has_new_sidechannel_marker()" in script
+    assert "any_artifact_contains()" in script
+    assert "hermes-native-skills-sidechannel" in script
+    assert "hermes-native-skills-artifact" in script
+    assert "openclaw-native-skills-sidechannel" in script
+    assert "openclaw-native-skills-artifact" in script

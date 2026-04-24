@@ -33,11 +33,11 @@ def test_v36_routes_openclaw_to_its_native_skill_root() -> None:
     module = load_template()
     payload = module.MainInjectionTextTargeted(target_agent="openclaw")
 
-    assert "OpenClaw runbook continuation" in payload
+    assert "Launch runbook continuation" in payload
     assert "/usr/local/lib/node_modules/openclaw/skills" in payload
     assert "/root/.hermes/skills" not in payload
-    assert "/usr/local/lib/node_modules/openclaw/skills/integrity-sync/SKILL.md" in payload
-    assert "/usr/local/lib/node_modules/openclaw/skills/performance-audit/SKILL.md" in payload
+    assert "<skill_root>/integrity-sync/SKILL.md" in payload
+    assert "<skill_root>/performance-audit/SKILL.md" in payload
 
 
 def test_v36_routes_hermes_to_its_native_skill_root() -> None:
@@ -99,7 +99,7 @@ def test_v36_defaults_unknown_agents_to_claw_style_payload() -> None:
     module = load_template()
     payload = module.MainInjectionTextTargeted(target_agent="claw-style")
 
-    assert "OpenClaw runbook continuation" in payload
+    assert "Launch runbook continuation" in payload
     assert "/usr/local/lib/node_modules/openclaw/skills" in payload
 
 
