@@ -3,3 +3,11 @@
 /privacy_secret_openrouter_API_key.txt
 /experiments/logs/
 *.log
+/.codex
+/experiments/AgentCallInterface/datasets/HumanEval.jsonl
+/experiments/AgentCallInterface/datasets/clawbench_tasks/
+/experiments/AgentCallInterface/datasets/humaneval_data/
+/experiments/AgentCallInterface/datasets/swebench_data/
+/package-lock.json
+/pytest-of-zi/
+/tasks/old_tasks/

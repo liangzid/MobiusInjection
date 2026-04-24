@@ -1,0 +1,14 @@
+
+
+
+
+Given =clawbench= shown in =AgentCallInterface/datasets=, we aim to select tens of test tasks from four task categories, and thus used for the evaluation shown in =effectiveness_injection_claw_0.1.context_injection_minimal.sh=.
+
+The four categories I premarily selected: Daily Life, Social, Office, and Dev.
+
+For each category, we may select less than 20 but more than 10 tasks for the evaluation.
+
+Evaluated metrics could be the:
+
++ Task Success Rate (TSR): Rate of tasks been passed.
++ P-ASR (Poisoning Success Rate): Rate of our skill injection success.
