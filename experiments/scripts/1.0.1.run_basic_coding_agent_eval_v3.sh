@@ -894,7 +894,7 @@ run_agent_eval() {
     log_subsection "Pre-Injection Backup"
     PRE_BACKUP_IMAGE="${AGENT_NAME}:${PRE_BACKUP_TAG}"
 
-    if docker images | grep -q "${AGENT_NAME}.*${PRE_BACKUP_TAG}"; then
+    if docker image inspect "$PRE_BACKUP_IMAGE" >/dev/null 2>&1; then
         log "Pre-injection backup exists: $PRE_BACKUP_IMAGE"
     else
         log "Creating pre-injection backup..."

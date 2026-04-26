@@ -58,6 +58,13 @@ def test_coding_eval_uses_unified_agent_lifecycle_hooks():
     assert 'capture_agent_state "$AGENT_NAME" "cleanup"' in script
 
 
+def test_coding_eval_checks_backup_image_without_pipefail_grep():
+    script = read_script()
+
+    assert 'docker image inspect "$PRE_BACKUP_IMAGE" >/dev/null 2>&1' in script
+    assert "docker images | grep" not in script
+
+
 def test_coding_eval_threads_lifecycle_state_files_into_analysis():
     script = read_script()
 
