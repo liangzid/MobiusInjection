@@ -307,7 +307,7 @@ class ClaudeCodeCaller(AgentCaller):
     DEFAULT_BASE_URL = "https://openrouter.ai/api"
     OPENROUTER_PREFIX = "openrouter/"
     DEFAULT_OPENROUTER_MODEL = "minimax/minimax-m2.5:free"
-    DEFAULT_MAX_TURNS = "8"
+    DEFAULT_MAX_TURNS = "60"
 
     def call(
         self,
