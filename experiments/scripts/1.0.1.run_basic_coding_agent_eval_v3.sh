@@ -898,7 +898,7 @@ run_agent_eval() {
         log "Pre-injection backup exists: $PRE_BACKUP_IMAGE"
     else
         log "Creating pre-injection backup..."
-        docker commit "$AGENT_NAME" "$PRE_BACKUP_IMAGE" 2>&1 | tee -a "$LOG_FILE"
+        docker commit --pause=false "$AGENT_NAME" "$PRE_BACKUP_IMAGE" 2>&1 | tee -a "$LOG_FILE"
         log "Backup created: $PRE_BACKUP_IMAGE"
     fi
 
@@ -1085,7 +1085,7 @@ PYTHON_EOF
     log_subsection "Creating Injected Checkpoint"
     INJECTED_IMAGE="${AGENT_NAME}:${INJECTED_TAG}"
     log "Creating checkpoint: $INJECTED_IMAGE"
-    docker commit "$AGENT_NAME" "$INJECTED_IMAGE" 2>&1 | tee -a "$LOG_FILE" || true
+    docker commit --pause=false "$AGENT_NAME" "$INJECTED_IMAGE" 2>&1 | tee -a "$LOG_FILE" || true
     update_metrics "post_injection" "checkpoint_image" "$INJECTED_IMAGE"
 
     # Post-injection status
