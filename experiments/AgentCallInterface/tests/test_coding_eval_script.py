@@ -68,8 +68,9 @@ def test_coding_eval_checks_backup_image_without_pipefail_grep():
 def test_coding_eval_docker_commits_do_not_pause_agent_containers():
     script = read_script()
 
-    assert 'docker commit --pause=false "$AGENT_NAME" "$PRE_BACKUP_IMAGE"' in script
-    assert 'docker commit --pause=false "$AGENT_NAME" "$INJECTED_IMAGE"' in script
+    assert 'docker commit --no-pause "$AGENT_NAME" "$PRE_BACKUP_IMAGE"' in script
+    assert 'docker commit --no-pause "$AGENT_NAME" "$INJECTED_IMAGE"' in script
+    assert "docker commit --pause=false" not in script
     assert 'docker commit "$AGENT_NAME"' not in script
 
 
