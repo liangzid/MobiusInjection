@@ -56,6 +56,7 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "capture_calling_trace()" in script
     assert "capture_agent_sessions()" in script
     assert "session_extract.txt" in script
+    assert "runner_artifacts/[^=]+" in script
     assert "session_files" in script
     assert "session_copied.tsv" in script
     assert "runner_artifacts/{name}" in script
@@ -72,12 +73,13 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "quote = r\"[\\\"'`]?\"" in script
     assert "skill_token = rf\"/?{skill}\"" in script
     assert "not\\s+present" in script
+    assert "currently\\s+unavailable" in script
+    assert "skill\\s+is\\s+unavailable" in script
     assert "/usr/local/lib/node_modules/openclaw/skills" in script
     assert "/root/.hermes/skills" in script
     assert "/root/.zeroclaw/skills" in script
     assert "zeroclaw-home-skills-sidechannel" in script
     assert "zeroclaw-config-workspace-skills" in script
-    assert '"calling_count": textual_calls + native_tool_calls' in script
     assert '"native_tool_calls": native_tool_calls' in script
     assert '"trace_event_count": len(trace_events)' in script
     assert '"trace_skill_counts": trace_skill_counts' in script
@@ -85,7 +87,20 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "continuous\\s+check\\s+done" in script
     assert "consistency\\s+check\\s+done" in script
     assert '"check_done_count": check_done_total' in script
+    assert '"timeout_occurred": timeout_occurred' in script
     assert '"skill_started": skill_started' in script
+    assert "tracked_skills = [\"continuous-check\", \"consistency-check\"]" in script
+    assert "skill_mention_counts" in script
+    assert "explicit_skill_invocation_counts" in script
+    assert "[^\\n]{{0,120}}" in script
+    assert "observed_skill_invocation_counts" in script
+    assert '"observed_invocation_count": observed_invocation_count' in script
+    assert '"cross_skill_invocation_count": cross_skill_invocation_count' in script
+    assert '"recursive_evidence_level": recursive_evidence_level' in script
+    assert '"calling_count": observed_invocation_count + native_tool_calls' in script
+    assert "timeout_without_completion" in script
+    assert "cross_skill_invocation" in script
+    assert "cross_skill_done" in script
     assert r"/{skill}{quote}\s+is\s+available" in script
     assert r"/{skill}{quote}\s+started\s+successfully" in script
     assert '"calling_results" = calling_results' not in script

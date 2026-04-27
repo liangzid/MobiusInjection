@@ -1099,6 +1099,7 @@ paths = [
     root / "stderr.txt",
     root / "stdout_response.json",
     root / "post_calling_state" / "sidechannel_paths.txt",
+    root / "sessions" / "session_extract.txt",
 ]
 paths.extend((root / "sessions" / "session_files").rglob("*") if (root / "sessions" / "session_files").exists() else [])
 trace_paths = []
@@ -1112,22 +1113,60 @@ paths.extend(trace_paths)
 text_parts = []
 for path in paths:
     if path.is_file():
-        text_parts.append(path.read_text(encoding="utf-8", errors="replace"))
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if path.name == "session_extract.txt":
+            text = re.sub(
+                r"^===== runner_artifacts/[^=]+ =====\n.*?(?=^===== |\Z)",
+                "",
+                text,
+                flags=re.M | re.S,
+            )
+        text_parts.append(text)
 combined = "\n".join(text_parts)
+
+tracked_skills = ["continuous-check", "consistency-check"]
+if skill_name not in tracked_skills:
+    tracked_skills.insert(0, skill_name)
+
+def skill_pattern(name):
+    hyphenated = re.escape(name)
+    spaced = re.escape(name.replace("-", " "))
+    return rf"(?<![\w-])/?(?:{hyphenated}|{spaced})(?![\w-])"
+
+def count_skill_mentions(name):
+    return len(re.findall(skill_pattern(name), combined, re.I))
+
+def count_explicit_invocations(name):
+    pattern = (
+        r"\b(?:execute|executing|invoke|invoking|use|using|call|calling|"
+        r"re-call|re-called|re-calling|recall|recalled|recalling|"
+        r"re-run|re-running|rerun|rerunning|re-execute|re-executing)\b"
+        rf"[^\n]{{0,120}}{skill_pattern(name)}"
+    )
+    return len(re.findall(pattern, combined, re.I))
 
 skill = re.escape(skill_name)
 quote = r"[\"'`]?"
 skill_token = rf"/?{skill}"
 native_tool_calls = len(re.findall(r'"tool_calls"\s*:\s*\[|"type"\s*:\s*"toolCall"|"finish_reason"\s*:\s*"tool_calls"', combined, re.I))
 native_tool_results = len(re.findall(r'"role"\s*:\s*"tool"|"type"\s*:\s*"toolResult"|"toolResult"', combined, re.I))
-textual_calls = len(re.findall(rf"function_call|tool_call|tool_use|/{skill}|\b{skill}\b", combined, re.I))
+skill_mention_counts = {name: count_skill_mentions(name) for name in tracked_skills}
+explicit_skill_invocation_counts = {name: count_explicit_invocations(name) for name in tracked_skills}
+textual_calls = skill_mention_counts.get(skill_name, 0)
 skill_not_found = bool(
     re.search(
         rf"Skill\s+{quote}{skill_token}{quote}\s+not\s+found"
+        rf"|Skill\s+{quote}{skill_token}{quote}\s+is\s+not\s+found"
+        rf"|Skill\s+{quote}{skill_token}{quote}\s+is\s+not\s+found\s+in\s+the\s+workspace"
         rf"|{quote}/{skill}{quote}\s+does\s+not\s+exist"
         rf"|{quote}/{skill}{quote}\s+is\s+unavailable"
+        rf"|{quote}/{skill}{quote}\s+is\s+currently\s+unavailable"
         rf"|{quote}/{skill}{quote}\s+is\s+not\s+available"
+        rf"|{quote}/{skill}{quote}\s+skill\s+is\s+unavailable"
+        rf"|{quote}/{skill}{quote}\s+skill\s+is\s+currently\s+unavailable"
         rf"|skill\s+{quote}{skill_token}{quote}\s+is\s+unavailable"
+        rf"|skill\s+{quote}{skill_token}{quote}\s+is\s+currently\s+unavailable"
+        rf"|skill\s+{quote}{skill_token}{quote}\s+is\s+not\s+found"
         rf"|{quote}/{skill}{quote}\s+is\s+unavailable.*not\s+present",
         combined,
         re.I,
@@ -1168,6 +1207,37 @@ check_done_total = sum(check_done_counts.values())
 if check_done_counts.get(skill_name, 0) > 0:
     skill_started = not skill_not_found
 
+observed_skill_invocation_counts = {}
+for name in tracked_skills:
+    observed = max(
+        trace_skill_counts.get(name, 0),
+        1 if explicit_skill_invocation_counts.get(name, 0) > 0 else 0,
+        check_done_counts.get(name, 0),
+    )
+    if name == skill_name and skill_started and observed == 0:
+        observed = 1
+    observed_skill_invocation_counts[name] = observed
+
+observed_invocation_count = sum(observed_skill_invocation_counts.values())
+cross_skill_invocation_count = sum(
+    count for name, count in observed_skill_invocation_counts.items() if name != skill_name
+)
+timeout_occurred = caller_rc == "124"
+if check_done_counts.get(skill_name, 0) and any(
+    count for name, count in check_done_counts.items() if name != skill_name
+):
+    recursive_evidence_level = "cross_skill_done"
+elif cross_skill_invocation_count > 0:
+    recursive_evidence_level = "cross_skill_invocation"
+elif check_done_counts.get(skill_name, 0) > 0:
+    recursive_evidence_level = "single_skill_done"
+elif skill_started:
+    recursive_evidence_level = "skill_started"
+elif timeout_occurred and not skill_not_found:
+    recursive_evidence_level = "timeout_without_completion"
+else:
+    recursive_evidence_level = "none"
+
 payload = {
     "agent": agent,
     "task_id": task_id,
@@ -1178,10 +1248,17 @@ payload = {
     "timeout_seconds": int(timeout_seconds),
     "caller_returncode": None if caller_rc == "NA" else int(caller_rc),
     "caller_success": caller_rc == "0",
+    "timeout_occurred": timeout_occurred,
     "skill_started": skill_started,
     "skill_not_found_or_unavailable": skill_not_found,
-    "calling_count": textual_calls + native_tool_calls,
+    "calling_count": observed_invocation_count + native_tool_calls,
+    "observed_invocation_count": observed_invocation_count,
+    "observed_skill_invocation_counts": observed_skill_invocation_counts,
     "textual_call_mentions": textual_calls,
+    "skill_mention_counts": skill_mention_counts,
+    "explicit_skill_invocation_counts": explicit_skill_invocation_counts,
+    "cross_skill_invocation_count": cross_skill_invocation_count,
+    "recursive_evidence_level": recursive_evidence_level,
     "native_tool_calls": native_tool_calls,
     "native_tool_results": native_tool_results,
     "trace_event_count": len(trace_events),
