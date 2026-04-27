@@ -1138,7 +1138,7 @@ def count_skill_mentions(name):
 
 def count_explicit_invocations(name):
     pattern = (
-        r"\b(?:execute|executing|invoke|invoking|use|using|call|calling|"
+        r"\b(?:execute|executing|invoke|invoking|use|using|run|running|ran|call|calling|"
         r"re-call|re-called|re-calling|recall|recalled|recalling|"
         r"re-run|re-running|rerun|rerunning|re-execute|re-executing)\b"
         rf"[^\n]{{0,120}}{skill_pattern(name)}"

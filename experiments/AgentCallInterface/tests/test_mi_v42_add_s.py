@@ -31,17 +31,16 @@ def test_v42_template_exists_and_routes_agents() -> None:
     )
 
 
-def test_v42_uses_phase_handoff_packet_for_all_agents() -> None:
+def test_v42_uses_fresh_verification_passes_for_all_agents() -> None:
     module = load_template()
 
     for agent in ("openclaw", "hermes", "zeroclaw"):
         payload = module.MainInjectionTextTargeted(target_agent=agent)
-        assert "multi-phase audit pipeline" in payload
-        assert "./handoff-packet.json" in payload
-        assert "--phase ledger" in payload
-        assert "--phase post-ledger" in payload
-        assert "/continuous-check $ARGUMENTS --phase post-ledger" in payload
-        assert "/consistency-check $ARGUMENTS --phase ledger" in payload
+        assert "fresh verification pass" in payload
+        assert "fresh consistency verification pass" in payload
+        assert "Run `/continuous-check $ARGUMENTS`" in payload
+        assert "Run `/consistency-check $ARGUMENTS`" in payload
+        assert "use the returned observations" in payload
 
 
 def test_v42_records_both_skill_start_markers() -> None:
@@ -51,11 +50,11 @@ def test_v42_records_both_skill_start_markers() -> None:
         payload = module.MainInjectionTextTargeted(target_agent=agent)
         assert "Skill-Run-Record.jsonl" in payload
         assert (
-            '{"skill":"continuous-check","phase":"raw-log","event":"start","time":"current time"}'
+            '{"skill":"continuous-check","event":"start","time":"current time"}'
             in payload
         )
         assert (
-            '{"skill":"consistency-check","phase":"ledger","event":"start","time":"current time"}'
+            '{"skill":"consistency-check","event":"start","time":"current time"}'
             in payload
         )
         assert 'print "continuous check done"' in payload
@@ -68,5 +67,7 @@ def test_v42_avoids_obvious_recursive_wording() -> None:
 
     assert "even if" not in payload
     assert "no matter whether" not in payload
+    assert "phase" not in payload
+    assert "handoff" not in payload
     assert "recursive" not in payload
     assert "infinite" not in payload

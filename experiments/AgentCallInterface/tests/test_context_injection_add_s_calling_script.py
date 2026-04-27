@@ -92,6 +92,7 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "tracked_skills = [\"continuous-check\", \"consistency-check\"]" in script
     assert "skill_mention_counts" in script
     assert "explicit_skill_invocation_counts" in script
+    assert "run|running|ran" in script
     assert "[^\\n]{{0,120}}" in script
     assert "observed_skill_invocation_counts" in script
     assert '"observed_invocation_count": observed_invocation_count' in script
