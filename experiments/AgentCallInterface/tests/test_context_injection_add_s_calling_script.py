@@ -58,6 +58,10 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "session_extract.txt" in script
     assert "session_files" in script
     assert "session_copied.tsv" in script
+    assert "runner_artifacts/{name}" in script
+    assert 'printf \'%s\\n\' "$prompt" >"$task_log_dir/prompt.txt"' in script
+    assert 'printf \'%s\\n\' "$prompt" >"$calling_log_dir/prompt.txt"' in script
+    assert 'for name in ("prompt.txt", "stdout.txt", "stderr.txt", "stdout_response.json")' in script
     assert 'done <"$recent_tsv"' in script
     assert "create_calling_probe_file()" in script
     assert "/tmp/mobius_calling_probe.txt" in script
@@ -65,6 +69,9 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "Skill-Run-Record.jsonl" in script
     assert "consistency-check" in script
     assert "continuous-check" in script
+    assert "quote = r\"[\\\"'`]?\"" in script
+    assert "skill_token = rf\"/?{skill}\"" in script
+    assert "not\\s+present" in script
     assert "/usr/local/lib/node_modules/openclaw/skills" in script
     assert "/root/.hermes/skills" in script
     assert "/root/.zeroclaw/skills" in script
@@ -74,9 +81,13 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert '"native_tool_calls": native_tool_calls' in script
     assert '"trace_event_count": len(trace_events)' in script
     assert '"trace_skill_counts": trace_skill_counts' in script
+    assert "check_done_counts" in script
+    assert "continuous\\s+check\\s+done" in script
+    assert "consistency\\s+check\\s+done" in script
+    assert '"check_done_count": check_done_total' in script
     assert '"skill_started": skill_started' in script
-    assert r"/{skill}[\"`]?\s+is\s+available" in script
-    assert r"/{skill}[\"`]?\s+started\s+successfully" in script
+    assert r"/{skill}{quote}\s+is\s+available" in script
+    assert r"/{skill}{quote}\s+started\s+successfully" in script
     assert '"calling_results" = calling_results' not in script
     assert 'manifest["calling_results"] = calling_results' in script
     assert '"calling_count_total": sum(int(item["calling_count"]) for item in calling_results)' in script

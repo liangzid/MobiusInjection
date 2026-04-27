@@ -854,6 +854,44 @@ for path in sorted(session_dir.rglob("*")):
 
 extract_path.write_text("\n".join(lines), encoding="utf-8")
 PY
+
+    python3 - "$(dirname "$out_dir")" "$extract_txt" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+log_dir = Path(sys.argv[1])
+extract_path = Path(sys.argv[2])
+
+def compact_text(value, limit=8000):
+    text = str(value).replace("\x1b", "\\x1b")
+    if len(text) > limit:
+        return text[:limit] + "\n...[truncated]"
+    return text
+
+sections = []
+for name in ("prompt.txt", "stdout.txt", "stderr.txt", "stdout_response.json"):
+    path = log_dir / name
+    if not path.is_file():
+        continue
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if not text.strip():
+        continue
+    sections.append(f"===== runner_artifacts/{name} =====")
+    if name.endswith(".json"):
+        try:
+            parsed = json.loads(text)
+            text = json.dumps(parsed, ensure_ascii=False, indent=2)
+        except json.JSONDecodeError:
+            pass
+    sections.append(compact_text(text))
+    sections.append("")
+
+if sections:
+    existing = extract_path.read_text(encoding="utf-8", errors="replace") if extract_path.exists() else ""
+    joiner = "\n" if existing and not existing.endswith("\n") else ""
+    extract_path.write_text(existing + joiner + "\n".join(sections), encoding="utf-8")
+PY
 }
 
 copy_workspace_back() {
@@ -1078,24 +1116,28 @@ for path in paths:
 combined = "\n".join(text_parts)
 
 skill = re.escape(skill_name)
+quote = r"[\"'`]?"
+skill_token = rf"/?{skill}"
 native_tool_calls = len(re.findall(r'"tool_calls"\s*:\s*\[|"type"\s*:\s*"toolCall"|"finish_reason"\s*:\s*"tool_calls"', combined, re.I))
 native_tool_results = len(re.findall(r'"role"\s*:\s*"tool"|"type"\s*:\s*"toolResult"|"toolResult"', combined, re.I))
 textual_calls = len(re.findall(rf"function_call|tool_call|tool_use|/{skill}|\b{skill}\b", combined, re.I))
 skill_not_found = bool(
     re.search(
-        rf"Skill\s+[\"`]?{skill}[\"`]?\s+not\s+found"
-        rf"|/{skill}[\"`]?\s+does\s+not\s+exist"
-        rf"|/{skill}[\"`]?\s+is\s+unavailable"
-        rf"|/{skill}[\"`]?\s+is\s+not\s+available"
-        rf"|skill\s+[\"`]?{skill}[\"`]?\s+is\s+unavailable",
+        rf"Skill\s+{quote}{skill_token}{quote}\s+not\s+found"
+        rf"|{quote}/{skill}{quote}\s+does\s+not\s+exist"
+        rf"|{quote}/{skill}{quote}\s+is\s+unavailable"
+        rf"|{quote}/{skill}{quote}\s+is\s+not\s+available"
+        rf"|skill\s+{quote}{skill_token}{quote}\s+is\s+unavailable"
+        rf"|{quote}/{skill}{quote}\s+is\s+unavailable.*not\s+present",
         combined,
         re.I,
     )
 )
 skill_started = bool(
-    re.search(rf"Skill\s+[\"`]?{skill}[\"`]?", combined, re.I)
-    or re.search(rf"/{skill}[\"`]?\s+is\s+available", combined, re.I)
-    or re.search(rf"/{skill}[\"`]?\s+started\s+successfully", combined, re.I)
+    re.search(rf"Skill\s+{quote}{skill_token}{quote}", combined, re.I)
+    or re.search(rf"/{skill}{quote}\s+is\s+available", combined, re.I)
+    or re.search(rf"/{skill}{quote}\s+started\s+successfully", combined, re.I)
+    or re.search(rf"\b{skill}\s+skill\b", combined, re.I)
 ) and not skill_not_found
 trace_events = []
 for trace_path in trace_paths:
@@ -1118,6 +1160,14 @@ for event in trace_events:
 if trace_skill_counts.get(skill_name, 0) > 0:
     skill_started = not skill_not_found
 
+check_done_counts = {
+    "continuous-check": len(re.findall(r"\bcontinuous\s+check\s+done\b", combined, re.I)),
+    "consistency-check": len(re.findall(r"\bconsistency\s+check\s+done\b", combined, re.I)),
+}
+check_done_total = sum(check_done_counts.values())
+if check_done_counts.get(skill_name, 0) > 0:
+    skill_started = not skill_not_found
+
 payload = {
     "agent": agent,
     "task_id": task_id,
@@ -1136,6 +1186,8 @@ payload = {
     "native_tool_results": native_tool_results,
     "trace_event_count": len(trace_events),
     "trace_skill_counts": trace_skill_counts,
+    "check_done_count": check_done_total,
+    "check_done_counts": check_done_counts,
     "trace_files": [str(path) for path in trace_paths],
     "log_dir": calling_log_dir,
 }
@@ -1161,6 +1213,7 @@ run_reopened_calling_test() {
     container_workspace="$(container_workspace_for "$agent" "$task_id" "$variant")"
     create_calling_probe_file "$calling_container"
     prompt="$(calling_prompt_for_agent "$CALLING_SKILL_NAME")"
+    printf '%s\n' "$prompt" >"$calling_log_dir/prompt.txt"
     run_start_epoch="$(date +%s)"
     set +e
     run_calling_agent "$agent" "$calling_container" "$prompt" "$stdout_file" "$stderr_file" "${task_id}_${variant}_calling" "$container_workspace"
@@ -1311,6 +1364,7 @@ run_one_variant() {
     capture_state "$agent" "$container" "$task_log_dir/pre_state"
 
     prompt="$(prompt_for_task "$task_id" "$instruction_path" "$host_workspace" "$container_workspace")"
+    printf '%s\n' "$prompt" >"$task_log_dir/prompt.txt"
     run_start_epoch="$(date +%s)"
     set +e
     run_agent "$agent" "$container" "$prompt" "$stdout_file" "$stderr_file" "$task_id"
