@@ -413,6 +413,27 @@ Execution result on 2026-04-28:
   - `bash -n` passed for the three imported claw-like shell scripts.
   - Focused pytest passed: 62 tests.
 
+Post-import continuation check on 2026-04-28:
+
+- A read-only `git merge-tree` check still shows full-merge risk in shared or
+  policy-sensitive paths:
+  - `.gitignore`
+  - root `AGENTS.md`
+  - `experiments/AgentCallInterface/agents/agent_callers.py`
+  - `experiments/AgentCallInterface/evaluation/mobius_monitor.py`
+  - shared tests such as `test_agent_callers.py` and `test_mobius_monitor.py`
+  - task-record deletions from `origin/master`
+- The `D` entries for `coding_agents/`, `coding_datasets/`,
+  `coding_evaluation/`, and `experiments/scripts/coding_agents/` in
+  `git diff HEAD..origin/master` are expected because those paths intentionally
+  exist only on the coding-agent branch. They should not be treated as files to
+  delete from this branch.
+- Reviewed `experiments/AgentCallInterface/utils/api_keys.py` as a possible
+  generic utility import. It was not imported because the `origin/master`
+  version removes the current branch's `OPENROUTER_API_KEY` and
+  `OPENROUTER_API_KEY_FILE` support, while local tests cover that behavior.
+- No additional safe main-branch import was identified under the current plan.
+
 ### Phase 6 - Future Structure Cleanup
 
 After the immediate merge risk is removed, consider a later cleanup commit:
