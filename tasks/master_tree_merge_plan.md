@@ -434,6 +434,55 @@ Post-import continuation check on 2026-04-28:
   `OPENROUTER_API_KEY_FILE` support, while local tests cover that behavior.
 - No additional safe main-branch import was identified under the current plan.
 
+Current coding-agent file usage inventory on 2026-04-28:
+
+- Primary coding-agent entrypoints:
+  - `experiments/scripts/coding_agents/run_basic_coding_agent_eval_v3.sh`
+  - `experiments/scripts/coding_agents/run_free_models_humaneval_injection_benchmark.sh`
+  - `experiments/scripts/coding_agents/run_minimax_humaneval_injection_benchmark.sh`
+  - `experiments/scripts/coding_agents/run_minimax_coding_agents_full_eval.sh`
+  - `experiments/scripts/coding_agents/analyze_humaneval_minimax_logs.py`
+- Coding-agent specific Python modules:
+  - `experiments/AgentCallInterface/coding_agents/coding_agent_callers.py`
+  - `experiments/AgentCallInterface/coding_datasets/coding_benchmark_loader.py`
+  - `experiments/AgentCallInterface/coding_evaluation/benchmark_manifest.py`
+  - `experiments/AgentCallInterface/coding_evaluation/benchmark_analysis.py`
+  - `experiments/AgentCallInterface/coding_evaluation/humaneval_log_analysis.py`
+  - `experiments/AgentCallInterface/coding_evaluation/log_retention.py`
+  - `experiments/AgentCallInterface/coding_evaluation/mobius_monitor.py`
+  - `experiments/AgentCallInterface/coding_evaluation/prompt_composer.py`
+- Still-shared files used by the coding-agent path:
+  - `experiments/AgentCallInterface/utils/api_keys.py`
+  - `experiments/AgentCallInterface/evaluation/opencode_skill_session.py`
+  - `mobiusInjection/TEMPLATE_V3_coding_agent.py`
+  - benchmark data under `experiments/AgentCallInterface/datasets/`
+- Old non-special names still present and possibly still referenced by legacy
+  wrappers or tests:
+  - `experiments/scripts/1.0.1.run_basic_coding_agent_eval_v3.sh`
+  - `experiments/scripts/1.0.3.run_free_models_humaneval_injection_benchmark.sh`
+  - `experiments/AgentCallInterface/datasets/coding_benchmark_loader.py`
+  - `experiments/AgentCallInterface/evaluation/benchmark_manifest.py`
+  - `experiments/AgentCallInterface/evaluation/mobius_monitor.py`
+  - `experiments/AgentCallInterface/transformers/agent_transformers.py`
+
+Phase 6 continuation on 2026-04-28:
+
+- Renamed remaining direct coding-agent runtime references:
+  - copied `experiments/AgentCallInterface/evaluation/opencode_skill_session.py`
+    to
+    `experiments/AgentCallInterface/coding_evaluation/coding_opencode_skill_session.py`
+  - copied `mobiusInjection/TEMPLATE_V3_coding_agent.py` to
+    `mobiusInjection/CODING_AGENT_TEMPLATE_V3.py`
+- Updated the coding-agent shell entrypoints and tests to use the new names:
+  - `run_basic_coding_agent_eval_v3.sh` now calls
+    `experiments.AgentCallInterface.coding_evaluation.coding_opencode_skill_session`
+  - `run_basic_coding_agent_eval_v3.sh` and
+    `run_minimax_coding_agents_full_eval.sh` now default to
+    `INJECTION_TEMPLATE_MODULE=CODING_AGENT_TEMPLATE_V3`
+- Old files were intentionally kept in place as legacy compatibility paths
+  until the full merge from `origin/master` resolves whether they are deleted,
+  renamed, or retained.
+
 ### Phase 6 - Future Structure Cleanup
 
 After the immediate merge risk is removed, consider a later cleanup commit:

@@ -1,4 +1,4 @@
-from mobiusInjection.TEMPLATE_V3_coding_agent import (
+from mobiusInjection.CODING_AGENT_TEMPLATE_V3 import (
     MainInjectionTextTargeted,
     combine_and_generate_payloads,
     payload_dict,

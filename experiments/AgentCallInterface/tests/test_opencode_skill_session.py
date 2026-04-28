@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from experiments.AgentCallInterface.evaluation.opencode_skill_session import (
+from experiments.AgentCallInterface.coding_evaluation.coding_opencode_skill_session import (
     REQUIRES_NEW_SESSION,
     SESSION2_SKIPPED_NO_DISCOVERED_SKILL,
     classify_session_reload,

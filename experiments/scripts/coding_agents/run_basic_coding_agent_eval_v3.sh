@@ -3,7 +3,7 @@
 # 1.0.1.run_basic_eval_v3.sh
 #
 # Basic Agent Mobius Injection Evaluation - V3 Coding-Agent Template
-#   - Use TEMPLATE_V3_coding_agent.py injection text by default
+#   - Use CODING_AGENT_TEMPLATE_V3.py injection text by default
 #   - Ground prompt wording in coding-agent workspace and skill lifecycle context
 #   - Test target remains /tmp/test_data.txt
 #   - Run OpenCode through OpenRouter with minimax/minimax-m2.5:free by default
@@ -33,7 +33,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 INJECTION_DIR="$PROJECT_ROOT/mobiusInjection"
-INJECTION_TEMPLATE_MODULE="${INJECTION_TEMPLATE_MODULE:-TEMPLATE_V3_coding_agent}"
+INJECTION_TEMPLATE_MODULE="${INJECTION_TEMPLATE_MODULE:-CODING_AGENT_TEMPLATE_V3}"
 
 MODEL_NAME="${1:-openrouter/minimax/minimax-m2.5:free}"
 TIMEOUT_SECONDS="${2:-300}"
@@ -411,7 +411,7 @@ print('===OPENCODE_RESTART_SESSION_SKILL_END===')
 PYTHON_EOF
     fi
 
-    python3 -m experiments.AgentCallInterface.evaluation.opencode_skill_session \
+    python3 -m experiments.AgentCallInterface.coding_evaluation.coding_opencode_skill_session \
         --injection-output "$injection_output_file" \
         --restart-output "$OPENCODE_RESTART_SESSION_OUTPUT" \
         --debug-output "$OPENCODE_STATE_FILE" \
