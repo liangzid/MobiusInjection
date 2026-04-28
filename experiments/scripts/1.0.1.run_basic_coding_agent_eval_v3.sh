@@ -612,7 +612,9 @@ find "$CLAUDE_RUN_ROOT" -maxdepth 6 -printf "%M %u:%g %p\n" 2>/dev/null | sort
 echo "## injected or memory files"
 find "$CLAUDE_RUN_ROOT" -maxdepth 8 -type f \( \
     -iname "*integrity*" -o -iname "*performance*" -o \
-    -iname "SKILL.md" -o -iname "MEMORY.md" \
+    -iname "*loop-trace*" -o -iname "mobius-loop-trace.jsonl" -o \
+    -iname "*sync-check*" -o -iname "sync-check-record.jsonl" -o \
+    -iname "Skill-Run-Record.jsonl" -o -iname "SKILL.md" -o -iname "MEMORY.md" \
 \) -print -exec sed -n "1,160p" {} \; 2>/dev/null || true
 echo "## eval subprocesses"
 for d in /proc/[0-9]*; do

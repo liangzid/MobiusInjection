@@ -95,6 +95,14 @@ def test_coding_eval_has_claude_lifecycle_coverage():
     assert "claude_run_files_after_cleanup" in script
 
 
+def test_coding_eval_captures_claude_loop_trace_files():
+    script = read_script()
+
+    assert 'mobius-loop-trace.jsonl' in script
+    assert 'sync-check-record.jsonl' in script
+    assert 'Skill-Run-Record.jsonl' in script
+
+
 def test_coding_eval_no_longer_parses_generic_evidence_with_output_grep():
     script = read_script()
 
