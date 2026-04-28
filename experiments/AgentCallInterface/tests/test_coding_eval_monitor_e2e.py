@@ -32,7 +32,7 @@ def test_mobius_monitor_cli_builds_coding_eval_analysis_from_recorded_outputs(tm
         [
             sys.executable,
             "-m",
-            "experiments.AgentCallInterface.evaluation.mobius_monitor",
+            "experiments.AgentCallInterface.coding_evaluation.mobius_monitor",
             "--output",
             str(FIXTURE_DIR / "real_zeroclaw_mobius_excerpt.txt"),
             "--followup",

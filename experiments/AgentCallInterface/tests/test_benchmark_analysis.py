@@ -2,8 +2,8 @@ import json
 import shutil
 from pathlib import Path
 
-from experiments.AgentCallInterface.evaluation.benchmark_analysis import aggregate_benchmark_run
-from experiments.AgentCallInterface.evaluation.mobius_monitor import scan_evidence
+from experiments.AgentCallInterface.coding_evaluation.benchmark_analysis import aggregate_benchmark_run
+from experiments.AgentCallInterface.coding_evaluation.mobius_monitor import scan_evidence
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

@@ -1,5 +1,5 @@
 import json
-from experiments.AgentCallInterface.agents.agent_callers import (
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import (
     AgentResponse,
     ClaudeCodeCaller,
     HermesCaller,
@@ -139,6 +139,7 @@ def test_claude_code_stream_parser_extracts_success_text_delta():
     assert response.success is True
     assert response.output == "OK"
     assert response.error is None
+    assert response.raw_output
 
 
 def test_claude_code_stream_parser_rejects_empty_success_result():

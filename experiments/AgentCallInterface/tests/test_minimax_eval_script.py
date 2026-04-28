@@ -8,7 +8,8 @@ SCRIPT_PATH = (
     PROJECT_ROOT
     / "experiments"
     / "scripts"
-    / "1.0.1.run_minimax_coding_agents_full_eval.sh"
+    / "coding_agents"
+    / "run_minimax_coding_agents_full_eval.sh"
 )
 
 
@@ -35,4 +36,4 @@ def test_minimax_eval_wrapper_dry_run_targets_three_coding_agents():
     assert "MODEL=openrouter/minimax/minimax-m2.5:free" in result.stdout
     assert "INJECTION_TEMPLATE_MODULE=TEMPLATE_V3_coding_agent" in result.stdout
     assert "CODING_EVAL_AGENTS=opencode,kilo_code,claude_code" in result.stdout
-    assert "1.0.1.run_basic_coding_agent_eval_v3.sh" in result.stdout
+    assert "run_basic_coding_agent_eval_v3.sh" in result.stdout

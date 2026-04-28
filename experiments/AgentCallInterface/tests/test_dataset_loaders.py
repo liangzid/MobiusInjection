@@ -9,7 +9,7 @@ from experiments.AgentCallInterface.datasets.clawbench_loader import (
     ClawBenchLoader,
     ClawBenchTask,
 )
-from experiments.AgentCallInterface.datasets.coding_benchmark_loader import (
+from experiments.AgentCallInterface.coding_datasets.coding_benchmark_loader import (
     SWEBenchLoader,
     HumanEvalLoader,
     CodingBenchmarkLoader,
@@ -55,6 +55,17 @@ class TestSWEBenchLoader:
         assert "Issue description:" in tasks[0].prompt
         assert tasks[0].metadata["benchmark_prompt_kind"] == "swebench_issue_v1"
         assert tasks[0].metadata["instance_id"]
+
+    def test_load_benchmark_tasks_from_swebench_lite_file(self):
+        tasks = load_benchmark_tasks(
+            dataset="swebench",
+            dataset_type="swe-bench_lite",
+            limit=50,
+        )
+
+        assert len(tasks) == 50
+        assert tasks[0].task_id == "astropy__astropy-12907"
+        assert tasks[-1].dataset == "swebench"
 
 
 class TestHumanEvalLoader:

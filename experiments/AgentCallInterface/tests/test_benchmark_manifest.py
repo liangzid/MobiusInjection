@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from experiments.AgentCallInterface.datasets.coding_benchmark_loader import (
+from experiments.AgentCallInterface.coding_datasets.coding_benchmark_loader import (
     load_benchmark_tasks,
 )
-from experiments.AgentCallInterface.evaluation.benchmark_manifest import (
+from experiments.AgentCallInterface.coding_evaluation.benchmark_manifest import (
     build_benchmark_manifest,
     sanitize_path_segment,
 )

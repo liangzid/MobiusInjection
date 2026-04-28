@@ -8,7 +8,8 @@ SCRIPT_PATH = (
     PROJECT_ROOT
     / "experiments"
     / "scripts"
-    / "1.0.3.run_free_models_humaneval_injection_benchmark.sh"
+    / "coding_agents"
+    / "run_free_models_humaneval_injection_benchmark.sh"
 )
 
 
@@ -72,7 +73,7 @@ def test_free_models_humaneval_wrapper_snapshots_eval_script(tmp_path):
         tmp_path
         / "run"
         / "scripts"
-        / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+        / "run_basic_coding_agent_eval_v3.sh"
     )
 
     assert result.returncode == 0, result.stderr
@@ -81,7 +82,8 @@ def test_free_models_humaneval_wrapper_snapshots_eval_script(tmp_path):
         PROJECT_ROOT
         / "experiments"
         / "scripts"
-        / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+        / "coding_agents"
+        / "run_basic_coding_agent_eval_v3.sh"
     ).read_text()
 
 
@@ -98,3 +100,20 @@ def test_free_models_wrapper_supports_swebench_dataset(tmp_path):
     assert "DATASET=swebench" in result.stdout
     assert "MODEL=openrouter/qwen/qwen3.6-plus" in result.stdout
     assert "CASES=2" in result.stdout
+
+
+def test_free_models_wrapper_supports_swebench_lite_dataset_type(tmp_path):
+    result = run_dry_script(
+        tmp_path,
+        BENCHMARK_DATASET="swebench",
+        SWEBENCH_DATASET_TYPE="swe-bench_lite",
+        MODEL_NAMES="openrouter/qwen/qwen3.6-plus",
+        CODING_EVAL_AGENTS="opencode,kilo_code,claude_code",
+        LIMIT="50",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "DATASET=swebench" in result.stdout
+    assert "SWEBENCH_DATASET_TYPE=swe-bench_lite" in result.stdout
+    assert "CASES=150" in result.stdout
+    assert "astropy__astropy-12907" in result.stdout

@@ -2,7 +2,7 @@ import json
 import shutil
 from pathlib import Path
 
-from experiments.AgentCallInterface.evaluation.log_retention import apply_log_retention
+from experiments.AgentCallInterface.coding_evaluation.log_retention import apply_log_retention
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

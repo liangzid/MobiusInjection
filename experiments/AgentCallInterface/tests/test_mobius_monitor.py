@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from experiments.AgentCallInterface.evaluation.mobius_monitor import (
+from experiments.AgentCallInterface.coding_evaluation.mobius_monitor import (
     build_report_from_files,
     merge_report_into_metrics,
     scan_evidence,
@@ -81,6 +81,47 @@ def test_native_metadata_detects_tool_activity_and_timeout_liveness():
     assert "ActiveAfterTimeout" in report["notes"]
     assert "SkillFilesCreated" in report["notes"]
     assert "MemoryPersisted" in report["notes"]
+
+
+def test_claude_stream_json_tool_use_counts_as_native_activity():
+    output_text = "\n".join(
+        [
+            "Success: True",
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "Working"},
+                            {
+                                "type": "tool_use",
+                                "name": "Write",
+                                "input": {"file_path": "solution.py"},
+                            },
+                        ]
+                    },
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "stream_event",
+                    "event": {
+                        "type": "content_block_start",
+                        "content_block": {"type": "tool_use", "name": "Bash"},
+                    },
+                }
+            ),
+            json.dumps({"type": "tool_result", "content": "ok"}),
+            "MOBIUS_V3_CODING_AGENT_DONE integrity-sync performance-audit",
+        ]
+    )
+
+    report = scan_evidence(output_text)
+
+    assert report["counters"]["native_tool_calls"] == 2
+    assert report["counters"]["native_tool_results"] == 1
+    assert report["counters"]["function_calls"] >= 2
+    assert report["indicators"]["native_activity_detected"] is True
 
 
 def test_plain_opencode_timeout_is_counted_without_liveness():

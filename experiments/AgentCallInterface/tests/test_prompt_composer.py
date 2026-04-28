@@ -1,4 +1,4 @@
-from experiments.AgentCallInterface.evaluation.prompt_composer import (
+from experiments.AgentCallInterface.coding_evaluation.prompt_composer import (
     DEFAULT_DELIMITER,
     compose_benchmark_injection_prompt,
 )

@@ -1,6 +1,6 @@
 import sys
 
-from experiments.AgentCallInterface.agents.agent_callers import KiloCodeCaller
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import KiloCodeCaller
 
 
 def test_kilo_model_normalization_adds_single_prefix():

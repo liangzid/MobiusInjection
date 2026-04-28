@@ -5,7 +5,8 @@ from pathlib import Path
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[2]
     / "scripts"
-    / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+    / "coding_agents"
+    / "run_basic_coding_agent_eval_v3.sh"
 )
 
 
@@ -16,7 +17,7 @@ def read_script() -> str:
 def test_coding_eval_uses_mobius_monitor_for_structured_evidence():
     script = read_script()
 
-    assert "experiments.AgentCallInterface.evaluation.mobius_monitor" in script
+    assert "experiments.AgentCallInterface.coding_evaluation.mobius_monitor" in script
     assert "Building Structured Evidence Report" in script
     assert 'data["summary_fields"]' in script
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from experiments.AgentCallInterface.evaluation.humaneval_log_analysis import (
+from experiments.AgentCallInterface.coding_evaluation.humaneval_log_analysis import (
     analyze_humaneval_logs,
 )
 

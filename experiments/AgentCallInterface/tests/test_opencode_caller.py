@@ -1,6 +1,6 @@
 import sys
 
-from experiments.AgentCallInterface.agents.agent_callers import OpenCodeCaller
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import OpenCodeCaller
 
 
 def test_opencode_resolves_eval_default_model_to_available_alias():

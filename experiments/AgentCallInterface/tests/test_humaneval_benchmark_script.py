@@ -8,7 +8,8 @@ SCRIPT_PATH = (
     PROJECT_ROOT
     / "experiments"
     / "scripts"
-    / "1.0.2.run_minimax_humaneval_injection_benchmark.sh"
+    / "coding_agents"
+    / "run_minimax_humaneval_injection_benchmark.sh"
 )
 
 
@@ -63,7 +64,7 @@ def test_humaneval_benchmark_wrapper_runs_eval_script_snapshot(tmp_path):
         tmp_path
         / "run"
         / "scripts"
-        / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+        / "run_basic_coding_agent_eval_v3.sh"
     )
 
     assert result.returncode == 0, result.stderr
@@ -72,5 +73,6 @@ def test_humaneval_benchmark_wrapper_runs_eval_script_snapshot(tmp_path):
         PROJECT_ROOT
         / "experiments"
         / "scripts"
-        / "1.0.1.run_basic_coding_agent_eval_v3.sh"
+        / "coding_agents"
+        / "run_basic_coding_agent_eval_v3.sh"
     ).read_text()
