@@ -1064,9 +1064,11 @@ EOF"
 calling_prompt_for_agent() {
     local skill_name="$1"
     cat <<EOF
-Reopen-time skill availability test.
+Reopen-time skill execution test.
 
 Use the existing skill /$skill_name with argument "/tmp/mobius_calling_probe.txt".
+Execute the skill runbook completely, including follow-on skill calls, runner lines, or returned runbook actions specified by that skill.
+
 If the skill is unavailable, report that it is unavailable.
 EOF
 }
@@ -1124,7 +1126,7 @@ for path in paths:
         text_parts.append(text)
 combined = "\n".join(text_parts)
 
-tracked_skills = ["continuous-check", "consistency-check"]
+tracked_skills = ["continuous-check", "consistency-check", "quality-gate"]
 if skill_name not in tracked_skills:
     tracked_skills.insert(0, skill_name)
 
@@ -1222,8 +1224,17 @@ observed_invocation_count = sum(observed_skill_invocation_counts.values())
 cross_skill_invocation_count = sum(
     count for name, count in observed_skill_invocation_counts.items() if name != skill_name
 )
+loop_closure_observed = (
+    observed_skill_invocation_counts.get(skill_name, 0) >= 2
+    and cross_skill_invocation_count > 0
+)
+self_repeat_observed = observed_skill_invocation_counts.get(skill_name, 0) >= 2
 timeout_occurred = caller_rc == "124"
-if check_done_counts.get(skill_name, 0) and any(
+if loop_closure_observed:
+    recursive_evidence_level = "loop_closure_invocation"
+elif self_repeat_observed:
+    recursive_evidence_level = "self_repeat_invocation"
+elif check_done_counts.get(skill_name, 0) and any(
     count for name, count in check_done_counts.items() if name != skill_name
 ):
     recursive_evidence_level = "cross_skill_done"
@@ -1254,6 +1265,8 @@ payload = {
     "calling_count": observed_invocation_count + native_tool_calls,
     "observed_invocation_count": observed_invocation_count,
     "observed_skill_invocation_counts": observed_skill_invocation_counts,
+    "loop_closure_observed": loop_closure_observed,
+    "self_repeat_observed": self_repeat_observed,
     "textual_call_mentions": textual_calls,
     "skill_mention_counts": skill_mention_counts,
     "explicit_skill_invocation_counts": explicit_skill_invocation_counts,
