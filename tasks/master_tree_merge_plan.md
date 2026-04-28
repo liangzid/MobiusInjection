@@ -510,6 +510,13 @@ Full merge execution on 2026-04-28:
   - `bash -n experiments/scripts/effectivenss_injection_claw_0.2.context_injection_add_s.sh`
     passed.
   - Focused pytest passed: 120 tests.
+- Merge commit: `76d9adf Merge remote-tracking branch 'origin/master' into codeagent/experiments-copy`.
+- Confirmed `origin/master` is an ancestor of the current `HEAD`
+  with `git merge-base --is-ancestor origin/master HEAD` exit code `0`.
+- Re-applied the saved `pre-master-merge-tracked-worktree` stash cleanly after
+  the merge. The stash entry was intentionally retained as a backup, and the
+  restored dirty tracked files were left unchanged because they pre-existed this
+  merge task.
 
 ### Phase 6 - Future Structure Cleanup
 
@@ -530,9 +537,9 @@ unless shared-file conflicts remain high.
 
 ## Current Follow-up Result
 
-Dr. Frost asked to write the detailed plan into the same document and rename the
-document to `master_tree_merge_plan`. The original
-`tasks/session_record_20260428_master_gap_check.md` was renamed to
-`tasks/master_tree_merge_plan.md`, and the detailed migration/merge plan was
-added here. No code migration, merge, test run, or commit was performed in this
-step.
+Dr. Frost asked to execute the migration plan, include shell-script internal
+renames when names changed, and then fully merge master. The coding-agent
+runtime files were copied into coding-specific paths, the coding-agent shell
+scripts were updated to call those new module/template names, master was fully
+merged, the focused verification suite passed, and the completed merge state was
+committed.
