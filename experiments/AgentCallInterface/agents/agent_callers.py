@@ -45,6 +45,7 @@ class AgentResponse:
     task_id: str
     stderr: str = ""
     returncode: int | None = None
+    raw_output: str = ""
 
 
 class AgentCaller(ABC):
@@ -88,6 +89,13 @@ def _prompt_from(task_input: dict[str, Any]) -> str:
     return task_input.get("problem_statement", task_input.get("task_id", ""))
 
 
+def _container_name_from(task_input: dict[str, Any], default: str) -> str:
+    container_name = str(task_input.get("container_name") or default).strip()
+    if not container_name:
+        raise ValueError("container_name must not be empty")
+    return container_name
+
+
 def _encode_text(value: str) -> str:
     return base64.b64encode(value.encode()).decode()
 
@@ -104,28 +112,71 @@ def _decode_b64(var_name: str) -> str:
     return f'$(printf %s "${{{var_name}}}" | base64 -d)'
 
 
+def _toml_string_array(values: tuple[str, ...]) -> str:
+    return json.dumps(list(values), indent=4)
+
+
 class OpenClawCaller(AgentCaller):
+    CONTAINER_NAME = "openclaw"
     PROFILE_NAME = "mobius-eval"
+    MODEL_OVERRIDE_NOT_ALLOWED = "Model override"
 
     def _normalize_openclaw_model(self, model: str) -> str:
         if model.startswith("openrouter/"):
             return model
         return f"openrouter/{model}"
 
-    def _build_openclaw_command(self, prompt: str, model: str, api_key: str) -> list[str]:
+    def _build_openclaw_command(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        container_name: str | None = None,
+        allow_model_override: bool = True,
+    ) -> list[str]:
         prompt_b64 = _encode_text(prompt)
-        quoted_model = shlex.quote(self._normalize_openclaw_model(model))
+        model_option = ""
+        if allow_model_override:
+            quoted_model = shlex.quote(self._normalize_openclaw_model(model))
+            model_option = f" --model {quoted_model}"
         script = (
             f'openclaw --profile {self.PROFILE_NAME} infer model run '
-            f'--local --json --model {quoted_model} --prompt "{_decode_b64("OPENCLAW_PROMPT_B64")}"'
+            f'--local --json{model_option} --prompt "{_decode_b64("OPENCLAW_PROMPT_B64")}"'
         )
         return _docker_bash_command(
-            "openclaw",
+            container_name or self.CONTAINER_NAME,
             script,
             {
                 "OPENROUTER_API_KEY": api_key,
                 "OPENCLAW_PROMPT_B64": prompt_b64,
             },
+        )
+
+    def _build_openclaw_set_primary_model_command(
+        self,
+        model: str,
+        api_key: str,
+        container_name: str | None = None,
+    ) -> list[str]:
+        normalized_model = self._normalize_openclaw_model(model)
+        quoted_model = shlex.quote(normalized_model)
+        script = (
+            f"openclaw --profile {self.PROFILE_NAME} config set "
+            f"agents.defaults.model.primary {quoted_model}"
+        )
+        return _docker_bash_command(
+            container_name or self.CONTAINER_NAME,
+            script,
+            {"OPENROUTER_API_KEY": api_key},
+        )
+
+    def _is_model_override_rejected(self, response: AgentResponse) -> bool:
+        if response.returncode == 0:
+            return False
+        haystack = "\n".join(part for part in (response.output, response.stderr, response.error or "") if part)
+        return (
+            self.MODEL_OVERRIDE_NOT_ALLOWED in haystack
+            and "not allowed for agent" in haystack
         )
 
     def _parse_openclaw_output(self, raw_output: str) -> tuple[bool, str, str | None]:
@@ -147,9 +198,33 @@ class OpenClawCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = _prompt_from(task_input)
+        container_name = _container_name_from(task_input, self.CONTAINER_NAME)
         api_key = get_openrouter_api_key()
-        cmd = self._build_openclaw_command(prompt, model, api_key)
-        response = _run_command(cmd, task_input.get("task_id", ""), timeout)
+        task_id = task_input.get("task_id", "")
+        # OpenClaw eval profile may block runtime --model overrides.
+        # Set profile default model first, then run inference without --model.
+        set_model_cmd = self._build_openclaw_set_primary_model_command(model, api_key, container_name)
+        set_model_response = _run_command(set_model_cmd, task_id, min(timeout, 90))
+        if set_model_response.returncode != 0:
+            return AgentResponse(
+                success=False,
+                output=set_model_response.output,
+                error=set_model_response.error or "Failed to set OpenClaw primary model",
+                duration=set_model_response.duration,
+                task_id=task_id,
+                stderr=set_model_response.stderr,
+                returncode=set_model_response.returncode,
+            )
+
+        cmd = self._build_openclaw_command(
+            prompt,
+            model,
+            api_key,
+            container_name,
+            allow_model_override=False,
+        )
+        response = _run_command(cmd, task_id, timeout)
+
         if not response.output.strip():
             return response
         try:
@@ -176,19 +251,121 @@ class OpenClawCaller(AgentCaller):
 
 
 class ZeroClawCaller(AgentCaller):
-    def _build_zeroclaw_command(self, prompt: str, model: str, api_key: str) -> list[str]:
+    CONTAINER_NAME = "zeroclaw"
+    CONFIG_DIR_TEMPLATE = "/tmp/zeroclaw-eval-config.XXXXXX"
+    MAX_TOOL_ITERATIONS = 40
+    EVAL_ALLOWED_COMMANDS = (
+        "bash",
+        "sh",
+        "ls",
+        "cat",
+        "grep",
+        "find",
+        "echo",
+        "printf",
+        "pwd",
+        "wc",
+        "head",
+        "tail",
+        "date",
+        "python",
+        "python3",
+        "node",
+        "mkdir",
+        "touch",
+        "cp",
+        "mv",
+        "tee",
+        "sed",
+        "awk",
+    )
+    EVAL_FORBIDDEN_PATHS = (
+        "/etc",
+        "/root",
+        "/home",
+        "/usr",
+        "/bin",
+        "/sbin",
+        "/lib",
+        "/opt",
+        "/boot",
+        "/dev",
+        "/proc",
+        "/sys",
+        "/var",
+        "~/.ssh",
+        "~/.gnupg",
+        "~/.aws",
+        "~/.config",
+    )
+    EVAL_AUTO_APPROVE_TOOLS = (
+        "shell",
+        "file_read",
+        "file_write",
+        "memory_recall",
+        "glob_search",
+        "content_search",
+        "calculator",
+    )
+    EVAL_ALLOWED_ROOTS = ("/tmp", "/workspace")
+
+    def _build_eval_config(self) -> str:
+        return f"""
+default_provider = "openrouter"
+default_temperature = 0.0
+provider_timeout_secs = 120
+
+[autonomy]
+level = "full"
+workspace_only = true
+allowed_commands = {_toml_string_array(self.EVAL_ALLOWED_COMMANDS)}
+forbidden_paths = {_toml_string_array(self.EVAL_FORBIDDEN_PATHS)}
+max_actions_per_hour = 200
+max_cost_per_day_cents = 500
+require_approval_for_medium_risk = false
+block_high_risk_commands = true
+auto_approve = {_toml_string_array(self.EVAL_AUTO_APPROVE_TOOLS)}
+always_ask = []
+allowed_roots = {_toml_string_array(self.EVAL_ALLOWED_ROOTS)}
+non_cli_excluded_tools = []
+shell_env_passthrough = []
+shell_timeout_secs = 120
+
+[agent]
+compact_context = true
+max_tool_iterations = {self.MAX_TOOL_ITERATIONS}
+max_history_messages = 50
+max_context_tokens = 32000
+max_tool_result_chars = 50000
+parallel_tools = false
+""".strip()
+
+    def _build_zeroclaw_command(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        container_name: str | None = None,
+    ) -> list[str]:
         prompt_b64 = _encode_text(prompt)
+        config_b64 = _encode_text(self._build_eval_config())
         quoted_model = shlex.quote(model)
         script = (
+            f'ZEROCLAW_EVAL_CONFIG_DIR="$(mktemp -d {self.CONFIG_DIR_TEMPLATE})" && '
+            'printf %s "$ZEROCLAW_EVAL_CONFIG_B64" | base64 -d > "$ZEROCLAW_EVAL_CONFIG_DIR/config.toml" && '
+            'chmod 600 "$ZEROCLAW_EVAL_CONFIG_DIR/config.toml" && '
+            'export ZEROCLAW_API_KEY="$OPENROUTER_API_KEY" API_KEY="$OPENROUTER_API_KEY" && '
             "/home/linuxbrew/.linuxbrew/Cellar/zeroclaw/0.6.9/bin/zeroclaw agent "
+            '--config-dir "$ZEROCLAW_EVAL_CONFIG_DIR" '
             f"-p openrouter --model {quoted_model} -m \"{_decode_b64('ZEROCLAW_PROMPT_B64')}\""
         )
         return _docker_bash_command(
-            "zeroclaw",
+            container_name or self.CONTAINER_NAME,
             script,
             {
                 "OPENROUTER_API_KEY": api_key,
                 "ZEROCLAW_PROMPT_B64": prompt_b64,
+                "ZEROCLAW_EVAL_CONFIG_B64": config_b64,
             },
         )
 
@@ -199,8 +376,9 @@ class ZeroClawCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = _prompt_from(task_input)
+        container_name = _container_name_from(task_input, self.CONTAINER_NAME)
         api_key = get_openrouter_api_key()
-        cmd = self._build_zeroclaw_command(prompt, model, api_key)
+        cmd = self._build_zeroclaw_command(prompt, model, api_key, container_name)
         return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
@@ -274,13 +452,21 @@ class NanobotCaller(AgentCaller):
 
 
 class HermesCaller(AgentCaller):
-    def _build_hermes_command(self, prompt: str, model: str, api_key: str) -> list[str]:
+    CONTAINER_NAME = "hermes"
+
+    def _build_hermes_command(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        container_name: str | None = None,
+    ) -> list[str]:
         script = (
             "source ~/.local/bin/env && /root/.hermes/hermes-agent/venv/bin/hermes chat "
             f"--provider openrouter --model {shlex.quote(model)} -Q -q \"{_decode_b64('HERMES_PROMPT_B64')}\""
         )
         return _docker_bash_command(
-            "hermes",
+            container_name or self.CONTAINER_NAME,
             script,
             {
                 "OPENROUTER_API_KEY": api_key,
@@ -295,8 +481,9 @@ class HermesCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = _prompt_from(task_input)
+        container_name = _container_name_from(task_input, self.CONTAINER_NAME)
         api_key = get_openrouter_api_key()
-        cmd = self._build_hermes_command(prompt, model, api_key)
+        cmd = self._build_hermes_command(prompt, model, api_key, container_name)
         return _run_command(cmd, task_input.get("task_id", ""), timeout)
 
 
@@ -549,6 +736,7 @@ class ClaudeCodeCaller(AgentCaller):
             task_id=task_id,
             stderr=stderr,
             returncode=returncode,
+            raw_output=raw_output,
         )
 
 

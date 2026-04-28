@@ -214,6 +214,61 @@ def test_openclaw_command_uses_isolated_profile_and_json():
     assert "--model openrouter/free" in command[-1]
 
 
+def test_openclaw_command_accepts_context_injection_container_override():
+    caller = OpenClawCaller()
+    command = caller._build_openclaw_command(
+        "Report status.",
+        "openrouter/free",
+        "test-key",
+        container_name="ctx_openclaw_xdom_clean",
+    )
+
+    assert command[6:9] == ["ctx_openclaw_xdom_clean", "bash", "-lc"]
+
+
+def test_openclaw_command_can_disable_model_override():
+    caller = OpenClawCaller()
+    command = caller._build_openclaw_command(
+        "Report status.",
+        "openrouter/free",
+        "test-key",
+        allow_model_override=False,
+    )
+
+    assert "--model " not in command[-1]
+    assert "--local --json --prompt" in command[-1]
+
+
+def test_openclaw_set_primary_model_command_targets_profile_config():
+    caller = OpenClawCaller()
+    command = caller._build_openclaw_set_primary_model_command(
+        "qwen/qwen3.6-plus",
+        "test-key",
+    )
+
+    assert command[0:4] == ["docker", "exec", "-e", "OPENROUTER_API_KEY=test-key"]
+    assert command[4:7] == ["openclaw", "bash", "-lc"]
+    assert (
+        "openclaw --profile mobius-eval config set agents.defaults.model.primary "
+        "openrouter/qwen/qwen3.6-plus"
+    ) in command[-1]
+
+
+def test_openclaw_detects_profile_model_override_rejection():
+    caller = OpenClawCaller()
+    response = AgentResponse(
+        success=False,
+        output="",
+        error='Error: Model override "openrouter/qwen/qwen3.6-plus" is not allowed for agent "main".',
+        duration=0.1,
+        task_id="xdom-001",
+        stderr='Error: Model override "openrouter/qwen/qwen3.6-plus" is not allowed for agent "main".',
+        returncode=1,
+    )
+
+    assert caller._is_model_override_rejected(response) is True
+
+
 def test_openclaw_output_parser_extracts_text_and_failure_state():
     caller = OpenClawCaller()
     payload = {
@@ -235,10 +290,40 @@ def test_zeroclaw_command_passes_provider_and_model():
     assert command[0:4] == ["docker", "exec", "-e", "OPENROUTER_API_KEY=test-key"]
     assert command[4:6] == ["-e", command[5]]
     assert "ZEROCLAW_PROMPT_B64=" in command[5]
-    assert command[6:9] == ["zeroclaw", "bash", "-lc"]
+    assert command[6:8] == ["-e", command[7]]
+    assert "ZEROCLAW_EVAL_CONFIG_B64=" in command[7]
+    assert command[8:11] == ["zeroclaw", "bash", "-lc"]
     assert "zeroclaw agent" in command[-1]
+    assert "--config-dir \"$ZEROCLAW_EVAL_CONFIG_DIR\"" in command[-1]
     assert "-p openrouter" in command[-1]
     assert "--model openrouter/free" in command[-1]
+    assert "ZEROCLAW_API_KEY=\"$OPENROUTER_API_KEY\"" in command[-1]
+
+
+def test_zeroclaw_command_accepts_context_injection_container_override():
+    caller = ZeroClawCaller()
+    command = caller._build_zeroclaw_command(
+        "Report status.",
+        "openrouter/free",
+        "test-key",
+        container_name="ctx_zeroclaw_xdom_clean",
+    )
+
+    assert command[8:11] == ["ctx_zeroclaw_xdom_clean", "bash", "-lc"]
+
+
+def test_zeroclaw_eval_config_is_noninteractive_for_tmp_workspaces():
+    caller = ZeroClawCaller()
+    config = caller._build_eval_config()
+
+    assert 'level = "full"' in config
+    assert 'require_approval_for_medium_risk = false' in config
+    assert '"shell"' in config
+    assert '"file_write"' in config
+    assert 'allowed_roots = [' in config
+    assert '"/tmp"' in config
+    assert '"/workspace"' in config
+    assert f"max_tool_iterations = {caller.MAX_TOOL_ITERATIONS}" in config
 
 
 def test_nanobot_temp_config_targets_openrouter():
@@ -300,3 +385,15 @@ def test_hermes_command_uses_quiet_provider_and_model():
     assert "--provider openrouter" in command[-1]
     assert "--model openrouter/free" in command[-1]
     assert " -Q -q " in command[-1]
+
+
+def test_hermes_command_accepts_context_injection_container_override():
+    caller = HermesCaller()
+    command = caller._build_hermes_command(
+        "Report status.",
+        "openrouter/free",
+        "test-key",
+        container_name="ctx_hermes_xdom_clean",
+    )
+
+    assert command[6:9] == ["ctx_hermes_xdom_clean", "bash", "-lc"]

@@ -1,0 +1,22 @@
+
+
+
+
+We have successfully validate the possibility of our experiments with the script of =effectiveness_injection_claw_0.1.context_injection_minimal.sh=.
+
+However, this experiment is located only for ONE test case.
+
+We hope to expand it to many tasks.
+
+Therefore, at first, we plan to prepare the evaluated tasks based on the research plan =research_plan_0424_a_creat_select_evaluate_tasks.org= for preparing four category of test cases.
+
+Then, we need to do our experiments under the injected text =MI_V3.5.2_clawagenttry.py=
+under the same way of ==effectiveness_injection_claw_0.1.context_injection_minimal.sh=, and calculate their TSR and P-ASR for each category.
+We use =qwen/qwen3.6-plus= of openrouter for our experiments.
+
+Moreover, we hope to save the post-run images for the succeed analysis.
+
+
+
+
+Note: The NDSS DDL is 6th, May. So the time is nervous. We cannot afford any significant errors but I am open and can understand any specific situations. Feel free to ask me any details therefore we can try to minimize the errors in experiments.

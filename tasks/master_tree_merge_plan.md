@@ -483,6 +483,34 @@ Phase 6 continuation on 2026-04-28:
   until the full merge from `origin/master` resolves whether they are deleted,
   renamed, or retained.
 
+Full merge execution on 2026-04-28:
+
+- Preserved pre-existing tracked worktree edits in a stash before merging:
+  `pre-master-merge-tracked-worktree`.
+- Ran `git merge origin/master --no-edit`.
+- Resolved expected conflicts:
+  - `.gitignore`: kept both coding-agent local ignores and main-branch dataset
+    / cache ignores.
+  - `AGENTS.md`: kept the coding-agent worktree instructions, especially the
+    Dr. Frost commit-backup rule, because the main-branch version forbids
+    commits and conflicts with the active instructions for this worktree.
+  - `test_mi_v41_add_s.py`, `test_mi_v4_add_s.py`, and
+    `test_mobius_monitor.py`: kept the locally verified assertions and coding
+    monitor imports.
+- Added missing `mobiusInjection/MI_V3.5.3_hermes.py`,
+  `mobiusInjection/MI_V3.5.3_openclaw.py`, and
+  `mobiusInjection/MI_V3.5.3_zeroclaw.py` because the full merge brought in
+  `test_mi_v353_agent_specific.py`, which references those templates.
+- Synchronized `experiments/AgentCallInterface/coding_agents/coding_agent_callers.py`
+  with the merged shared caller behavior and restored `AgentResponse.raw_output`
+  for coding-agent Claude stream evidence.
+- Verification:
+  - `bash -n experiments/scripts/coding_agents/run_basic_coding_agent_eval_v3.sh`
+    passed.
+  - `bash -n experiments/scripts/effectivenss_injection_claw_0.2.context_injection_add_s.sh`
+    passed.
+  - Focused pytest passed: 120 tests.
+
 ### Phase 6 - Future Structure Cleanup
 
 After the immediate merge risk is removed, consider a later cleanup commit:

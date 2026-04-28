@@ -5,8 +5,11 @@
 #+latex_class: elegantpaper
 #+filetags: ::
 
+Target Conference: NDSS'27
+DDL: 6th, May, 2026
+Note: Only for Research Use.
 
-This projects contains th implementation of my new agent-oriented and -based DDoS attack prototype, named mobius injection.
+This projects contains th implementation of my new agent-oriented and -based DDoS threat evaluation prototype, named mobius injection.
 
 The core idea of mobius injection is to *create an infinite calling loops within the agent system, i.e., to create an infinite calling loops among agent components.*
 
@@ -19,13 +22,3 @@ We define that the mobius injected text should at least contain the following pa
   - A consumption module, which is the main part of the payload. This part contains the texts about how to propose DoS attacks to LLM APIs, MCP servers, or other AI infrastructures.
   - A persistence module, which aims to persist the malicious injection. For instance, to divide and write the malicious segments into different files or skills of the project.
   - A disguise module. This part aims to make the whole injection and the succeed mobius injection more stealthy. The core idea is to control the calling the frequency of the DoS attacks, and to print some good and ordinary fake results to users.
-
-
-
-
-
-
-
-
-
-

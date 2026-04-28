@@ -1,4 +1,9 @@
 
+
+
+*CAUTION: This Research Plan is Outdated and NOT VALUABLE Any More. Never read it and use it.*
+
+
 * Overview
 
 This task is apart of our academic paper named mobius injection. The core is to evaluate the resistence of current claw-style agents against one type of prompt injection which is aims to construct infinite function calling. Our target is to reveal a new threat in this field.
@@ -26,12 +31,17 @@ In this task, we want to create three unit injected prompts:
 + V0.3.CallASkill.md. Based on V0.1 version, we extraly add the call skill function.
 + V0.4.SkillPersistence.md Check the persistence of the injected prompts.
 
+
+Note: Create different checkpoints after injection for these for scripts or do not create it.
+
+Caution: NEVER OVERWRITE THE CHECKPOINTS IN OUR MAIN V3 -based EXPERIMENTS!!
+
 * Idea 2: Check more Information to Debug What Happens.
 
 
 Wait. Wait. Some other questions here: Do you think why hermes and openclaw reach the times out? Any other meta-data which can provide some side-channel proofs of whether the times out comes from our injected skills or others? Maybe we can check the activity files of these agents if possible or check the bash commands history in these containers? What do you think, hhhh.
 
-
+Note: This part has been finished. We successfully obtian more information which suggests that the hermes and openclaw are also suffered from these attacks.
 
 
 
