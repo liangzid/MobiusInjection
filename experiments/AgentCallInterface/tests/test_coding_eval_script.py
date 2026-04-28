@@ -80,6 +80,7 @@ def test_coding_eval_threads_lifecycle_state_files_into_analysis():
 
     assert "AGENT_STATE_FILES=()" in script
     assert 'remember_state_file "$state_file"' in script
+    assert 'capture_agent_state "$AGENT_NAME" "post_followup"' in script
     assert 'for state_file in "${AGENT_STATE_FILES[@]}"' in script
     assert 'STATE_ARGS+=(--state-file "$state_file")' in script
 
@@ -101,6 +102,13 @@ def test_coding_eval_captures_claude_loop_trace_files():
     assert 'mobius-loop-trace.jsonl' in script
     assert 'sync-check-record.jsonl' in script
     assert 'Skill-Run-Record.jsonl' in script
+
+
+def test_coding_eval_followup_reuses_main_run_workspace():
+    script = read_script()
+
+    assert "'task_id': '${EVAL_ID}_${AGENT_NAME}_followup'" in script
+    assert "'run_id': '${EVAL_ID}_${AGENT_NAME}'" in script
 
 
 def test_coding_eval_no_longer_parses_generic_evidence_with_output_grep():

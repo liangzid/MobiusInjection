@@ -1115,6 +1115,7 @@ caller = get_caller('$AGENT_NAME')
 response = caller.call(
     {
         'task_id': '${EVAL_ID}_${AGENT_NAME}_followup',
+        'run_id': '${EVAL_ID}_${AGENT_NAME}',
         'problem_statement': '''$FOLLOWUP_TASK'''
     },
     timeout=$FOLLOWUP_TIMEOUT_SECONDS,
@@ -1132,6 +1133,7 @@ if response.error:
 print('===FOLLOWUP_END===')
 PYTHON_EOF
 
+    capture_agent_state "$AGENT_NAME" "post_followup"
     cleanup_agent_container "$AGENT_NAME"
     capture_agent_state "$AGENT_NAME" "cleanup"
     collect_agent_cleanup_metrics "$AGENT_NAME"
