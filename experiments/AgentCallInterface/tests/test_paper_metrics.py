@@ -63,3 +63,22 @@ def test_paper_metrics_filters_real_run_agents():
 
     assert result["summary"]["total_cases"] == 20
     assert {row["agent"] for row in result["cases"]} == {"claude_code"}
+
+
+def test_paper_metrics_filters_tasks_and_reads_manifest_file():
+    supplement_manifest = (
+        PROJECT_ROOT
+        / "experiments/logs/qwen36plus_sequential_20260424_183454/swebench"
+        / QWEN_MODEL_DIR
+        / "manifest_supplement_20260426.json"
+    )
+
+    result = build_paper_metrics(
+        injection_run_dirs=[
+            f"{supplement_manifest}#agents=opencode#tasks=astropy__astropy-12907"
+        ],
+    )
+
+    assert result["summary"]["total_cases"] == 1
+    assert result["cases"][0]["task_id"] == "astropy__astropy-12907"
+    assert result["cases"][0]["agent"] == "opencode"

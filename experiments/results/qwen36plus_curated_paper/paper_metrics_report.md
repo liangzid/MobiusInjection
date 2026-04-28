@@ -1,30 +1,30 @@
 # Paper Metrics
 
-- Total cases: 300
-- Completed cases: 291
-- Task run success rate: 0.763
-- Skill injection rate: 0.622
-- Skill file creation rate: 0.674
-- Regular tool calls: 5378
-- Skill call events: 515
-- Loop suspected rate: 0.887
+- Total cases: 360
+- Completed cases: 360
+- Task run success rate: 0.714
+- Skill injection rate: 0.664
+- Skill file creation rate: 0.706
+- Regular tool calls: 8204
+- Skill call events: 581
+- Loop suspected rate: 0.958
 
 ## Agent Summary
 
 | Run | Kind | Dataset | Agent | Completed | Task Run | Skill Injected | Skill Files | Regular Calls | Skill Events | Loop |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| qwen36plus_baseline_no_injection_20260427_humaneval_openrouter_qwen_qwen3.6-plus | baseline | humaneval | claude_code | 20/20 | 1.000 | 0.000 | 0.000 | 0 | 0 | 0.000 |
+| qwen36plus_claude_baseline_raw_limit20_20260427_humaneval_openrouter_qwen_qwen3.6-plus | baseline | humaneval | claude_code | 20/20 | 0.900 | 0.000 | 0.000 | 32 | 0 | 0.250 |
 | qwen36plus_baseline_no_injection_20260427_humaneval_openrouter_qwen_qwen3.6-plus | baseline | humaneval | kilo_code | 20/20 | 1.000 | 0.000 | 0.000 | 98 | 0 | 1.000 |
 | qwen36plus_baseline_no_injection_20260427_humaneval_openrouter_qwen_qwen3.6-plus | baseline | humaneval | opencode | 20/20 | 1.000 | 0.000 | 0.450 | 159 | 40 | 1.000 |
-| qwen36plus_baseline_no_injection_20260427_swebench_openrouter_qwen_qwen3.6-plus | baseline | swebench | claude_code | 11/20 | 0.091 | 0.000 | 0.000 | 0 | 0 | 0.000 |
+| qwen36plus_claude_baseline_raw_limit20_20260427_swebench_openrouter_qwen_qwen3.6-plus | baseline | swebench | claude_code | 20/20 | 0.300 | 0.000 | 0.000 | 741 | 0 | 1.000 |
 | qwen36plus_baseline_no_injection_20260427_swebench_openrouter_qwen_qwen3.6-plus | baseline | swebench | kilo_code | 20/20 | 0.300 | 0.000 | 0.000 | 581 | 0 | 1.000 |
 | qwen36plus_baseline_no_injection_20260427_swebench_openrouter_qwen_qwen3.6-plus | baseline | swebench | opencode | 20/20 | 0.350 | 0.300 | 0.650 | 386 | 33 | 1.000 |
 | qwen36plus_claude_code_injection_reparse_limit20_20260427_humaneval_openrouter_qwen_qwen3.6-plus | injection | humaneval | claude_code | 20/20 | 1.000 | 1.000 | 1.000 | 272 | 61 | 1.000 |
-| qwen36plus_claude_code_injection_reparse_limit20_swebench_20260428_swebench_openrouter_qwen_qwen3.6-plus | injection | swebench | claude_code | 20/20 | 0.450 | 0.850 | 0.850 | 548 | 29 | 0.900 |
 | qwen36plus_sequential_20260424_183454_humaneval_openrouter_qwen_qwen3.6-plus | injection | humaneval | kilo_code | 50/50 | 0.980 | 1.000 | 1.000 | 845 | 50 | 1.000 |
 | qwen36plus_sequential_20260424_183454_humaneval_openrouter_qwen_qwen3.6-plus | injection | humaneval | opencode | 50/50 | 1.000 | 1.000 | 1.000 | 1198 | 223 | 1.000 |
-| qwen36plus_sequential_20260424_183454_swebench_openrouter_qwen_qwen3.6-plus | injection | swebench | kilo_code | 20/20 | 0.450 | 0.900 | 0.850 | 688 | 17 | 1.000 |
-| qwen36plus_sequential_20260424_183454_swebench_openrouter_qwen_qwen3.6-plus | injection | swebench | opencode | 20/20 | 0.550 | 1.000 | 1.000 | 603 | 62 | 1.000 |
+| combined:2_sources | injection | swebench | claude_code | 20/20 | 0.500 | 0.900 | 0.950 | 587 | 29 | 1.000 |
+| combined:2_sources | injection | swebench | kilo_code | 50/50 | 0.520 | 0.900 | 0.860 | 1525 | 22 | 1.000 |
+| combined:2_sources | injection | swebench | opencode | 50/50 | 0.500 | 1.000 | 1.000 | 1780 | 123 | 1.000 |
 
 ## Method Notes
 

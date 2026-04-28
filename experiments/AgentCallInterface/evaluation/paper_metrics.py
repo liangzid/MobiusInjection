@@ -26,6 +26,9 @@ SLASH_SKILL_RE = re.compile(
 class RunSpec:
     path: Path
     agents: frozenset[str] | None = None
+    tasks: frozenset[str] | None = None
+    exclude_tasks: frozenset[str] | None = None
+
 
 CASE_FIELDS = (
     "run_label",
@@ -121,25 +124,53 @@ def _load_run(
     run_dir = spec.path
     manifest = _read_manifest(run_dir)
     run_label = _run_label(run_dir)
-    entries = [entry for entry in manifest if _agent_included(entry, spec.agents)]
+    entries = [entry for entry in manifest if _entry_included(entry, spec)]
     return [_case_record(entry, run_label, run_kind, baseline_index) for entry in entries]
 
 
 def _parse_run_spec(value: str | Path) -> RunSpec:
     raw = str(value)
-    if "#agents=" not in raw:
-        return RunSpec(Path(raw))
-    path_value, agent_value = raw.split("#agents=", 1)
-    agents = frozenset(agent.strip() for agent in agent_value.split(",") if agent.strip())
-    return RunSpec(Path(path_value), agents or None)
+    path_value, *fragments = raw.split("#")
+    options = _run_spec_options(fragments)
+    return RunSpec(
+        path=Path(path_value),
+        agents=_option_set(options.get("agents")),
+        tasks=_option_set(options.get("tasks")),
+        exclude_tasks=_option_set(options.get("exclude_tasks")),
+    )
 
 
-def _agent_included(entry: dict[str, Any], agents: frozenset[str] | None) -> bool:
-    return agents is None or str(entry.get("agent", "")) in agents
+def _run_spec_options(fragments: list[str]) -> dict[str, str]:
+    options: dict[str, str] = {}
+    for fragment in fragments:
+        if "=" not in fragment:
+            continue
+        key, option_value = fragment.split("=", 1)
+        options[key] = option_value
+    return options
+
+
+def _option_set(value: str | None) -> frozenset[str] | None:
+    if not value:
+        return None
+    items = frozenset(item.strip() for item in value.split(",") if item.strip())
+    return items or None
+
+
+def _entry_included(entry: dict[str, Any], spec: RunSpec) -> bool:
+    agent = str(entry.get("agent", ""))
+    task_id = str(entry.get("task_id", ""))
+    if spec.agents is not None and agent not in spec.agents:
+        return False
+    if spec.tasks is not None and task_id not in spec.tasks:
+        return False
+    if spec.exclude_tasks is not None and task_id in spec.exclude_tasks:
+        return False
+    return True
 
 
 def _read_manifest(run_dir: Path) -> list[dict[str, Any]]:
-    manifest_path = run_dir / "manifest.json"
+    manifest_path = run_dir if run_dir.suffix == ".json" else run_dir / "manifest.json"
     if not manifest_path.exists():
         raise FileNotFoundError(f"Missing manifest: {manifest_path}")
     return json.loads(manifest_path.read_text())
@@ -240,13 +271,17 @@ def _case_complete(entry: dict[str, Any]) -> bool:
 
 
 def _run_label(run_dir: Path) -> str:
-    parts = run_dir.parts
+    label_path = run_dir.parent if run_dir.suffix == ".json" else run_dir
+    parts = label_path.parts
     if "models" not in parts:
-        return run_dir.name
+        return label_path.name
     model_index = parts.index("models")
     if model_index < 2 or model_index + 1 >= len(parts):
-        return run_dir.name
-    return "_".join([parts[model_index - 2], parts[model_index - 1], parts[model_index + 1]])
+        return label_path.name
+    label = "_".join([parts[model_index - 2], parts[model_index - 1], parts[model_index + 1]])
+    if run_dir.suffix == ".json" and run_dir.stem != "manifest":
+        label = f"{label}_{run_dir.stem}"
+    return label
 
 
 def _baseline_success(baseline: dict[str, Any] | None) -> str:
@@ -434,24 +469,24 @@ def _overall_summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _agent_summaries(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for case in cases:
-        key = (case["run_label"], case["run_kind"], case["dataset"], case["agent"])
+        key = (case["run_kind"], case["dataset"], case["agent"])
         grouped[key].append(case)
     return [_agent_summary(key, rows) for key, rows in sorted(grouped.items())]
 
 
 def _agent_summary(
-    key: tuple[str, str, str, str],
+    key: tuple[str, str, str],
     cases: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    run_label, run_kind, dataset, agent = key
+    run_kind, dataset, agent = key
     completed = [case for case in cases if case["status"] == "completed"]
     baseline_matched = [case for case in completed if case["baseline_matched"]]
     skill_events = _sum(completed, "skill_call_events")
     all_calls = _sum(completed, "total_tool_calls")
     return {
-        "run_label": run_label,
+        "run_label": _combined_run_label(cases),
         "run_kind": run_kind,
         "dataset": dataset,
         "agent": agent,
@@ -473,6 +508,13 @@ def _agent_summary(
         "timeout_rate": _rate(completed, "timed_out"),
         "runtime_failure_rate": _rate(completed, "runtime_failure_detected"),
     }
+
+
+def _combined_run_label(cases: list[dict[str, Any]]) -> str:
+    labels = sorted(set(str(case["run_label"]) for case in cases))
+    if len(labels) == 1:
+        return labels[0]
+    return f"combined:{len(labels)}_sources"
 
 
 def _baseline_rate(cases: list[dict[str, Any]]) -> str:
