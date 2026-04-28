@@ -339,6 +339,14 @@ Exit criteria:
 - A backup commit exists for the completed isolation refactor.
 - Worktree status is reviewed after commit.
 
+Execution result on 2026-04-28:
+
+- Created backup commit:
+  - `744aec3 Isolate coding-agent experiment paths from master`
+- Staged only the isolation refactor files, coding-agent test path updates, new
+  coding-agent scripts, and this plan document.
+- Left unrelated existing worktree changes unstaged.
+
 ### Phase 5 - Selective Merge From `origin/master`
 
 After the isolation commit, evaluate `origin/master` again and import only safe
@@ -376,6 +384,34 @@ Exit criteria:
 - Imported main-branch content does not change coding-agent experiment behavior.
 - Focused verification still passes.
 - A second backup commit records the selective merge/import.
+
+Execution result on 2026-04-28:
+
+- Imported safe claw-like additions from `origin/master`:
+  - `experiments/AgentCallInterface/context_injection_add_s.py`
+  - ADD_S taskset configs under `experiments/configs/`
+  - claw-like effectiveness scripts under `experiments/scripts/`
+  - `mobiusInjection/MI_V3.2*`, `MI_V3.3*`, `MI_V3.4*`,
+    `MI_V3.5*`, `MI_V3.6*`, `MI_V4*`, `MI_V4.1*`, and `MI_V4.2*`
+  - passing context-injection and MI tests from `origin/master`
+- Merged `.gitignore` by preserving current coding-agent ignore entries and
+  adding useful main-branch entries for `.codex`, dataset directories,
+  `package-lock.json`, `pytest-of-zi`, and `tasks/old_tasks`.
+- Explicitly did not import:
+  - root `AGENTS.md`, because its commit rule conflicts with the active
+    Dr. Frost instructions for this worktree.
+  - `package.json`, because it is an empty `{}` file on `origin/master` and is
+    not needed for either imported scripts or tests.
+  - main-branch deletions of coding-agent benchmark/evaluation files.
+  - `test_mi_v353_agent_specific.py`, because it references
+    `mobiusInjection/MI_V3.5.3_*` files that do not exist on `origin/master`.
+- Adjusted imported V4/V4.1 tests to match the actual current main-branch
+  template text, then verified them.
+- Verification:
+  - `python3 -m py_compile` passed for imported context-injection and
+    MI template Python files.
+  - `bash -n` passed for the three imported claw-like shell scripts.
+  - Focused pytest passed: 62 tests.
 
 ### Phase 6 - Future Structure Cleanup
 
