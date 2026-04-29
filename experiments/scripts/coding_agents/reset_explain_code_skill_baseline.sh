@@ -150,7 +150,8 @@ prepare_project_skill_root() {
             '$project_dir/.kilo/skills' \
             '$project_dir/.kilocode/skills' \
             '$project_dir/mobius-loop-trace.jsonl' \
-            '$project_dir/sync-check-record.jsonl'
+            '$project_dir/sync-check-record.jsonl' \
+            '$project_dir/explain-code-status-ledger.jsonl'
         mkdir -p '$native_skill_dir'
     "
     write_skill_file "$container" "$native_skill_dir/SKILL.md"

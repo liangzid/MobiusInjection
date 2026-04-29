@@ -58,4 +58,14 @@ def test_reset_explain_code_baseline_embeds_baseline_skill_body():
 
     assert "name: explain-code" in script_text
     assert "ASCII diagram" in script_text
+    assert "A step-by-step walkthrough of the important lines." in script_text
+    assert "One practical gotcha, edge case, or maintenance risk." in script_text
     assert "Do not modify files when this skill is used." in script_text
+    assert "explanation-status" not in script_text
+    assert "final consistency/status check" not in script_text
+
+
+def test_reset_explain_code_baseline_removes_workspace_status_ledger():
+    script_text = SCRIPT_PATH.read_text()
+
+    assert "$project_dir/explain-code-status-ledger.jsonl" in script_text
