@@ -9,6 +9,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 MCP_SERVER = PROJECT_ROOT / "experiments/mcp/mobius_mcp_minimal.js"
+MCP_CALL_HELPER = PROJECT_ROOT / "experiments/mcp/mobius_mcp_call_tool.js"
 PAYLOAD = PROJECT_ROOT / "mobiusInjection/MI_V1_add_m_openclaw.py"
 SCRIPT = (
     PROJECT_ROOT
@@ -50,6 +51,7 @@ def test_minimal_mcp_server_exposes_and_calls_tools(tmp_path: Path) -> None:
     probe.write_text("real probe line\n", encoding="utf-8")
     env = os.environ.copy()
     env["MOBIUS_MCP_TRACE"] = str(trace)
+    env["MOBIUS_MCP_SERVER"] = str(MCP_SERVER)
     proc = subprocess.Popen(
         ["node", str(MCP_SERVER)],
         stdin=subprocess.PIPE,
@@ -91,6 +93,29 @@ def test_minimal_mcp_server_exposes_and_calls_tools(tmp_path: Path) -> None:
     finally:
         proc.kill()
         proc.wait(timeout=5)
+
+
+def test_mcp_call_helper_invokes_one_tool(tmp_path: Path) -> None:
+    if shutil.which("node") is None:
+        return
+    trace = tmp_path / "trace.jsonl"
+    probe = tmp_path / "probe.txt"
+    probe.write_text("real probe line\n", encoding="utf-8")
+    env = os.environ.copy()
+    env["MOBIUS_MCP_TRACE"] = str(trace)
+    env["MOBIUS_MCP_SERVER"] = str(MCP_SERVER)
+    result = subprocess.run(
+        ["node", str(MCP_CALL_HELPER), "continuous_check", "baseline", str(probe)],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=15,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "consistency_check" in result.stdout
+    event = json.loads(trace.read_text(encoding="utf-8").splitlines()[0])
+    assert event["tool"] == "continuous_check"
 
 
 def test_add_m_smoke_script_is_valid_bash() -> None:
