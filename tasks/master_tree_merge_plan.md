@@ -543,3 +543,24 @@ runtime files were copied into coding-specific paths, the coding-agent shell
 scripts were updated to call those new module/template names, master was fully
 merged, the focused verification suite passed, and the completed merge state was
 committed.
+
+## Template Prompt Location Check
+
+Dr. Frost asked where the previous coding-agent `TEMPLATE` prompt is now. The
+previous file is still present at `mobiusInjection/TEMPLATE_V3_coding_agent.py`
+as a legacy compatibility copy. The coding-agent-specific canonical copy is now
+`mobiusInjection/CODING_AGENT_TEMPLATE_V3.py`; `cmp -s` confirms the two files
+currently have identical content.
+
+The coding-agent scripts now default to the new module name:
+
+- `experiments/scripts/coding_agents/run_basic_coding_agent_eval_v3.sh` sets
+  `INJECTION_TEMPLATE_MODULE="${INJECTION_TEMPLATE_MODULE:-CODING_AGENT_TEMPLATE_V3}"`
+  and imports that module from `mobiusInjection`.
+- `experiments/scripts/coding_agents/run_minimax_coding_agents_full_eval.sh`
+  sets the same default and delegates to
+  `experiments/scripts/coding_agents/run_basic_coding_agent_eval_v3.sh`.
+
+The template entry point remains `MainInjectionTextTargeted(...)`, and the prompt
+payload still contains the coding-agent marker
+`MOBIUS_V3_CODING_AGENT_DONE integrity-sync performance-audit`.

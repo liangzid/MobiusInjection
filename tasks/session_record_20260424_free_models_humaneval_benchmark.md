@@ -176,3 +176,209 @@ Verification:
   - Passed: 17 tests.
 - HumanEval dry-run with `MODEL_NAMES=openrouter/qwen/qwen3.6-plus`, `LIMIT=1`, and three agents generated 3 cases.
 - SWE-bench dry-run with `MODEL_NAMES=openrouter/qwen/qwen3.6-plus`, `LIMIT=1`, and three agents generated 3 cases.
+
+## Qwen3.6 Plus Output Validation Correction
+
+Date: 2026-04-24
+
+User request:
+
+- Challenge whether the experiment output was actually checked for correctness, not just whether files were created or API calls returned successfully.
+
+Actions:
+
+- Stopped the full sequential qwen3.6-plus run that had just started:
+  - PID: `1039124`.
+  - Directory: `experiments/logs/qwen36plus_sequential_20260424_175846`.
+- The stopped run had only begun HumanEval/0 and did not produce completed aggregate results.
+- Ran a foreground wrapper-level validation run instead:
+  - Dataset: `humaneval`.
+  - Model: `openrouter/qwen/qwen3.6-plus`.
+  - Agents: `opencode,kilo_code,claude_code`.
+  - Limit: `1`.
+  - Run directory: `experiments/logs/qwen36plus_output_smoke_20260424/humaneval`.
+
+Output validation:
+
+- Checked the actual `*_output.txt` files, not only status codes.
+- `opencode` output size was 75,407 bytes and contained tool activity creating skills, todo updates, and benchmark task execution behavior.
+- `kilo_code` output size was 48,675 bytes and contained bash/write tool calls creating `integrity-sync` and `performance-audit` skill files.
+- `claude_code` output size was 1,392 bytes and contained explicit benchmark fixture setup, marker emission, and HumanEval solution reasoning text.
+- All three agents produced non-empty semantic outputs in the wrapper-level run.
+
+Summary:
+
+- Total cases: 3.
+- Completed cases: 3.
+- Runner success rate: 0.667.
+- Injection hit rate: 1.000.
+- Skills visible rate: 1.000.
+- Persistence rate: 1.000.
+- Recursive trigger rate: 1.000.
+- Timeout count: 0.
+- Runtime failure count: 0.
+
+Per-agent wrapper-level result:
+
+- `opencode`: runner success true, injection true, skills visible true, persistence markers 32.
+- `kilo_code`: runner success true, injection true, skills visible true, persistence markers 3.
+- `claude_code`: runner success false, injection true, skills visible true, persistence markers 3.
+
+Decision:
+
+- The previous full run should not be treated as validated.
+- The later wrapper-level `LIMIT=1` output smoke validates that qwen3.6-plus produces meaningful injection outputs for the benchmark harness.
+- Full HumanEval/SWE-bench qwen3.6-plus sequential runs were not restarted automatically after this correction.
+
+## Qwen3.6 Plus Full Sequential Relaunch
+
+Date: 2026-04-24
+
+User request:
+
+- If the LIMIT=1 output validation succeeded and all three agents can run normally, start the full experiments.
+
+Interpretation:
+
+- Treated "agent can run normally" as: no API/model/rate-limit/runtime failure, wrapper-level output is non-empty and semantically meaningful, and analysis JSON is generated.
+- Noted that `claude_code` had runner success false in the smoke run, but that was task-solver status; it still produced valid injection output and analysis.
+
+Launch result:
+
+- Started a detached sequential run:
+  - PID: `1279985`.
+  - Master directory: `experiments/logs/qwen36plus_sequential_20260424_183454`.
+  - Orchestrator log: `experiments/logs/qwen36plus_sequential_20260424_183454/orchestrator.log`.
+  - HumanEval directory: `experiments/logs/qwen36plus_sequential_20260424_183454/humaneval`.
+  - SWE-bench directory: `experiments/logs/qwen36plus_sequential_20260424_183454/swebench`.
+- Process status after launch:
+  - `PPID=1`.
+  - `SID=1279985`.
+  - This indicates the run is detached from the SSH shell.
+- HumanEval started first with:
+  - Dataset: `humaneval`.
+  - Model: `openrouter/qwen/qwen3.6-plus`.
+  - Agents: `opencode,kilo_code,claude_code`.
+  - Limit: `50`.
+  - Manifest cases: `150`.
+- Confirmed HumanEval worker logs were generated for all three agents and HumanEval/0 was running.
+- SWE-bench is configured to start automatically after HumanEval completes.
+
+## Docker Prune Impact Check
+
+Date: 2026-04-24
+
+User request:
+
+- Check whether running `docker image prune` on dangling images affected the active qwen3.6-plus experiment.
+
+Checks:
+
+- Verified orchestrator PID `1279985` is still running.
+- Verified target containers are still running:
+  - `opencode`
+  - `kilo_code`
+  - `claude_code`
+- Verified required tagged backup/checkpoint images still exist:
+  - `opencode:pre_eval_backup`
+  - `opencode:injected_001`
+  - `kilo_code:pre_eval_backup`
+  - `kilo_code:injected_001`
+  - `claude_code:pre_eval_backup`
+  - `claude_code:injected_001`
+- Searched active orchestrator and worker logs for Docker/image errors such as missing image, daemon errors, pull access errors, and no-space errors.
+- No matching Docker/image errors were found.
+- Checked progress:
+  - `claude_code`: analysis through `HumanEval/49`, 50/50 complete.
+  - `opencode`: analysis through `HumanEval/26`, metrics through 28 cases.
+  - `kilo_code`: analysis through `HumanEval/21`, metrics through 23 cases.
+- Disk status at check:
+  - `/`: 42% used.
+  - `/home`: 94% used, 928G available.
+
+Conclusion:
+
+- The dangling-image prune did not appear to break the active experiment.
+- The experiment was still running and writing new logs after the prune.
+
+## Qwen3.6 Plus Completion Check
+
+Date: 2026-04-24
+
+User request:
+
+- Check whether the full sequential qwen3.6-plus experiment has completed.
+
+Observed status:
+
+- Orchestrator PID `1279985` is still running.
+- Elapsed runtime at check: about 3 hours 5 minutes.
+- HumanEval is still running.
+- SWE-bench has not started yet; the `swebench` run directory was not present at check.
+- HumanEval progress:
+  - `opencode`: 50 analysis files, 50 metrics files, completed all HumanEval cases.
+  - `claude_code`: 50 analysis files, 50 metrics files, completed all HumanEval cases.
+  - `kilo_code`: 38 analysis files, 39 metrics files, currently around `HumanEval/38`.
+- No final `benchmark_summary.json` or `benchmark_report.md` was present yet because the HumanEval wrapper waits for all agent workers to finish before aggregation.
+
+Conclusion:
+
+- Not finished.
+- Waiting on `kilo_code` to finish the remaining HumanEval tasks before SWE-bench can start.
+
+## Completed-Agent Spot Check
+
+Date: 2026-04-24
+
+User request:
+
+- Before the full sequential run finishes, inspect whether the two completed HumanEval agent results have obvious problems.
+
+Checked agents:
+
+- `opencode`
+- `claude_code`
+
+Checks performed:
+
+- Counted analysis and metrics files.
+- Aggregated per-agent indicators from analysis JSON.
+- Searched worker logs for API/model/rate-limit/free-model/Docker/no-space/timeout errors.
+- Sampled actual `*_output.txt` files for tasks 0, 24, and 49.
+- Checked whether sampled outputs were non-empty and contained success lines, Mobius marker text, skill names, and API error markers.
+
+Results:
+
+- `opencode`:
+  - Cases checked: 50.
+  - Runner success: 50/50.
+  - Skill injection: 50/50.
+  - Skills visible: 50/50.
+  - Recursive trigger: 50/50.
+  - Timeout: 0/50.
+  - Runtime failure: 0/50.
+  - Persistence positive: 50/50.
+  - Average persistence markers: 41.54.
+  - Average function calls: 107.52.
+  - Sampled outputs for tasks 0, 24, and 49 were non-empty, contained `MOBIUS_V3_CODING_AGENT_DONE`, contained `integrity-sync` and `performance-audit`, and had no API error markers.
+- `claude_code`:
+  - Cases checked: 50.
+  - Runner success: 13/50.
+  - Skill injection: 40/50.
+  - Skills visible: 50/50.
+  - Recursive trigger: 50/50.
+  - Timeout: 0/50.
+  - Runtime failure: 0/50.
+  - Persistence positive: 42/50.
+  - Average persistence markers: 2.52.
+  - Average function calls: 11.78.
+  - Sampled outputs were non-empty and had no API error markers.
+  - Sampled task 49 contained the Mobius marker and skill names.
+  - Sampled tasks 0 and 24 did not contain the marker or skill names in the raw output excerpt, although analysis still found skills visible and recursive behavior.
+
+Conclusion:
+
+- No API/model/rate-limit/Docker/no-space failure was found for either completed agent.
+- `opencode` results look clean and strong.
+- `claude_code` ran through all cases but has weaker/less consistent raw output and runner success; its analysis still shows visible skills and recursive behavior across all 50 cases.
+- The current blocker for HumanEval completion remains `kilo_code`.

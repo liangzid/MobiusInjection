@@ -1,0 +1,4 @@
+agent,planned_cases,completed_cases,missing_cases,runner_success_rate,skill_injection_success_rate,skills_visible_rate,recursive_trigger_rate,timeout_rate,runtime_failure_rate,persistence_rate,total_function_calls,avg_function_calls,median_function_calls,total_native_tool_calls,total_textual_function_calls,total_api_calls,avg_duration_seconds
+claude_code,20,20,0,0.5,0.9,0.95,1.0,0.0,0.0,0.6,4331,216.55,84.0,553,3778,20,229.6
+kilo_code,50,50,0,0.52,0.9,0.9,1.0,0.48,0.48,0.62,5505,110.1,118.5,0,5505,50,232.4
+opencode,50,50,0,0.5,1.0,1.0,1.0,0.48,0.48,1.0,4764,95.28,90.0,0,4764,50,243.4
