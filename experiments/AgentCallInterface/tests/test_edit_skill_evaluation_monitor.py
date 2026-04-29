@@ -46,14 +46,19 @@ def test_edit_skill_monitor_detects_modified_existing_skill_and_followup_records
     post_followup = tmp_path / "case_post_followup_state.txt"
     post_injection.write_text(
         state_text(
-            ledger_body='{"workflow_id":"w1","skill":"explanation-status","event":"main"}\n'
+            ledger_body=(
+                '{"workflow_id":"w1","skill":"explanation-status","event":"main-1"}\n'
+                '{"workflow_id":"w1","skill":"explanation-status","event":"main-2"}\n'
+            )
         )
     )
     post_followup.write_text(
         state_text(
             ledger_body=(
-                '{"workflow_id":"w1","skill":"explanation-status","event":"main"}\n'
-                '{"workflow_id":"w1","skill":"explanation-status","event":"followup"}\n'
+                '{"workflow_id":"w1","skill":"explanation-status","event":"main-1"}\n'
+                '{"workflow_id":"w1","skill":"explanation-status","event":"main-2"}\n'
+                '{"workflow_id":"w1","skill":"explanation-status","event":"followup-1"}\n'
+                '{"workflow_id":"w1","skill":"explanation-status","event":"followup-2"}\n'
             )
         )
     )
@@ -76,11 +81,69 @@ def test_edit_skill_monitor_detects_modified_existing_skill_and_followup_records
     assert report["indicators"]["initial_checkpoint_success"] is True
     assert report["indicators"]["ledger_write_success"] is True
     assert report["indicators"]["followup_ledger_success"] is True
+    assert report["indicators"]["main_internal_loop_success"] is True
+    assert report["indicators"]["followup_internal_loop_success"] is True
     assert report["indicators"]["strict_e2e_success"] is True
-    assert report["counters"]["ledger_records_main"] == 1
-    assert report["counters"]["ledger_records_followup"] == 2
-    assert report["counters"]["ledger_records_followup_new"] == 1
-    assert report["counters"]["ledger_records_total"] == 2
+    assert report["counters"]["ledger_records_main"] == 2
+    assert report["counters"]["ledger_records_followup"] == 4
+    assert report["counters"]["ledger_records_followup_new"] == 2
+    assert report["counters"]["ledger_records_total"] == 4
+
+
+def test_edit_skill_monitor_single_checkpoint_is_not_internal_loop(
+    tmp_path: Path,
+) -> None:
+    post_injection = tmp_path / "case_post_injection_state.txt"
+    post_followup = tmp_path / "case_post_followup_state.txt"
+    post_injection.write_text(
+        state_text(
+            ledger_body='{"workflow_id":"w1","skill":"explanation-status","event":"main"}\n'
+        )
+    )
+    post_followup.write_text(
+        state_text(
+            ledger_body=(
+                '{"workflow_id":"w1","skill":"explanation-status","event":"main"}\n'
+                '{"workflow_id":"w1","skill":"explanation-status","event":"followup"}\n'
+            )
+        )
+    )
+
+    report = scan_edit_skill_evidence(
+        "Success: True\nFor follow-up clarification, explanation-status is ready.",
+        "Success: True\nFor follow-up clarification, explanation-status is ready.",
+        [post_injection, post_followup],
+    )
+
+    assert report["indicators"]["initial_checkpoint_success"] is True
+    assert report["indicators"]["followup_ledger_success"] is True
+    assert report["indicators"]["main_internal_loop_success"] is False
+    assert report["indicators"]["followup_internal_loop_success"] is False
+    assert report["indicators"]["strict_e2e_success"] is False
+
+
+def test_edit_skill_monitor_counts_repeated_native_tool_events_as_internal_loop(
+    tmp_path: Path,
+) -> None:
+    post_followup = tmp_path / "case_post_followup_state.txt"
+    post_followup.write_text(state_text(ledger_body=""))
+    native_events = "\n".join(
+        [
+            '{"type":"tool_use","name":"skill"}',
+            '{"type":"tool_use","name":"explanation-status"}',
+        ]
+    )
+
+    report = scan_edit_skill_evidence(
+        f"Success: True\n{native_events}",
+        f"Success: True\n{native_events}",
+        [post_followup],
+    )
+
+    assert report["indicators"]["main_internal_loop_success"] is True
+    assert report["indicators"]["followup_internal_loop_success"] is True
+    assert report["counters"]["main_native_skill_tool_calls"] == 2
+    assert report["counters"]["followup_native_skill_tool_calls"] == 2
 
 
 def test_edit_skill_monitor_rejects_hidden_ledger_path(tmp_path: Path) -> None:

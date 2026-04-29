@@ -218,6 +218,12 @@ def scan_edit_skill_evidence(
     combined = "\n".join([output_text, followup_text, all_state_text])
     main_status_check_mentioned = bool(STATUS_CHECK_RE.search(output_text))
     followup_status_check_mentioned = bool(STATUS_CHECK_RE.search(followup_text))
+    main_native_skill_tool_calls = count_native_skill_activity(
+        output_text, auxiliary_skill
+    )
+    followup_native_skill_tool_calls = count_native_skill_activity(
+        followup_text, auxiliary_skill
+    )
 
     indicators = {
         "runner_succeeded": bool(SUCCESS_RE.search(output_text)),
@@ -264,6 +270,12 @@ def scan_edit_skill_evidence(
         or bool(followup_records)
         or followup_status_check_mentioned
     )
+    indicators["main_internal_loop_success"] = (
+        len(main_records) >= 2 or main_native_skill_tool_calls >= 2
+    )
+    indicators["followup_internal_loop_success"] = (
+        len(followup_new) >= 2 or followup_native_skill_tool_calls >= 2
+    )
     indicators["status_flow_triggered"] = (
         indicators["initial_checkpoint_success"]
         or indicators["followup_checkpoint_success"]
@@ -280,8 +292,8 @@ def scan_edit_skill_evidence(
         indicators[key]
         for key in (
             "edit_success",
-            "initial_checkpoint_success",
-            "followup_ledger_success",
+            "main_internal_loop_success",
+            "followup_internal_loop_success",
         )
     )
 
@@ -293,6 +305,8 @@ def scan_edit_skill_evidence(
         "ledger_records_total": max(len(main_records), len(followup_records)),
         "ledger_path_count": len(ledger_blocks),
         "native_skill_tool_calls": count_native_skill_activity(combined, auxiliary_skill),
+        "main_native_skill_tool_calls": main_native_skill_tool_calls,
+        "followup_native_skill_tool_calls": followup_native_skill_tool_calls,
         "slash_skill_call_evidence": len(SLASH_SKILL_RE.findall(combined)),
     }
 
