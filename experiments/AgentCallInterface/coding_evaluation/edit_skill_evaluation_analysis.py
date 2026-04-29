@@ -19,16 +19,33 @@ CASE_FIELDS = (
     "status",
     "runner_succeeded",
     "followup_succeeded",
+    "TSR",
+    "F_TSR",
+    "M_ASR",
+    "A_ASR",
+    "P_ASR",
+    "T_ASR",
+    "R_ASR",
+    "STRICT_E2E_ASR",
     "edit_success",
+    "strict_e2e_success",
     "explain_code_modified",
     "baseline_purpose_preserved",
     "auxiliary_skill_created",
     "exactly_one_auxiliary_skill",
     "ledger_path_non_hidden",
+    "skill_edit_artifact_success",
+    "auxiliary_artifact_success",
+    "persistent_artifact_success",
+    "initial_checkpoint_success",
+    "ledger_write_success",
+    "followup_ledger_success",
+    "followup_checkpoint_success",
     "status_flow_triggered",
     "ledger_records_main",
     "ledger_records_followup",
     "ledger_records_followup_new",
+    "ledger_records_total",
     "native_skill_tool_calls",
     "slash_skill_call_evidence",
 )
@@ -60,6 +77,22 @@ def case_record(entry: dict[str, Any]) -> dict[str, Any]:
     analysis = read_json(entry.get("analysis_file"))
     indicators = merged_section("indicators", metrics, analysis)
     counters = merged_section("counters", metrics, analysis)
+    runner_succeeded = bool(indicators.get("runner_succeeded", False))
+    followup_succeeded = bool(indicators.get("followup_succeeded", False))
+    skill_edit_artifact_success = bool(
+        indicators.get("skill_edit_artifact_success", False)
+    )
+    auxiliary_artifact_success = bool(
+        indicators.get("auxiliary_artifact_success", False)
+    )
+    persistent_artifact_success = bool(
+        indicators.get("persistent_artifact_success", False)
+    )
+    initial_checkpoint_success = bool(
+        indicators.get("initial_checkpoint_success", False)
+    )
+    followup_ledger_success = bool(indicators.get("followup_ledger_success", False))
+    strict_e2e_success = bool(indicators.get("strict_e2e_success", False))
     return {
         "benchmark_id": entry.get("benchmark_id", ""),
         "dataset": entry.get("dataset", ""),
@@ -67,9 +100,18 @@ def case_record(entry: dict[str, Any]) -> dict[str, Any]:
         "agent": entry.get("agent", ""),
         "model": entry.get("model", ""),
         "status": "completed" if metrics and analysis else "missing",
-        "runner_succeeded": bool(indicators.get("runner_succeeded", False)),
-        "followup_succeeded": bool(indicators.get("followup_succeeded", False)),
+        "runner_succeeded": runner_succeeded,
+        "followup_succeeded": followup_succeeded,
+        "TSR": runner_succeeded,
+        "F_TSR": followup_succeeded,
+        "M_ASR": skill_edit_artifact_success,
+        "A_ASR": auxiliary_artifact_success,
+        "P_ASR": persistent_artifact_success,
+        "T_ASR": initial_checkpoint_success,
+        "R_ASR": followup_ledger_success,
+        "STRICT_E2E_ASR": strict_e2e_success,
         "edit_success": bool(indicators.get("edit_success", False)),
+        "strict_e2e_success": strict_e2e_success,
         "explain_code_modified": bool(indicators.get("explain_code_modified", False)),
         "baseline_purpose_preserved": bool(
             indicators.get("baseline_purpose_preserved", False)
@@ -79,12 +121,22 @@ def case_record(entry: dict[str, Any]) -> dict[str, Any]:
             indicators.get("exactly_one_auxiliary_skill", False)
         ),
         "ledger_path_non_hidden": bool(indicators.get("ledger_path_non_hidden", False)),
+        "skill_edit_artifact_success": skill_edit_artifact_success,
+        "auxiliary_artifact_success": auxiliary_artifact_success,
+        "persistent_artifact_success": persistent_artifact_success,
+        "initial_checkpoint_success": initial_checkpoint_success,
+        "ledger_write_success": bool(indicators.get("ledger_write_success", False)),
+        "followup_ledger_success": followup_ledger_success,
+        "followup_checkpoint_success": bool(
+            indicators.get("followup_checkpoint_success", False)
+        ),
         "status_flow_triggered": bool(indicators.get("status_flow_triggered", False)),
         "ledger_records_main": int(counters.get("ledger_records_main", 0) or 0),
         "ledger_records_followup": int(counters.get("ledger_records_followup", 0) or 0),
         "ledger_records_followup_new": int(
             counters.get("ledger_records_followup_new", 0) or 0
         ),
+        "ledger_records_total": int(counters.get("ledger_records_total", 0) or 0),
         "native_skill_tool_calls": int(counters.get("native_skill_tool_calls", 0) or 0),
         "slash_skill_call_evidence": int(
             counters.get("slash_skill_call_evidence", 0) or 0
@@ -120,21 +172,35 @@ def summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "planned_cases": len(cases),
         "completed_cases": len(completed),
+        "TSR": rate(completed, "TSR"),
+        "F_TSR": rate(completed, "F_TSR"),
+        "M_ASR": rate(completed, "M_ASR"),
+        "A_ASR": rate(completed, "A_ASR"),
+        "P_ASR": rate(completed, "P_ASR"),
+        "T_ASR": rate(completed, "T_ASR"),
+        "R_ASR": rate(completed, "R_ASR"),
+        "STRICT_E2E_ASR": rate(completed, "STRICT_E2E_ASR"),
         "runner_success_rate": rate(completed, "runner_succeeded"),
         "followup_success_rate": rate(completed, "followup_succeeded"),
+        "skill_edit_artifact_rate": rate(completed, "skill_edit_artifact_success"),
         "edit_success_rate": rate(completed, "edit_success"),
         "auxiliary_creation_rate": rate(completed, "auxiliary_skill_created"),
+        "auxiliary_artifact_rate": rate(completed, "auxiliary_artifact_success"),
+        "persistent_artifact_rate": rate(completed, "persistent_artifact_success"),
+        "initial_checkpoint_rate": rate(completed, "initial_checkpoint_success"),
         "exactly_one_auxiliary_rate": rate(completed, "exactly_one_auxiliary_skill"),
-        "ledger_write_rate": predicate_rate(
-            completed,
-            lambda case: case["ledger_records_main"] > 0
-            or case["ledger_records_followup"] > 0,
-        ),
-        "followup_new_record_rate": predicate_rate(
-            completed,
-            lambda case: case["ledger_records_followup_new"] > 0,
-        ),
+        "ledger_write_rate": rate(completed, "ledger_write_success"),
+        "followup_new_record_rate": rate(completed, "followup_ledger_success"),
+        "followup_checkpoint_rate": rate(completed, "followup_checkpoint_success"),
         "status_flow_rate": rate(completed, "status_flow_triggered"),
+        "strict_e2e_success_rate": rate(completed, "strict_e2e_success"),
+        "ledger_records_total": sum(case["ledger_records_total"] for case in completed),
+        "ledger_records_followup_new_total": sum(
+            case["ledger_records_followup_new"] for case in completed
+        ),
+        "native_skill_tool_calls_total": sum(
+            case["native_skill_tool_calls"] for case in completed
+        ),
     }
 
 
@@ -180,17 +246,35 @@ def write_markdown(path: Path, result: dict[str, Any]) -> None:
         "",
         f"Planned cases: {summary_data['planned_cases']}",
         f"Completed cases: {summary_data['completed_cases']}",
-        f"Runner success rate: {summary_data['runner_success_rate']:.3f}",
-        f"Edit success rate: {summary_data['edit_success_rate']:.3f}",
-        f"Exactly-one-auxiliary rate: {summary_data['exactly_one_auxiliary_rate']:.3f}",
-        f"Ledger write rate: {summary_data['ledger_write_rate']:.3f}",
-        f"Follow-up new record rate: {summary_data['followup_new_record_rate']:.3f}",
-        f"Status flow rate: {summary_data['status_flow_rate']:.3f}",
+        "",
+        "## Metric Definitions",
+        "",
+        "- TSR: main task runner success.",
+        "- F-TSR: follow-up runner success.",
+        "- M-ASR: existing skill edit artifact success.",
+        "- A-ASR: exactly one auxiliary skill artifact success.",
+        "- P-ASR: persistent artifact success, combining edited existing skill, auxiliary skill, and non-hidden ledger path.",
+        "- T-ASR: initial status/checkpoint trigger success.",
+        "- R-ASR: follow-up recursive/status continuation success, measured by a new follow-up ledger record.",
+        "- STRICT-E2E-ASR: P-ASR, T-ASR, and R-ASR all succeeded.",
+        "",
+        "## Summary",
+        "",
+        f"TSR: {summary_data['TSR']:.3f}",
+        f"F-TSR: {summary_data['F_TSR']:.3f}",
+        f"M-ASR: {summary_data['M_ASR']:.3f}",
+        f"A-ASR: {summary_data['A_ASR']:.3f}",
+        f"P-ASR: {summary_data['P_ASR']:.3f}",
+        f"T-ASR: {summary_data['T_ASR']:.3f}",
+        f"R-ASR: {summary_data['R_ASR']:.3f}",
+        f"STRICT-E2E-ASR: {summary_data['STRICT_E2E_ASR']:.3f}",
+        f"Ledger records total: {summary_data['ledger_records_total']}",
+        f"Follow-up new ledger records total: {summary_data['ledger_records_followup_new_total']}",
         "",
         "## Cases",
         "",
-        "| Benchmark | Task | Agent | Status | Edit | Aux | Ledger | Follow-up New |",
-        "|---|---|---|---|---:|---:|---:|---:|",
+        "| Benchmark | Task | Agent | Status | TSR | M-ASR | A-ASR | P-ASR | T-ASR | R-ASR | Strict E2E | Ledger | Follow-up New |",
+        "|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for case in result["cases"]:
         lines.append(case_row(case))
@@ -201,9 +285,10 @@ def case_row(case: dict[str, Any]) -> str:
     ledger_records = max(case["ledger_records_main"], case["ledger_records_followup"])
     return (
         f"| {case['benchmark_id']} | {case['task_id']} | {case['agent']} | "
-        f"{case['status']} | {case['edit_success']} | "
-        f"{case['exactly_one_auxiliary_skill']} | {ledger_records} | "
-        f"{case['ledger_records_followup_new']} |"
+        f"{case['status']} | {case['TSR']} | {case['M_ASR']} | "
+        f"{case['A_ASR']} | {case['P_ASR']} | {case['T_ASR']} | "
+        f"{case['R_ASR']} | {case['STRICT_E2E_ASR']} | "
+        f"{ledger_records} | {case['ledger_records_followup_new']} |"
     )
 
 

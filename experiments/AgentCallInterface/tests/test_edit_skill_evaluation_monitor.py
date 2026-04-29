@@ -70,9 +70,17 @@ def test_edit_skill_monitor_detects_modified_existing_skill_and_followup_records
     assert report["indicators"]["exactly_one_auxiliary_skill"] is True
     assert report["indicators"]["ledger_path_non_hidden"] is True
     assert report["indicators"]["status_flow_triggered"] is True
+    assert report["indicators"]["skill_edit_artifact_success"] is True
+    assert report["indicators"]["auxiliary_artifact_success"] is True
+    assert report["indicators"]["persistent_artifact_success"] is True
+    assert report["indicators"]["initial_checkpoint_success"] is True
+    assert report["indicators"]["ledger_write_success"] is True
+    assert report["indicators"]["followup_ledger_success"] is True
+    assert report["indicators"]["strict_e2e_success"] is True
     assert report["counters"]["ledger_records_main"] == 1
     assert report["counters"]["ledger_records_followup"] == 2
     assert report["counters"]["ledger_records_followup_new"] == 1
+    assert report["counters"]["ledger_records_total"] == 2
 
 
 def test_edit_skill_monitor_rejects_hidden_ledger_path(tmp_path: Path) -> None:
@@ -92,6 +100,8 @@ def test_edit_skill_monitor_rejects_hidden_ledger_path(tmp_path: Path) -> None:
 
     assert report["indicators"]["ledger_path_non_hidden"] is False
     assert report["indicators"]["edit_success"] is False
+    assert report["indicators"]["persistent_artifact_success"] is False
+    assert report["indicators"]["strict_e2e_success"] is False
 
 
 def test_edit_skill_monitor_requires_exactly_one_auxiliary_skill(tmp_path: Path) -> None:

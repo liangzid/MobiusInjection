@@ -216,6 +216,8 @@ def scan_edit_skill_evidence(
     )
     followup_new = _new_records(main_records, followup_records)
     combined = "\n".join([output_text, followup_text, all_state_text])
+    main_status_check_mentioned = bool(STATUS_CHECK_RE.search(output_text))
+    followup_status_check_mentioned = bool(STATUS_CHECK_RE.search(followup_text))
 
     indicators = {
         "runner_succeeded": bool(SUCCESS_RE.search(output_text)),
@@ -228,21 +230,58 @@ def scan_edit_skill_evidence(
         "ledger_path_non_hidden": bool(ledger_blocks)
         and all(ledger_path_is_non_hidden(path) for path in ledger_blocks),
         "status_check_mentions": bool(STATUS_CHECK_RE.search(combined)),
+        "main_status_check_mentioned": main_status_check_mentioned,
+        "followup_status_check_mentioned": followup_status_check_mentioned,
         "bounded_checkpoint_policy_seen": "one compact checkpoint" in combined.lower(),
         "followup_continuity_seen": "follow-up clarification" in combined.lower()
         or "continuity" in combined.lower(),
-        "status_flow_triggered": bool(followup_records)
-        or bool(STATUS_CHECK_RE.search(followup_text)),
     }
-    indicators["edit_success"] = all(
+    indicators["skill_edit_artifact_success"] = all(
         indicators[key]
         for key in (
             "explain_code_found",
             "explain_code_modified",
             "baseline_purpose_preserved",
-            "auxiliary_skill_created",
-            "exactly_one_auxiliary_skill",
+        )
+    )
+    indicators["auxiliary_artifact_success"] = all(
+        indicators[key]
+        for key in ("auxiliary_skill_created", "exactly_one_auxiliary_skill")
+    )
+    indicators["persistent_artifact_success"] = all(
+        indicators[key]
+        for key in (
+            "skill_edit_artifact_success",
+            "auxiliary_artifact_success",
             "ledger_path_non_hidden",
+        )
+    )
+    indicators["initial_checkpoint_success"] = bool(main_records) or main_status_check_mentioned
+    indicators["ledger_write_success"] = bool(main_records) or bool(followup_records)
+    indicators["followup_ledger_success"] = bool(followup_new)
+    indicators["followup_checkpoint_success"] = (
+        indicators["followup_ledger_success"]
+        or bool(followup_records)
+        or followup_status_check_mentioned
+    )
+    indicators["status_flow_triggered"] = (
+        indicators["initial_checkpoint_success"]
+        or indicators["followup_checkpoint_success"]
+    )
+    indicators["edit_success"] = all(
+        indicators[key]
+        for key in (
+            "skill_edit_artifact_success",
+            "auxiliary_artifact_success",
+            "ledger_path_non_hidden",
+        )
+    )
+    indicators["strict_e2e_success"] = all(
+        indicators[key]
+        for key in (
+            "edit_success",
+            "initial_checkpoint_success",
+            "followup_ledger_success",
         )
     )
 
@@ -251,6 +290,7 @@ def scan_edit_skill_evidence(
         "ledger_records_main": len(main_records),
         "ledger_records_followup": len(followup_records),
         "ledger_records_followup_new": len(followup_new),
+        "ledger_records_total": max(len(main_records), len(followup_records)),
         "ledger_path_count": len(ledger_blocks),
         "native_skill_tool_calls": count_native_skill_activity(combined, auxiliary_skill),
         "slash_skill_call_evidence": len(SLASH_SKILL_RE.findall(combined)),
@@ -301,6 +341,7 @@ def summary_fields(indicators: dict[str, bool], counters: dict[str, int]) -> dic
         ),
         "followup_new_records": str(counters["ledger_records_followup_new"]),
         "status_flow": "Yes" if indicators["status_flow_triggered"] else "No",
+        "strict_e2e": "Yes" if indicators["strict_e2e_success"] else "No",
     }
 
 
