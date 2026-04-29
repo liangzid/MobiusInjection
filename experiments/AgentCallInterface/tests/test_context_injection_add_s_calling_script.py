@@ -78,6 +78,8 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "currently\\s+unavailable" in script
     assert "skill\\s+is\\s+unavailable" in script
     assert "/usr/local/lib/node_modules/openclaw/skills" in script
+    assert "/root/.openclaw/skills" in script
+    assert "openclaw-home-skills-sidechannel" in script
     assert "/root/.hermes/skills" in script
     assert "/root/.zeroclaw/skills" in script
     assert "zeroclaw-home-skills-sidechannel" in script
