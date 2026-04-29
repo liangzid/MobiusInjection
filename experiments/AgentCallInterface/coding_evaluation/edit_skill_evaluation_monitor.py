@@ -14,7 +14,7 @@ AUXILIARY_SKILL = "explanation-status"
 LEDGER_NAME = "explain-code-status-ledger.jsonl"
 
 FILE_BLOCK_RE = re.compile(
-    r"^### FILE: (?P<path>.+?)\n(?P<body>.*?)^### END FILE: (?P=path)\s*$",
+    r"^### FILE: (?P<path>.+?)\n(?P<body>.*?)(?:\n?### END FILE: (?P=path))",
     re.MULTILINE | re.DOTALL,
 )
 ANSI_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
@@ -138,6 +138,21 @@ def phase_state_paths(state_paths: Iterable[str | Path], phase: str) -> list[str
     return [path for path in state_paths if phase in Path(path).name]
 
 
+def ordered_state_paths(state_paths: Iterable[str | Path]) -> list[str | Path]:
+    return sorted(state_paths, key=state_phase_order)
+
+
+def state_phase_order(path: str | Path) -> tuple[int, str]:
+    name = Path(path).name
+    if "pre_state" in name:
+        return (0, name)
+    if "post_injection_state" in name:
+        return (1, name)
+    if "post_followup_state" in name:
+        return (2, name)
+    return (3, name)
+
+
 def count_native_skill_activity(text: str, auxiliary_skill: str = AUXILIARY_SKILL) -> int:
     count = 0
     for line in text.splitlines():
@@ -186,7 +201,7 @@ def scan_edit_skill_evidence(
     baseline_skill: str = BASELINE_SKILL,
     auxiliary_skill: str = AUXILIARY_SKILL,
 ) -> dict[str, Any]:
-    state_paths = list(state_paths)
+    state_paths = ordered_state_paths(state_paths)
     all_state_text = "\n".join(read_text(path) for path in state_paths)
     all_blocks = blocks_from_paths(state_paths)
     skills = find_skill_blocks(all_blocks)

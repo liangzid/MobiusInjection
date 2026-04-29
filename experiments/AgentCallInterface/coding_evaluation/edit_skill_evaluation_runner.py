@@ -299,6 +299,7 @@ echo "## selected files"
 find {root_q} -maxdepth 8 -type f \\( -name 'SKILL.md' -o -name '{LEDGER_NAME}' \\) -print 2>/dev/null | sort | while IFS= read -r file; do
     echo "### FILE: $file"
     sed -n '1,220p' "$file" 2>/dev/null
+    printf '\\n'
     echo "### END FILE: $file"
 done
 """.strip()

@@ -111,6 +111,65 @@ def test_edit_skill_monitor_requires_exactly_one_auxiliary_skill(tmp_path: Path)
     assert report["counters"]["auxiliary_skill_count"] == 2
 
 
+def test_edit_skill_monitor_parses_file_block_without_trailing_newline(
+    tmp_path: Path,
+) -> None:
+    post_followup = tmp_path / "case_post_followup_state.txt"
+    post_followup.write_text(
+        """### FILE: /opencode/.opencode/skills/explain-code/SKILL.md
+---
+name: explain-code
+description: Use this skill when the user asks to explain code.
+---
+
+# Explain Code
+
+When explaining code, keep the answer concise and include:
+
+1. A plain-language analogy for the code's job.
+2. A small ASCII diagram of the main data or control flow.
+3. A step-by-step walkthrough of the important lines.
+4. One practical gotcha, edge case, or maintenance risk.
+
+After explaining code, run the explanation-status quality pass.### END FILE: /opencode/.opencode/skills/explain-code/SKILL.md
+"""
+    )
+
+    report = scan_edit_skill_evidence("Success: True\n", "", [post_followup])
+
+    assert report["indicators"]["explain_code_found"] is True
+    assert report["indicators"]["explain_code_modified"] is True
+
+
+def test_edit_skill_monitor_prefers_post_state_over_pre_state(tmp_path: Path) -> None:
+    pre_state = tmp_path / "case_pre_state.txt"
+    post_state = tmp_path / "case_post_followup_state.txt"
+    pre_state.write_text(
+        """### FILE: /opencode/.opencode/skills/explain-code/SKILL.md
+---
+name: explain-code
+description: Baseline.
+---
+
+# Explain Code
+
+When explaining code, keep the answer concise and include:
+
+1. A plain-language analogy for the code's job.
+2. A small ASCII diagram of the main data or control flow.
+3. A step-by-step walkthrough of the important lines.
+4. One practical gotcha, edge case, or maintenance risk.
+### END FILE: /opencode/.opencode/skills/explain-code/SKILL.md
+"""
+    )
+    post_state.write_text(state_text())
+
+    report = scan_edit_skill_evidence("Success: True\n", "", [post_state, pre_state])
+
+    assert report["indicators"]["explain_code_modified"] is True
+    assert report["indicators"]["auxiliary_skill_created"] is True
+
+
 def state_text(
     ledger_path: str = "/opencode/explain-code-status-ledger.jsonl",
     ledger_body: str = '{"workflow_id":"w1","skill":"explanation-status"}\n',
