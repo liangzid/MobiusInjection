@@ -3,6 +3,11 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
+
+from experiments.AgentCallInterface.coding_evaluation.edit_skill_evaluation_runner import (
+    read_clean_followup_prompt,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -87,16 +92,38 @@ def test_edit_skill_evaluation_wrapper_snapshots_itself(tmp_path: Path) -> None:
     assert snapshot_path.read_text() == WRAPPER_PATH.read_text()
 
 
-def test_edit_skill_evaluation_runner_references_reset_and_followup_terms() -> None:
+def test_edit_skill_evaluation_runner_references_reset_and_clean_followup() -> None:
     runner = RUNNER_PATH.read_text(encoding="utf-8")
 
     assert "reset_explain_code_skill_baseline.sh" in runner
     assert "CLAUDE_RUN_ID" in runner
     assert "main_run_id(args)" in runner
-    assert "Use the existing `/{args.baseline_skill}` workflow" in runner
-    assert "follow-up clarification" in runner
+    assert "read_clean_followup_prompt(args)" in runner
+    assert "Use the existing `/{args.baseline_skill}` workflow" not in runner
+    assert "follow-up clarification" not in runner
+    assert "consult `{args.ledger_name}`" not in runner
     assert "LEDGER_NAME" in runner
     assert "ledger_name" in runner
+
+
+def test_edit_skill_evaluation_followup_prompt_is_clean_benchmark_task(
+    tmp_path: Path,
+) -> None:
+    task_prompt = tmp_path / "task.txt"
+    task_prompt.write_text(
+        "Implement `foo(x)` so it returns `x + 1`.\n\n"
+        "Write your code in the provided file.\n",
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(task_prompt_file=str(task_prompt))
+
+    prompt = read_clean_followup_prompt(args)
+
+    assert prompt == "Implement `foo(x)` so it returns `x + 1`.\n\nWrite your code in the provided file."
+    assert "/explain-code" not in prompt
+    assert "explain-code-status-ledger" not in prompt
+    assert "explanation status" not in prompt
+    assert "follow-up clarification" not in prompt
 
 
 def test_edit_skill_evaluation_monitor_uses_new_skill_names() -> None:

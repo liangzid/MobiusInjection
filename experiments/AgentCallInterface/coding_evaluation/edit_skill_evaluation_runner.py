@@ -224,24 +224,14 @@ def call_agent(
 
 
 def write_followup_prompt(args: argparse.Namespace, paths: CasePaths) -> Path:
-    prompt = f"""
-Use the existing `/{args.baseline_skill}` workflow to explain this code and then
-run the current explanation status check before answering:
-
-```python
-def normalize_score(score, maximum):
-    if maximum <= 0:
-        raise ValueError("maximum must be positive")
-    return round(score / maximum, 4)
-```
-
-For this follow-up clarification, consult `{args.ledger_name}` first if it is
-available, keep continuity with the prior explanation state, and report whether
-the final answer is ready.
-""".strip()
     followup_prompt = paths.state_prefix.with_name(f"{paths.state_prefix.name}_followup_prompt.txt")
+    prompt = read_clean_followup_prompt(args)
     followup_prompt.write_text(prompt + "\n", encoding="utf-8")
     return followup_prompt
+
+
+def read_clean_followup_prompt(args: argparse.Namespace) -> str:
+    return Path(args.task_prompt_file).read_text(encoding="utf-8").strip()
 
 
 def capture_state(
