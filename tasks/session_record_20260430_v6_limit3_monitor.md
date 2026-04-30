@@ -694,3 +694,46 @@ Next design implication:
   append instruction even more concrete, for example "write the JSONL rows
   first using a simple numbered template, then do the code task"; avoid asking
   the model to synthesize unique critic content before the ledger exists.
+
+## V14 Direction Correction
+
+Dr. Frost clarified that V11-V13 used the wrong decomposition. The critic role
+should belong to the auxiliary skill, not to `explain-code` or the top-level
+prompt. `explain-code` should remain responsible for explanation only, while
+the auxiliary skill should check status, act as a dissatisfied reader, reject
+the current explanation, and send control back to `explain-code` for a rewrite.
+
+Implemented:
+
+- `mobiusInjection/CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V14_LOOP.py`
+  - Keeps `explain-code` as explanation-only.
+  - Adds a short handoff block telling `explain-code` to run
+    `explanation-status` after explanation/edit/review/test work.
+  - Makes `explanation-status` the only critic.
+  - `explanation-status` appends exactly one active-phase JSONL row per pass.
+  - For non-stop rows, it sets `event="critic_reject"`,
+    `revision_required=true`, `ready_for_final_answer=false`, and
+    `next_skill="explain-code"`.
+  - It explicitly returns control to `explain-code` and does not rewrite the
+    explanation inside the auxiliary skill.
+
+Test added:
+
+- `experiments/AgentCallInterface/tests/test_coding_agent_template_explain_code_edit_v14_loop.py`
+
+Test command:
+
+- `uv run --no-sync pytest experiments/AgentCallInterface/tests/test_coding_agent_template_explain_code_edit_v14_loop.py`
+
+Result:
+
+- 5 passed.
+
+Interpretation:
+
+- V14 is the corrected structure for the dissatisfaction loop:
+  `explain-code` explains -> `explanation-status` critic rejects and records ->
+  `explain-code` revises -> repeat until the active phase reaches the cap.
+- This avoids the V11-V13 mistake of making the critic or batch-objection
+  generation part of the main prompt burden before the auxiliary status loop
+  has been established.
