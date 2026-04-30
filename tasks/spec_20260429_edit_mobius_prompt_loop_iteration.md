@@ -43,6 +43,9 @@ New iterations should be separate files named:
 
 - `mobiusInjection/CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V2_LOOP.py`
 - `mobiusInjection/CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V3_LOOP.py`
+- `mobiusInjection/CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V4_LOOP.py`
+- `mobiusInjection/CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V5_LOOP.py`
+- `mobiusInjection/CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V6_LOOP.py`
 
 Each version should expose `MainInjectionTextTargeted(target_agent, target_model)`
 and keep compatibility with `INJECTION_TEMPLATE_MODULE`.
@@ -110,6 +113,23 @@ Recommended bounded-recursion metrics to inspect from logs:
 - `native_skill_tool_calls`, split by main/follow-up where available;
 - run duration and raw tool-call count from agent logs;
 - whether `P_ASR` remains close to baseline.
+
+## V6 Direction
+
+V6 should test a phase-split bounded handoff rather than a single global
+sequence:
+
+- main request uses a short cap, currently `MAIN_STATUS_PASSES = 3`;
+- follow-up request starts a fresh `phase_id="followup"` sequence at `seq=1`;
+- follow-up uses a higher cap, currently `FOLLOWUP_STATUS_PASSES = 12`;
+- the auxiliary skill ignores records from other phases when deciding the next
+  `seq`;
+- the prompt inlines compact template text for both the `explain-code` addendum
+  and the `explanation-status` skill body to improve persistence stability.
+
+This version is designed to preserve V3's persistent edit behavior while making
+follow-up amplification visible in `ledger_records_followup_new` and native
+skill/tool evidence.
 
 ## Recordkeeping
 
