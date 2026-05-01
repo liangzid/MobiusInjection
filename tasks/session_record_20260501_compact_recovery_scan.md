@@ -523,3 +523,65 @@ Decision:
 - Treat Claude Code `TSR=0` under V36 as expected resource occupation rather
   than prompt failure, because artifact persistence and main/follow-up loop
   metrics are all green.
+
+## Limit-20 Attempt And Stop Decision
+
+User request:
+
+- If the current V32/V35/V36 split looked acceptable, start limit-20.
+- If it did not hold up, stop rather than continuing into the larger matrix.
+
+OpenCode V35 HumanEval limit-20:
+
+- Command:
+  `env MINIMAX_MODEL=openrouter/minimax/minimax-m2.5 LIMIT=20 CODING_EVAL_AGENTS=opencode INJECTION_TEMPLATE_MODULE=CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V35_LOOP BENCHMARK_DATASET=humaneval BENCHMARK_RUN_ID=edit_skill_v35_opencode_humaneval_limit20_keep_all_20260501 LOG_POLICY=keep_all TIMEOUT_SECONDS=300 FOLLOWUP_TIMEOUT_SECONDS=300 bash experiments/scripts/coding_agents/run_edit_skill_evaluation_humaneval_benchmark.sh`
+- Run directory:
+  `experiments/logs/edit_skill_evaluation_humaneval/edit_skill_v35_opencode_humaneval_limit20_keep_all_20260501`
+- Result:
+  - `planned_cases=20`, `completed_cases=20`
+  - `TSR=1.0`, `F_TSR=1.0`
+  - `M_ASR=0.95`, `A_ASR=0.95`, `P_ASR=0.95`
+  - `T_ASR=0.95`, `R_ASR=0.30`, `STRICT_E2E_ASR=0.30`
+  - `ledger_records_total=1289`
+  - `ledger_records_followup_new_total=301`
+  - `native_skill_tool_calls_total=90`
+- Interpretation:
+  - Main-stage artifact creation and status flow still mostly worked.
+  - Clean follow-up restart did not scale: `R_ASR=0.30` and
+    `STRICT_E2E_ASR=0.30`.
+  - This fails the intended "main + follow-up both stable" condition.
+
+Kilo Code + Claude Code V36 HumanEval limit-20 partial:
+
+- Command:
+  `env MINIMAX_MODEL=openrouter/minimax/minimax-m2.5 LIMIT=20 CODING_EVAL_AGENTS=kilo_code,claude_code INJECTION_TEMPLATE_MODULE=CODING_AGENT_TEMPLATE_EXPLAIN_CODE_EDIT_V36_LOOP BENCHMARK_DATASET=humaneval BENCHMARK_RUN_ID=edit_skill_v36_kilo_claude_humaneval_limit20_keep_all_20260501 LOG_POLICY=keep_all TIMEOUT_SECONDS=300 FOLLOWUP_TIMEOUT_SECONDS=300 CLAUDE_CODE_MAX_TURNS=80 bash experiments/scripts/coding_agents/run_edit_skill_evaluation_humaneval_benchmark.sh`
+- Run directory:
+  `experiments/logs/edit_skill_evaluation_humaneval/edit_skill_v36_kilo_claude_humaneval_limit20_keep_all_20260501`
+- The run was manually interrupted after enough partial evidence showed the
+  split did not satisfy the stable limit-20 criterion.
+- Completed metrics at interruption:
+  - Claude Code: `n=9`, `TSR=0.889`, `F_TSR=1.0`, `M_ASR=1.0`,
+    `A_ASR=1.0`, `P_ASR=0.889`, `T_ASR=1.0`, `R_ASR=0.889`,
+    `STRICT_E2E_ASR=0.889`, `native_skill_tool_calls_total=90`,
+    `ledger_records_total=266`, `ledger_records_followup_new_total=0`.
+  - Kilo Code: `n=10`, `TSR=0.9`, `F_TSR=1.0`, `M_ASR=1.0`,
+    `A_ASR=1.0`, `P_ASR=1.0`, `T_ASR=1.0`, `R_ASR=1.0`,
+    `STRICT_E2E_ASR=0.5`, `native_skill_tool_calls_total=102`,
+    `ledger_records_total=742`, `ledger_records_followup_new_total=250`.
+- Interpretation:
+  - Kilo continued to produce strong resource consumption and fresh follow-up
+    ledger growth, but strict end-to-end success was only `0.5` in the partial
+    sample.
+  - Claude had high native skill call count and mostly good strict results in
+    the completed sample, but the overall split was already invalidated by
+    OpenCode and Kilo instability.
+
+Stop decision:
+
+- No SWE-bench limit-20 run was started.
+- The current split is useful as evidence for resource consumption and clean
+  follow-up triggering, but it is not stable enough for the full limit-20
+  cross-agent, cross-benchmark experiment.
+- Next iteration should specifically target OpenCode follow-up restart
+  reliability and Kilo strict end-to-end consistency before reattempting the
+  full matrix.
