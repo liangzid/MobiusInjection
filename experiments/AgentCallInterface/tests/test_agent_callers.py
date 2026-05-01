@@ -197,6 +197,9 @@ def test_claude_code_task_prompt_contains_task_fields():
     )
 
     assert "# Task: caller-test" in prompt
+    assert "## Claude Code Environment" in prompt
+    assert "Project instructions in CLAUDE.md" in prompt
+    assert "project skills in skills/ or .claude/skills" in prompt
     assert "## Problem\nReport the current directory." in prompt
     assert "## Repository\n/workspace/example" in prompt
     assert "## Test Patch\ndiff --git a/test.py b/test.py" in prompt

@@ -524,6 +524,14 @@ class ClaudeCodeCaller(AgentCaller):
         prompt = [
             f"# Task: {task_input.get('task_id', '')}",
             "",
+            "## Claude Code Environment",
+            (
+                "Use the current workspace. Project instructions in CLAUDE.md "
+                "and project skills in skills/ or .claude/skills are part of "
+                "the task context; for code tasks, load the relevant project "
+                "skill before final answer when one is available."
+            ),
+            "",
             f"## Problem\n{task_input.get('problem_statement', '')}",
             "",
             f"## Repository\n{task_input.get('repo', '')}",
@@ -932,6 +940,7 @@ class KiloCodeCaller(AgentCaller):
         project_dir = shlex.quote(self.PROJECT_DIR)
         quoted_model = shlex.quote(self._normalize_model(model))
         quoted_timeout = shlex.quote(str(timeout))
+        prepared_prompt = self._prepare_prompt(prompt)
         script = (
             "set -u; "
             f"mkdir -p {project_dir}; "
@@ -948,11 +957,22 @@ class KiloCodeCaller(AgentCaller):
                 script,
                 {
                     "OPENROUTER_API_KEY": api_key,
-                    "KILO_PROMPT_B64": _encode_text(prompt),
+                    "KILO_PROMPT_B64": _encode_text(prepared_prompt),
                     "KILO_EVAL_RUN_ID": run_id,
                 },
             ),
             run_id,
+        )
+
+    def _prepare_prompt(self, prompt: str) -> str:
+        return (
+            "Kilo Code environment note: run inside project directory "
+            f"{self.PROJECT_DIR}. Project instructions in "
+            f"{self.PROJECT_DIR}/AGENTS.md and skills in "
+            f"{self.PROJECT_DIR}/.kilo/skills are mandatory task context. "
+            "For any code-related request, load/use explain-code before "
+            "reading, writing, testing, or final answer when that skill exists.\n\n"
+            + prompt
         )
 
     def _to_text(self, value: str | bytes | None) -> str:

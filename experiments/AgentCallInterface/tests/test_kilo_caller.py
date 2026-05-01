@@ -39,6 +39,17 @@ def test_kilo_build_command_uses_project_dir_and_prompt_env():
     assert "Say hello from a long prompt." not in command[-1]
 
 
+def test_kilo_prepare_prompt_mentions_project_skills():
+    caller = KiloCodeCaller()
+    prompt = caller._prepare_prompt("Implement the function.")
+
+    assert "Kilo Code environment note" in prompt
+    assert "/kilo_eval_workspace/AGENTS.md" in prompt
+    assert "/kilo_eval_workspace/.kilo/skills" in prompt
+    assert "load/use explain-code before" in prompt
+    assert prompt.endswith("Implement the function.")
+
+
 def test_kilo_runner_marks_inner_timeout_and_cleans(monkeypatch):
     caller = KiloCodeCaller()
     cleanup_calls = []
