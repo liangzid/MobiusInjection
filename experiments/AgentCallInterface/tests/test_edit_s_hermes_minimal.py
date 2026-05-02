@@ -10,6 +10,13 @@ PAYLOAD_VARIANTS = [
     PROJECT_ROOT / "mobiusInjection/MI_V1.1_edit_s_hermes.py",
     PROJECT_ROOT / "mobiusInjection/MI_V1.2_edit_s_hermes.py",
     PROJECT_ROOT / "mobiusInjection/MI_V1.3_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V1.4_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V1.5_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V2_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V2.1_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V2.2_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V2.3_edit_s_hermes.py",
+    PROJECT_ROOT / "mobiusInjection/MI_V2.4_edit_s_hermes.py",
 ]
 SCRIPT = (
     PROJECT_ROOT
