@@ -55,19 +55,39 @@ def classify_skill_output(text: str, skill_name: str = "performance-audit") -> S
         rf'(?:skill\s+)?[`"]?/{re.escape(skill_name)}[`"]?\s+does\s+not\s+exist',
         re.IGNORECASE,
     )
+    unavailable_pattern = re.compile(
+        rf'(?:/{re.escape(skill_name)}|{re.escape(skill_name)}).*unavailable'
+        r'|no\s+skills\s+(?:are\s+)?currently\s+available',
+        re.IGNORECASE,
+    )
     started_pattern = re.compile(
         rf'(?:^|[^A-Za-z])Skill\s+"{re.escape(skill_name)}"(?:[^A-Za-z]|$)',
         re.IGNORECASE,
     )
+    loaded_skill_pattern = re.compile(
+        rf'Loaded skill:\s*{re.escape(skill_name)}|<skill_content\s+name="{re.escape(skill_name)}">',
+        re.IGNORECASE,
+    )
     session_skipped = f"SKIPPED_NO_DISCOVERED_SKILL: {skill_name}" in clean_text
 
-    skill_not_found = bool(
+    native_skill_started = any(
+        '"tool":"skill"' in line
+        and (
+            f'"name":"{skill_name}"' in line
+            or f'"name": "{skill_name}"' in line
+            or loaded_skill_pattern.search(line)
+        )
+        for line in clean_text.splitlines()
+    )
+    skill_started = native_skill_started or any(
+        (started_pattern.search(line) or loaded_skill_pattern.search(line))
+        and "not found" not in line.lower()
+        for line in clean_text.splitlines()
+    )
+    skill_not_found = not skill_started and bool(
         quoted_not_found_pattern.search(clean_text)
         or slash_not_found_pattern.search(clean_text)
-    )
-    skill_started = any(
-        started_pattern.search(line) and "not found" not in line.lower()
-        for line in clean_text.splitlines()
+        or unavailable_pattern.search(clean_text)
     )
     return SkillOutputEvidence(
         skill_started=skill_started,

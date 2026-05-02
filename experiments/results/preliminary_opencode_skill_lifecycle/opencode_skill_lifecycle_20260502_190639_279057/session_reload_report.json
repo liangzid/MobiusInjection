@@ -1,0 +1,9 @@
+{
+  "conclusion": "skill_visible_after_restart_same_session_inconclusive",
+  "post_creation_debug_visible": true,
+  "restart_session_skill_not_found": false,
+  "restart_session_skill_started": true,
+  "restart_session_skipped": false,
+  "same_session_skill_not_found": false,
+  "same_session_skill_started": false
+}

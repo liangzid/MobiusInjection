@@ -1,0 +1,3 @@
+<task_result>
+The `/performance-audit` skill is **unavailable**. The system reports that there are no skills currently available.
+</task_result>

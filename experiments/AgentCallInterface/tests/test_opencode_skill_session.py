@@ -37,8 +37,26 @@ def test_detects_skill_does_not_exist_message_from_real_minimax_shape():
     assert evidence.skill_started is False
 
 
+def test_detects_same_session_task_unavailable_from_real_opencode_output():
+    output = read_fixture("real_opencode_same_session_task_unavailable.txt")
+
+    evidence = classify_skill_output(output)
+
+    assert evidence.skill_not_found is True
+    assert evidence.skill_started is False
+
+
 def test_detects_restarted_session_skill_start_from_real_opencode_excerpt():
     output = read_fixture("real_opencode_restarted_session_skill_call.txt")
+
+    evidence = classify_skill_output(output)
+
+    assert evidence.skill_not_found is False
+    assert evidence.skill_started is True
+
+
+def test_detects_json_skill_tool_call_from_real_opencode_output():
+    output = read_fixture("real_opencode_json_skill_tool_call.txt")
 
     evidence = classify_skill_output(output)
 
