@@ -123,6 +123,12 @@ Interpretation:
   - native skill-call evidence;
   - clean follow-up native evidence;
   - clean follow-up trace delta evidence.
+- Failure diagnosis for the latest autonomous run:
+  - The two skill artifacts existed and were visible in `post_creation_debug_skill.txt`.
+  - The clean follow-up prompt did not mention either skill name, workflow id, sequence number, trace path, or append command.
+  - The clean follow-up output contained no native OpenCode skill-tool event, no `Loaded skill` marker, and no `<skill_content ...>` marker for either skill.
+  - The final trace matched the pre-follow-up trace exactly for the run id, so the skill ledger helper was not invoked during follow-up.
+  - Therefore the failure mode is best classified as `clean_task_did_not_trigger_skill_load`, not `skill_loaded_but_failed_to_write_trace` and not `skill_artifact_missing`.
 - A future passing Gate 3 result should require:
   - `artifact_success == true`;
   - `trace_alternation_success == true`;
