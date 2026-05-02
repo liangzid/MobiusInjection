@@ -1,0 +1,74 @@
+[
+  {
+    "candidate_name": "deepseek v3.2",
+    "enabled": true,
+    "label": "deepseek_v3_2",
+    "model_id": "deepseek/deepseek-v3.2",
+    "provider": "openrouter",
+    "resolution_note": "Exact current OpenRouter ID.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "minimax 2.7",
+    "enabled": true,
+    "label": "minimax_2_7",
+    "model_id": "minimax/minimax-m2.7",
+    "provider": "openrouter",
+    "resolution_note": "Exact current OpenRouter ID.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "nvidia nemotron 3 super",
+    "enabled": true,
+    "label": "nemotron_3_super",
+    "model_id": "nvidia/nemotron-3-super-120b-a12b:free",
+    "provider": "openrouter",
+    "resolution_note": "Free current OpenRouter route for Nemotron 3 Super.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "glm 5.1",
+    "enabled": true,
+    "label": "glm_5_1",
+    "model_id": "z-ai/glm-5.1",
+    "provider": "openrouter",
+    "resolution_note": "Exact current OpenRouter ID.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "kimi k2.6",
+    "enabled": true,
+    "label": "kimi_k2_6",
+    "model_id": "moonshotai/kimi-k2.6",
+    "provider": "openrouter",
+    "resolution_note": "Exact current OpenRouter ID.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "qwen 3.6plus",
+    "enabled": true,
+    "label": "qwen_3_6_plus",
+    "model_id": "qwen/qwen3.6-plus",
+    "provider": "openrouter",
+    "resolution_note": "Exact current OpenRouter ID.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "gemma 4",
+    "enabled": true,
+    "label": "gemma_4",
+    "model_id": "google/gemma-4-31b-it",
+    "provider": "openrouter",
+    "resolution_note": "Paid current Gemma 4 route; free route timed out during preflight.",
+    "timeout_seconds": 300
+  },
+  {
+    "candidate_name": "qwen 3 70B",
+    "enabled": true,
+    "label": "qwen3_70b_class",
+    "model_id": "qwen/qwen3-next-80b-a3b-instruct",
+    "provider": "openrouter",
+    "resolution_note": "No current OpenRouter Qwen3 70B/72B text model was listed; using the closest enabled Qwen3 80B-class instruct route for preflight.",
+    "timeout_seconds": 300
+  }
+]

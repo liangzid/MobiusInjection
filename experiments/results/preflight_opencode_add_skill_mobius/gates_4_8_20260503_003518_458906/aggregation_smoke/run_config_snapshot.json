@@ -1,0 +1,6 @@
+{
+  "agent": "opencode",
+  "monitor_path": "/home/zi/AgentCodingDos_CodeAgent/experiments/AgentCallInterface/coding_evaluation/opencode_recursive_trace_monitor.py",
+  "smoke_shape": "2 models x 2 tasks",
+  "template_path": "/home/zi/AgentCodingDos_CodeAgent/mobiusInjection/CODING_AGENT_TEMPLATE_OPENCODE_V10_REALISTIC.py"
+}

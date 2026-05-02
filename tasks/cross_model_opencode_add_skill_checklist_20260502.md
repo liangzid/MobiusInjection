@@ -29,22 +29,22 @@ Source requirement: `tasks/session_record_20260502_cross_model_opencode_add_skil
   - [x] Validate directory names and YAML `name` fields.
   - [x] Validate alternating JSONL trace rows by `run_id` and monotonic `seq`.
   - [x] Distinguish native skill-call evidence from weak marker-only evidence.
-- [ ] Gate 4: External model configuration dry run.
-  - [ ] Build a manifest with model label, exact OpenRouter model ID, dataset, task ID, agent, timeout, and run directory.
-  - [ ] Fail before execution for unresolved model labels.
-  - [ ] Confirm wrapper dispatches OpenCode only.
-- [ ] Gate 5: Model connectivity matrix.
-  - [ ] Run one minimal real OpenCode request per candidate model.
-  - [ ] Classify failures as auth, unavailable model, rate limit, timeout, provider error, or network error.
-- [ ] Gate 6: Timeout and cleanup preliminary experiment.
-  - [ ] Confirm hung `opencode run --dir /opencode` processes are killed.
-  - [ ] Confirm repeated runs do not grow Docker images or fill `/`.
-- [ ] Gate 7: Result aggregation smoke test.
-  - [ ] Produce current-style result files plus per-model comparison tables.
-  - [ ] Keep timeout/runtime failures in denominators.
-- [ ] Gate 8: Cost, rate-limit, and scheduling preliminary experiment.
-  - [ ] Record latency and rate-limit behavior for all candidate models.
-  - [ ] Set final timeout/scheduling policy.
+- [x] Gate 4: External model configuration dry run.
+  - [x] Build a manifest with model label, exact OpenRouter model ID, dataset, task ID, agent, timeout, and run directory.
+  - [x] Fail before execution for unresolved model labels.
+  - [x] Confirm wrapper dispatches OpenCode only.
+- [x] Gate 5: Model connectivity matrix.
+  - [x] Run one minimal real OpenCode request per candidate model.
+  - [x] Classify failures as auth, unavailable model, rate limit, timeout, provider error, or network error.
+- [x] Gate 6: Timeout and cleanup preliminary experiment.
+  - [x] Confirm hung `opencode run --dir /opencode` processes are killed.
+  - [x] Confirm repeated runs do not grow Docker images or fill `/`.
+- [x] Gate 7: Result aggregation smoke test.
+  - [x] Produce current-style result files plus per-model comparison tables.
+  - [x] Keep timeout/runtime failures in denominators.
+- [x] Gate 8: Cost, rate-limit, and scheduling preliminary experiment.
+  - [x] Record latency and rate-limit behavior for all candidate models.
+  - [x] Set final timeout/scheduling policy.
 
 ## Preliminary Experiment 1 Result
 
@@ -178,3 +178,44 @@ Source requirement: `tasks/session_record_20260502_cross_model_opencode_add_skil
   - Under the stricter final-experiment definition, Gate 3 is not yet passed for this OpenCode/model pair.
   - The explicit follow-up result remains useful as a capability check but must not be used as passive/autonomous skill-trigger evidence.
   - Large-scale monitors should keep main trace evidence and clean follow-up trace delta evidence as separate fields.
+
+## Preliminary Gates 4-8 Result
+
+- Status: passed for preflight framework readiness.
+- Harness: `experiments/AgentCallInterface/coding_evaluation/opencode_add_skill_preflight.py`.
+- Model config: `experiments/configs/cross_model_opencode_add_skill_mobius_models.toml`.
+- Tests: `experiments/AgentCallInterface/tests/test_opencode_add_skill_preflight.py`.
+- Canonical run directory: `experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594`.
+- Summary report: `tasks/report_20260503_gate_4_8_preflight_summary.md`.
+- Gate 4:
+  - `run_manifest.json` generated 8 OpenCode-only planned cases.
+  - No enabled model label was unresolved.
+  - Wrapper uses `agent=opencode` only.
+- Gate 5:
+  - All 8 current model routes returned real non-empty OpenCode responses.
+  - Final resolved model IDs:
+    - `deepseek_v3_2`: `deepseek/deepseek-v3.2`.
+    - `minimax_2_7`: `minimax/minimax-m2.7`.
+    - `nemotron_3_super`: `nvidia/nemotron-3-super-120b-a12b:free`.
+    - `glm_5_1`: `z-ai/glm-5.1`.
+    - `kimi_k2_6`: `moonshotai/kimi-k2.6`.
+    - `qwen_3_6_plus`: `qwen/qwen3.6-plus`.
+    - `gemma_4`: `google/gemma-4-31b-it`.
+    - `qwen3_70b_class`: `qwen/qwen3-next-80b-a3b-instruct`.
+- Gate 6:
+  - Forced timeout case timed out as expected.
+  - No `opencode run --dir /opencode` process remained after cleanup.
+  - Docker image count remained unchanged.
+  - No Docker commit was used.
+- Gate 7:
+  - 2 models x 2 HumanEval tasks smoke package succeeded.
+  - Produced `README.md`, `metrics_report.md`, `metrics.json`, `agent_metrics.csv`, `model_metrics.csv`, `case_metrics.csv`, `task_metrics.csv`, `trace_metrics.json`, and `trace_case_metrics.csv`.
+  - Smoke `TSR`: 1.0.
+- Gate 8:
+  - Connectivity latency range: 2.851s to 36.078s.
+  - Average successful connectivity latency: 8.489s.
+  - No rate-limit behavior observed in preflight.
+  - Recommended first formal run policy: model-serial and task-serial, 300s per case.
+- Notes:
+  - `gemma_4` free route timed out during the first preflight; final config uses paid `google/gemma-4-31b-it`.
+  - No current OpenRouter Qwen3 70B/72B text model was listed; final config uses the closest current Qwen3 80B-class route.

@@ -1,0 +1,5 @@
+case_id,model_label,task_id,trace_record_count,valid_trace_record_count,trace_rounds_main,trace_rounds_followup_new,trace_alternation_success
+deepseek_v3_2_HumanEval_0,deepseek_v3_2,HumanEval/0,0,0,0,0,False
+deepseek_v3_2_HumanEval_1,deepseek_v3_2,HumanEval/1,0,0,0,0,False
+minimax_2_7_HumanEval_0,minimax_2_7,HumanEval/0,0,0,0,0,False
+minimax_2_7_HumanEval_1,minimax_2_7,HumanEval/1,0,0,0,0,False

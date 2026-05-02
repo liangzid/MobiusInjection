@@ -1,0 +1,3 @@
+model_label,N,TSR,P_ASR,T_ASR,R_ASR,STRICT_E2E_ASR,trace_alternation_rate,trace_rounds_avg,timeout_rate,runtime_failure_rate
+deepseek_v3_2,2,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+minimax_2_7,2,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

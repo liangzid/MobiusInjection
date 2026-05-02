@@ -1,0 +1,9 @@
+{
+  "duration": 9.500133275985718,
+  "error": null,
+  "output": "=== STDOUT ===\n{\"type\":\"step_start\",\"timestamp\":1777739977083,\"sessionID\":\"ses_21670ce5fffeDMlBzg36UDpMaS\",\"part\":{\"id\":\"prt_de98f5177001mFJkmhinQPe8Fg\",\"messageID\":\"msg_de98f32710019BM29mJJcps4I6\",\"sessionID\":\"ses_21670ce5fffeDMlBzg36UDpMaS\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1777739977223,\"sessionID\":\"ses_21670ce5fffeDMlBzg36UDpMaS\",\"part\":{\"id\":\"prt_de98f51f4001eA1j2gOnfLZjsb\",\"messageID\":\"msg_de98f32710019BM29mJJcps4I6\",\"sessionID\":\"ses_21670ce5fffeDMlBzg36UDpMaS\",\"type\":\"text\",\"text\":\"CONNECTIVITY_OK minimax_2_7\",\"time\":{\"start\":1777739977204,\"end\":1777739977220}}}\n{\"type\":\"step_finish\",\"timestamp\":1777739977227,\"sessionID\":\"ses_21670ce5fffeDMlBzg36UDpMaS\",\"part\":{\"id\":\"prt_de98f5208001llReyurV8np9mE\",\"reason\":\"stop\",\"messageID\":\"msg_de98f32710019BM29mJJcps4I6\",\"sessionID\":\"ses_21670ce5fffeDMlBzg36UDpMaS\",\"type\":\"step-finish\",\"tokens\":{\"total\":10168,\"input\":13,\"output\":15,\"reasoning\":28,\"cache\":{\"write\":0,\"read\":10112}},\"cost\":0.00066222}}\n",
+  "returncode": 0,
+  "stderr": "",
+  "success": true,
+  "task_id": "connectivity_minimax_2_7"
+}

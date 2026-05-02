@@ -1,0 +1,9 @@
+{
+  "duration": 90.15815687179565,
+  "error": "Timeout after 90s",
+  "output": "",
+  "returncode": null,
+  "stderr": "",
+  "success": false,
+  "task_id": "connectivity_gemma_4"
+}

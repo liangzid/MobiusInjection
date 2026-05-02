@@ -1,0 +1,9 @@
+{
+  "duration": 14.880837440490723,
+  "error": null,
+  "output": "=== STDOUT ===\n{\"type\":\"step_start\",\"timestamp\":1777739756330,\"sessionID\":\"ses_216743a0cffenqMMFW9Lf8sdAy\",\"part\":{\"id\":\"prt_de98bf326001ZwHaXjIbeFu97I\",\"messageID\":\"msg_de98bc664001Z5B71pYrCu977D\",\"sessionID\":\"ses_216743a0cffenqMMFW9Lf8sdAy\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1777739758395,\"sessionID\":\"ses_216743a0cffenqMMFW9Lf8sdAy\",\"part\":{\"id\":\"prt_de98bfa5a001mCZVKUx1l2b3qW\",\"messageID\":\"msg_de98bc664001Z5B71pYrCu977D\",\"sessionID\":\"ses_216743a0cffenqMMFW9Lf8sdAy\",\"type\":\"text\",\"text\":\" CONNECTIVITY_OK kimi_k2_6\",\"time\":{\"start\":1777739758170,\"end\":1777739758391}}}\n{\"type\":\"step_finish\",\"timestamp\":1777739758400,\"sessionID\":\"ses_216743a0cffenqMMFW9Lf8sdAy\",\"part\":{\"id\":\"prt_de98bfb3d001JdgJUdCLfYT1Zp\",\"reason\":\"stop\",\"messageID\":\"msg_de98bc664001Z5B71pYrCu977D\",\"sessionID\":\"ses_216743a0cffenqMMFW9Lf8sdAy\",\"type\":\"step-finish\",\"tokens\":{\"total\":9455,\"input\":9393,\"output\":3,\"reasoning\":59,\"cache\":{\"write\":0,\"read\":0}},\"cost\":0.00917135}}\n",
+  "returncode": 0,
+  "stderr": "",
+  "success": true,
+  "task_id": "connectivity_kimi_k2_6"
+}

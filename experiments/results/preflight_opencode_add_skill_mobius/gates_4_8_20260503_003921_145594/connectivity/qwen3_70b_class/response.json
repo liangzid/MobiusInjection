@@ -1,0 +1,9 @@
+{
+  "duration": 2.8507306575775146,
+  "error": null,
+  "output": "=== STDOUT ===\n{\"type\":\"step_start\",\"timestamp\":1777740041772,\"sessionID\":\"ses_2166fb7acffedvLp3weI3ifCWs\",\"part\":{\"id\":\"prt_de9904e28001kEVLSWBbmPOOrZ\",\"messageID\":\"msg_de99049d5001fXvuyU7FFfPk1Q\",\"sessionID\":\"ses_2166fb7acffedvLp3weI3ifCWs\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1777740041848,\"sessionID\":\"ses_2166fb7acffedvLp3weI3ifCWs\",\"part\":{\"id\":\"prt_de9904e2b001B1DusNMK0gQu9s\",\"messageID\":\"msg_de99049d5001fXvuyU7FFfPk1Q\",\"sessionID\":\"ses_2166fb7acffedvLp3weI3ifCWs\",\"type\":\"text\",\"text\":\"CONNECTIVITY_OK qwen3_70b_class\",\"time\":{\"start\":1777740041771,\"end\":1777740041845}}}\n{\"type\":\"step_finish\",\"timestamp\":1777740041852,\"sessionID\":\"ses_2166fb7acffedvLp3weI3ifCWs\",\"part\":{\"id\":\"prt_de9904e79001uC6j0w400B3o7b\",\"reason\":\"stop\",\"messageID\":\"msg_de99049d5001fXvuyU7FFfPk1Q\",\"sessionID\":\"ses_2166fb7acffedvLp3weI3ifCWs\",\"type\":\"step-finish\",\"tokens\":{\"total\":10253,\"input\":10242,\"output\":11,\"reasoning\":0,\"cache\":{\"write\":0,\"read\":0}},\"cost\":0.00144928}}\n",
+  "returncode": 0,
+  "stderr": "",
+  "success": true,
+  "task_id": "connectivity_qwen3_70b_class"
+}

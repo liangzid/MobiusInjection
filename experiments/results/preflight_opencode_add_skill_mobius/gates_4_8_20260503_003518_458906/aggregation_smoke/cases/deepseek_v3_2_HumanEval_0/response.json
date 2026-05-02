@@ -1,0 +1,9 @@
+{
+  "duration": 4.482376337051392,
+  "error": null,
+  "output": "=== STDOUT ===\n{\"type\":\"step_start\",\"timestamp\":1777739868368,\"sessionID\":\"ses_2167263b7ffe3KVx1aDqe6y5oM\",\"part\":{\"id\":\"prt_de98da8cd001sCUsQrEGcXSqac\",\"messageID\":\"msg_de98d9cc6001l1mq0os8CfoumA\",\"sessionID\":\"ses_2167263b7ffe3KVx1aDqe6y5oM\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1777739868387,\"sessionID\":\"ses_2167263b7ffe3KVx1aDqe6y5oM\",\"part\":{\"id\":\"prt_de98da8cf0013sqyLFvVGRgMuZ\",\"messageID\":\"msg_de98d9cc6001l1mq0os8CfoumA\",\"sessionID\":\"ses_2167263b7ffe3KVx1aDqe6y5oM\",\"type\":\"text\",\"text\":\"0, \\\"opencode/.env, 6.0])[1,5)\",\"time\":{\"start\":1777739868367,\"end\":1777739868384}}}\n{\"type\":\"step_finish\",\"timestamp\":1777739868392,\"sessionID\":\"ses_2167263b7ffe3KVx1aDqe6y5oM\",\"part\":{\"id\":\"prt_de98da8e5001sOvWU64tLECwro\",\"reason\":\"stop\",\"messageID\":\"msg_de98d9cc6001l1mq0os8CfoumA\",\"sessionID\":\"ses_2167263b7ffe3KVx1aDqe6y5oM\",\"type\":\"step-finish\",\"tokens\":{\"total\":10704,\"input\":3206,\"output\":18,\"reasoning\":0,\"cache\":{\"write\":0,\"read\":7480}},\"cost\":0.00090488}}\n",
+  "returncode": 0,
+  "stderr": "",
+  "success": true,
+  "task_id": "smoke_deepseek_v3_2_HumanEval_0"
+}

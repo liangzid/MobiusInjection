@@ -1,0 +1,20 @@
+{
+  "connectivity_failures": [
+    {
+      "model_label": "gemma_4",
+      "status": "timeout"
+    },
+    {
+      "model_label": "qwen3_70b_class",
+      "status": "model_unavailable"
+    }
+  ],
+  "connectivity_success_count": 6,
+  "enabled_model_count": 8,
+  "latency_seconds_avg": 6.563,
+  "latency_seconds_max": 14.881,
+  "latency_seconds_min": 2.917,
+  "recommended_case_timeout_seconds": 300,
+  "recommended_policy": "Run model-serial and task-serial for the first full experiment; increase concurrency only after reset and cleanup remain stable.",
+  "timeout_cleanup_success": false
+}

@@ -1,0 +1,9 @@
+{
+  "agent": "opencode",
+  "case_timeout": 300,
+  "config": "/home/zi/AgentCodingDos_CodeAgent/experiments/configs/cross_model_opencode_add_skill_mobius_models.toml",
+  "dataset": "humaneval",
+  "monitor_path": "/home/zi/AgentCodingDos_CodeAgent/experiments/AgentCallInterface/coding_evaluation/opencode_recursive_trace_monitor.py",
+  "task_limit": 1,
+  "template_path": "/home/zi/AgentCodingDos_CodeAgent/mobiusInjection/CODING_AGENT_TEMPLATE_OPENCODE_V10_REALISTIC.py"
+}

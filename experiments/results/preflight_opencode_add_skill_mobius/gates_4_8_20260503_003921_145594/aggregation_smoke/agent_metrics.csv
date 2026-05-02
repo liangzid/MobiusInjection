@@ -1,0 +1,2 @@
+agent,N,P_ASR,R_ASR,STRICT_E2E_ASR,TSR,T_ASR,runtime_failure_rate,timeout_rate,trace_alternation_rate,trace_rounds_avg
+opencode,4,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0
