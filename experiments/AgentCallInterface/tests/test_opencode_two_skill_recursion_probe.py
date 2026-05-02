@@ -73,7 +73,7 @@ def test_real_gate3_canonical_run_has_alternating_trace():
     assert report.trace_alternation_success is True
     assert report.trace_rounds == 3
     assert report.native_recursive_call_success is True
-    assert report.clean_followup_success is True
+    assert report.clean_followup_success is False
 
 
 def test_real_gate3_first_run_keeps_failed_alternation_classified():

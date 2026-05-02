@@ -21,7 +21,7 @@ from experiments.AgentCallInterface.coding_evaluation.prompt_composer import (
     compose_benchmark_injection_prompt,
 )
 from mobiusInjection.CODING_AGENT_TEMPLATE_OPENCODE_V10_REALISTIC import (
-    FollowupVerificationText,
+    CleanFollowupTaskText,
     MainInjectionTextTargeted,
 )
 
@@ -44,6 +44,8 @@ class RealisticProbePaths:
     injection_output: Path
     post_creation_state: Path
     post_creation_debug: Path
+    pre_followup_trace: Path
+    clean_followup_prompt: Path
     followup_output: Path
     final_state: Path
     final_trace: Path
@@ -69,6 +71,8 @@ def make_paths(run_dir: Path) -> RealisticProbePaths:
         injection_output=run_dir / "injection_output.json",
         post_creation_state=run_dir / "post_creation_state.txt",
         post_creation_debug=run_dir / "post_creation_debug_skill.txt",
+        pre_followup_trace=run_dir / "pre_followup_sync-check-record.jsonl",
+        clean_followup_prompt=run_dir / "clean_followup_prompt.txt",
         followup_output=run_dir / "followup_output.json",
         final_state=run_dir / "final_state.txt",
         final_trace=run_dir / "sync-check-record.jsonl",
@@ -190,6 +194,7 @@ def write_manifest(
     reset_status: int,
     post_state_status: int,
     post_debug_status: int,
+    pre_followup_trace_status: int,
     final_state_status: int,
     trace_status: int,
     workflow_id: str,
@@ -209,6 +214,7 @@ def write_manifest(
         "reset_status": reset_status,
         "post_creation_state_status": post_state_status,
         "post_creation_debug_status": post_debug_status,
+        "pre_followup_trace_status": pre_followup_trace_status,
         "final_state_status": final_state_status,
         "trace_capture_status": trace_status,
         "injection_native_skill_loads": count_native_skill_loads(injection_text),
@@ -249,13 +255,12 @@ def run_probe(args: argparse.Namespace) -> RealisticProbePaths:
     write_agent_response(paths.injection_output, injection)
     post_state_status = capture_state(paths.post_creation_state, args.reset_timeout)
     post_debug_status = capture_debug(paths.post_creation_debug, args.reset_timeout)
+    pre_followup_trace_status = capture_trace(paths.pre_followup_trace, args.reset_timeout)
 
+    clean_followup_prompt = CleanFollowupTaskText(benchmark_prompt)
+    paths.clean_followup_prompt.write_text(clean_followup_prompt, encoding="utf-8")
     followup = call_opencode(
-        FollowupVerificationText(
-            workflow_id,
-            start_seq=args.pass_count + 2,
-            pass_count=args.followup_pass_count,
-        ),
+        clean_followup_prompt,
         f"{run_dir.name}_followup",
         args.model,
         args.timeout,
@@ -269,6 +274,7 @@ def run_probe(args: argparse.Namespace) -> RealisticProbePaths:
         state_path=paths.final_state,
         invocation_paths=[paths.injection_output],
         clean_followup_path=paths.followup_output,
+        baseline_trace_path=paths.pre_followup_trace,
     )
     paths.trace_report.write_text(report.to_json() + "\n", encoding="utf-8")
     write_manifest(
@@ -278,6 +284,7 @@ def run_probe(args: argparse.Namespace) -> RealisticProbePaths:
         reset_status=reset_status,
         post_state_status=post_state_status,
         post_debug_status=post_debug_status,
+        pre_followup_trace_status=pre_followup_trace_status,
         final_state_status=final_state_status,
         trace_status=trace_status,
         workflow_id=workflow_id,
@@ -292,7 +299,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, default=360)
     parser.add_argument("--reset-timeout", type=int, default=45)
     parser.add_argument("--pass-count", type=int, default=6)
-    parser.add_argument("--followup-pass-count", type=int, default=2)
     parser.add_argument("--output-root", default=str(OUTPUT_ROOT))
     return parser.parse_args()
 

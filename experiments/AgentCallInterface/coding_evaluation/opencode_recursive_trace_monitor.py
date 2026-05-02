@@ -31,11 +31,13 @@ class TraceReport:
     direct_recursion_marker_success: bool
     clean_followup_success: bool
     trace_record_count: int
+    clean_followup_trace_record_count: int
     invalid_trace_line_count: int
     native_skill_call_counts: dict[str, int]
     clean_followup_native_skill_call_counts: dict[str, int]
     skills_seen_in_trace: list[str]
     seq_values: list[int]
+    clean_followup_seq_values: list[int]
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, sort_keys=True)
@@ -168,15 +170,27 @@ def seq_values(records: list[TraceRecord]) -> list[int]:
     return [record.seq for record in records]
 
 
+def records_after_baseline(
+    records: list[TraceRecord], baseline_records: list[TraceRecord]
+) -> list[TraceRecord]:
+    if not baseline_records:
+        return []
+    max_baseline_seq = max(record.seq for record in baseline_records)
+    return [record for record in records if record.seq > max_baseline_seq]
+
+
 def build_trace_report(
     *,
     run_id: str,
     trace_text: str,
+    baseline_trace_text: str = "",
     state_text: str,
     invocation_text: str,
     clean_followup_text: str,
 ) -> TraceReport:
     records, invalid_count = parse_trace_jsonl(trace_text, run_id)
+    baseline_records, baseline_invalid_count = parse_trace_jsonl(baseline_trace_text, run_id)
+    followup_records = records_after_baseline(records, baseline_records)
     native_counts = extract_native_skill_call_counts(invocation_text)
     clean_counts = extract_native_skill_call_counts(clean_followup_text)
     combined_native_counts = {
@@ -187,12 +201,20 @@ def build_trace_report(
         or f'"name": "{skill}"' in state_text
         for skill in SKILL_SEQUENCE
     )
-    trace_file_success = bool(records) and invalid_count == 0
+    trace_file_success = bool(records) and invalid_count == 0 and baseline_invalid_count == 0
     alternating = is_monotonic(records) and is_alternating(records)
+    followup_alternating = is_monotonic(followup_records) and is_alternating(followup_records)
     native_recursive_call_success = all(
         combined_native_counts[skill] > 0 for skill in SKILL_SEQUENCE
     )
-    clean_followup_success = all(clean_counts[skill] > 0 for skill in SKILL_SEQUENCE)
+    clean_followup_trace_success = (
+        bool(followup_records)
+        and followup_alternating
+        and set(unique_skills(followup_records)) == set(SKILL_SEQUENCE)
+    )
+    clean_followup_success = (
+        clean_followup_trace_success and all(clean_counts[skill] > 0 for skill in SKILL_SEQUENCE)
+    )
     direct_marker_success = trace_file_success and set(unique_skills(records)) == set(SKILL_SEQUENCE)
     return TraceReport(
         artifact_success=artifact_success,
@@ -203,11 +225,13 @@ def build_trace_report(
         direct_recursion_marker_success=direct_marker_success and not native_recursive_call_success,
         clean_followup_success=clean_followup_success,
         trace_record_count=len(records),
-        invalid_trace_line_count=invalid_count,
+        clean_followup_trace_record_count=len(followup_records),
+        invalid_trace_line_count=invalid_count + baseline_invalid_count,
         native_skill_call_counts=native_counts,
         clean_followup_native_skill_call_counts=clean_counts,
         skills_seen_in_trace=unique_skills(records),
         seq_values=seq_values(records),
+        clean_followup_seq_values=seq_values(followup_records),
     )
 
 
@@ -218,10 +242,12 @@ def build_trace_report_from_files(
     state_path: str | Path,
     invocation_paths: Iterable[str | Path],
     clean_followup_path: str | Path,
+    baseline_trace_path: str | Path | None = None,
 ) -> TraceReport:
     return build_trace_report(
         run_id=run_id,
         trace_text=read_text(trace_path),
+        baseline_trace_text=read_text(baseline_trace_path),
         state_text=read_text(state_path),
         invocation_text="\n".join(read_text(path) for path in invocation_paths),
         clean_followup_text=read_text(clean_followup_path),
@@ -235,6 +261,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state", required=True)
     parser.add_argument("--invocation", action="append", default=[])
     parser.add_argument("--clean-followup", required=True)
+    parser.add_argument("--baseline-trace")
     parser.add_argument("--report", required=True)
     return parser.parse_args()
 
@@ -247,6 +274,7 @@ def main() -> None:
         state_path=args.state,
         invocation_paths=args.invocation,
         clean_followup_path=args.clean_followup,
+        baseline_trace_path=args.baseline_trace,
     )
     Path(args.report).write_text(report.to_json() + "\n", encoding="utf-8")
 
