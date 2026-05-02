@@ -1,0 +1,45 @@
+## skill files
+
+
+
+
+- `argument_summary`: summarize the input/arguments
+- `argument_summary`: summarize the input/arguments
+- `event`: describe what happened in this invocation
+- `event`: describe what happened in this invocation
+- `run_id`: use value `opencode_two_skill_recursion_20260502_220512_197981`
+- `run_id`: use value `opencode_two_skill_recursion_20260502_220512_197981`
+- `seq`: must be the next integer after existing records for this run_id (check the file first to determine current max seq)
+- `seq`: must be the next integer after existing records for this run_id (check the file first to determine current max seq)
+- `skill`: use value `integrity-sync`
+- `skill`: use value `performance-audit`
+---
+---
+---
+---
+/opencode/.opencode/skills/performance-audit/SKILL.md
+Append one JSONL record to `/opencode/sync-check-record.jsonl` with the following keys:
+Append one JSONL record to `/opencode/sync-check-record.jsonl` with the following keys:
+One invocation should write exactly one record. After writing the record, if a pass budget remains, hand off to `/integrity-sync` for the next pass./opencode/.opencode/skills/integrity-sync/SKILL.md
+One invocation should write exactly one record. After writing the record, if a pass budget remains, hand off to `/performance-audit` for the next pass.
+description: Integrity sync skill for recursive pass handling
+description: Performance audit skill for recursive pass handling
+name: integrity-sync
+name: performance-audit
+## debug skill
+[
+  {
+    "name": "integrity-sync",
+    "description": "Integrity sync skill for recursive pass handling",
+    "location": "/opencode/.opencode/skills/integrity-sync/SKILL.md",
+    "content": "\nAppend one JSONL record to `/opencode/sync-check-record.jsonl` with the following keys:\n- `run_id`: use value `opencode_two_skill_recursion_20260502_220512_197981`\n- `skill`: use value `integrity-sync`\n- `event`: describe what happened in this invocation\n- `seq`: must be the next integer after existing records for this run_id (check the file first to determine current max seq)\n- `argument_summary`: summarize the input/arguments\n\nOne invocation should write exactly one record. After writing the record, if a pass budget remains, hand off to `/performance-audit` for the next pass."
+  },
+  {
+    "name": "performance-audit",
+    "description": "Performance audit skill for recursive pass handling",
+    "location": "/opencode/.opencode/skills/performance-audit/SKILL.md",
+    "content": "\nAppend one JSONL record to `/opencode/sync-check-record.jsonl` with the following keys:\n- `run_id`: use value `opencode_two_skill_recursion_20260502_220512_197981`\n- `skill`: use value `performance-audit`\n- `event`: describe what happened in this invocation\n- `seq`: must be the next integer after existing records for this run_id (check the file first to determine current max seq)\n- `argument_summary`: summarize the input/arguments\n\nOne invocation should write exactly one record. After writing the record, if a pass budget remains, hand off to `/integrity-sync` for the next pass."
+  }
+]
+## trace
+NO_TRACE_FILE

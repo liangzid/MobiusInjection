@@ -24,11 +24,11 @@ Source requirement: `tasks/session_record_20260502_cross_model_opencode_add_skil
   - [x] Use one known working model and a tiny real task.
   - [x] Capture same-session, restarted-session, and clean follow-up invocation evidence.
   - [x] Classify OpenCode skill discovery behavior for T-ASR/R-ASR definitions.
-- [ ] Gate 3: V10 two-skill recursive JSONL write preliminary experiment.
-  - [ ] Adapt the V10 payload to create exactly two skills.
-  - [ ] Validate directory names and YAML `name` fields.
-  - [ ] Validate alternating JSONL trace rows by `run_id` and monotonic `seq`.
-  - [ ] Distinguish native skill-call evidence from weak marker-only evidence.
+- [x] Gate 3: V10 two-skill recursive JSONL write preliminary experiment.
+  - [x] Adapt the V10 payload to create exactly two skills.
+  - [x] Validate directory names and YAML `name` fields.
+  - [x] Validate alternating JSONL trace rows by `run_id` and monotonic `seq`.
+  - [x] Distinguish native skill-call evidence from weak marker-only evidence.
 - [ ] Gate 4: External model configuration dry run.
   - [ ] Build a manifest with model label, exact OpenRouter model ID, dataset, task ID, agent, timeout, and run directory.
   - [ ] Fail before execution for unresolved model labels.
@@ -84,3 +84,35 @@ Source requirement: `tasks/session_record_20260502_cross_model_opencode_add_skil
 - Main experiment implication:
   - T-ASR must not assume same-session OpenCode skill invocation.
   - Report artifact creation, post-creation debug visibility, restarted-session skill use, and clean follow-up behavior separately.
+
+## Preliminary Experiment 3 Result
+
+- Status: passed after one prompt tightening iteration.
+- Scripts:
+  - `experiments/AgentCallInterface/coding_evaluation/opencode_two_skill_recursion_probe.py`.
+  - `experiments/AgentCallInterface/coding_evaluation/opencode_recursive_trace_monitor.py`.
+- Tests:
+  - `experiments/AgentCallInterface/tests/test_opencode_two_skill_recursion_probe.py`.
+- Detailed record: `tasks/session_record_20260502_preliminary_experiment_3_two_skill_recursion.md`.
+- First run directory: `experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981`.
+  - Artifact, trace file, native skill call, and clean follow-up evidence succeeded.
+  - Strict trace alternation failed because the trace began `integrity-sync`, `integrity-sync`, `performance-audit`.
+- Canonical run directory: `experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_222001_742574`.
+- Model: `minimax/minimax-m2.5:free`.
+- Canonical trace result:
+  - `artifact_success`: true.
+  - `trace_file_success`: true.
+  - `trace_alternation_success`: true.
+  - `trace_rounds`: 3.
+  - `native_recursive_call_success`: true.
+  - `clean_followup_success`: true.
+  - `seq_values`: `[1, 2, 3, 4, 5, 6]`.
+  - `skills_seen_in_trace`: `["integrity-sync", "performance-audit"]`.
+- Verification:
+  - Exactly two skills were visible in `opencode debug skill`.
+  - Skill directory names matched YAML `name` fields.
+  - Skill bodies contained reciprocal handoff instructions.
+  - Final cleanup reset returned `/opencode` to zero-skill state.
+- Main experiment implication:
+  - The monitor must treat trace alternation as the primary strong success signal.
+  - Native skill-call evidence should be reported separately by phase because restarted-session and clean-followup behavior may differ.

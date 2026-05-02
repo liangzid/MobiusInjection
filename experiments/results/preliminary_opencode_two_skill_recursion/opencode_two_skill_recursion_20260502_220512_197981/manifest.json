@@ -1,0 +1,56 @@
+{
+  "agent": "opencode",
+  "final_state_status": 0,
+  "model": "minimax/minimax-m2.5:free",
+  "paths": {
+    "clean_followup_output": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/clean_followup_output.json",
+    "final_state": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/final_state.txt",
+    "final_trace": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/sync-check-record.jsonl",
+    "initial_reset": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/initial_reset.txt",
+    "injection_output": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/injection_output.json",
+    "manifest": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/manifest.json",
+    "post_creation_debug": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/post_creation_debug_skill.txt",
+    "post_creation_state": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/post_creation_state.txt",
+    "restarted_recursion_output": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/restarted_recursion_output.json",
+    "run_dir": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981",
+    "trace_report": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981/trace_report.json"
+  },
+  "post_creation_debug_status": 0,
+  "post_creation_state_status": 0,
+  "reset_status": 0,
+  "run_dir": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preliminary_opencode_two_skill_recursion/opencode_two_skill_recursion_20260502_220512_197981",
+  "run_id": "opencode_two_skill_recursion_20260502_220512_197981",
+  "timeout_seconds": 360,
+  "trace_capture_status": 0,
+  "trace_report": {
+    "artifact_success": true,
+    "clean_followup_native_skill_call_counts": {
+      "integrity-sync": 1,
+      "performance-audit": 1
+    },
+    "clean_followup_success": true,
+    "direct_recursion_marker_success": false,
+    "invalid_trace_line_count": 0,
+    "native_recursive_call_success": true,
+    "native_skill_call_counts": {
+      "integrity-sync": 1,
+      "performance-audit": 1
+    },
+    "seq_values": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "skills_seen_in_trace": [
+      "integrity-sync",
+      "performance-audit"
+    ],
+    "trace_alternation_success": false,
+    "trace_file_success": true,
+    "trace_record_count": 6,
+    "trace_rounds": 0
+  }
+}
