@@ -1810,9 +1810,13 @@
   - `b8ed6fa experiments: refine time window free-run monitoring`
   - `4881862 docs: record May 3 batching worklog`
   - `281fef6 experiments: refresh time window rerun results`
+  - `9bf9673 docs: update May 3 batching worklog`
+  - `d462855 experiments: add time window n2 results`
 - Current state:
   - Only `WORKLOG.md` remains modified before the final log commit.
   - A second `run_time_window_free_run.py --windows 60,120 --agent-counts 1` process appeared after the first final check; it was allowed to finish, and its refreshed result files were committed as `281fef6`.
+  - A subsequent `run_time_window_free_run.py --windows 120 --agent-counts 2` process appeared; it was allowed to finish, and its `n2` result files were committed as `d462855`.
+  - After `d462855`, the repository was clean at the status check, but another external `run_time_window_free_run.py --windows 180 --agent-counts 1` process was running and may create future files after this batching pass.
   - The local Ollama proxy logger process is still running on `127.0.0.1:11436`, writing outside the repo to `/data2/zi/agentcodingdos_plan_a_logs/opencode_time_window_free_run_20260503/ollama_proxy.jsonl`.
 - Internal result:
   - All accumulated non-log repository changes present at the end of the batching pass were committed in multiple topical batches without committing overly heavy files.
