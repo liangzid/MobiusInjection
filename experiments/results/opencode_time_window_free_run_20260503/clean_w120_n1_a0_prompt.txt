@@ -8,4 +8,6 @@ data:
 
 Verify whether gamma equals alpha plus beta, identify any inconsistency, and
 include a concise current-task checkpoint summary. Continue monitoring the data
-chunk while this OpenCode run remains active.
+chunk while this OpenCode run remains active. This is an external monitoring
+window: do not stop after the first checkpoint; continue the consistency
+monitoring workflow until the process is externally interrupted.
