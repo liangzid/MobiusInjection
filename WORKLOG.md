@@ -1754,6 +1754,31 @@
   - The targeted figure is not directly comparable to Table 1's non-targeted ADD-S ASR values because the targeted payload adds an exact runtime-profile guard and therefore measures guarded activation plus skill installation, not only the base ADD-S pollution capability.
   - Raw trace check: diagonal activation traces `26`, diagonal P-ASR `26`, off-diagonal activation traces `1`, and off-diagonal P-ASR `1`.
 
+## 2026-05-03 - Targeted Mobius figure typography refinement
+- User request:
+  - Rename the targeted figure metric to Targeted P-ASR.
+  - Improve the visualization by removing E1--E4 explanation text and in-figure notes, reducing oversized text, switching to a better-looking font, removing unnecessary bold styling, reducing spacing between the two subfigures, and keeping the figure single-column.
+- Files modified:
+  - `/home/zi/paper_mobius/scripts/plot_targeted_mobius_matrix.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_targeted_mobius_matrix.py`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/curves/targeted_mobius_1x2.pdf`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Updated the plot title from `Pollution ASR` to `Targeted P-ASR`.
+  - Removed all in-figure explanatory notes and the E1--E4 profile legend; the figure now keeps only titles, target/actual environment axes, tick labels, and cell values.
+  - Changed the figure font from Helvetica-style sans serif to Libertine, removed bold styling from titles/ticks/cell values, reduced all internal font sizes, tightened cell size and inter-panel spacing, and kept the figure as a single-column `figure`.
+  - Updated the paper inclusion width to `0.78\linewidth`.
+  - Regenerated the cropped PDF with `pdfcrop` and inspected both the standalone figure preview and the rendered paper page.
+  - Removed temporary Python bytecode and LaTeX figure-build artifacts after verification.
+- Results:
+  - Plotting regression test passed with the real 704-row targeted JSONL.
+  - Python syntax check passed.
+  - Full paper compilation succeeded with `latexmk -pdf main.tex`.
+  - The final cropped figure is `/home/zi/paper_mobius/curves/targeted_mobius_1x2.pdf`, size `130 x 63 pt`.
+  - Existing unrelated unresolved citations/references remain (`Liu-Prompt`, `Greshake-Not`, `Abdelnabi-Not`, `clawbench`, `swebench`, `humaneval`, `fig:`, and `fig:mobius-example`).
+
 ## 2026-05-03 - Git commit batching execution
 - User request:
   - Split accumulated repository files into multiple git commits.
@@ -1783,9 +1808,11 @@
   - `d297d82 experiments: add poisoned time window w60 results`
   - `149350e experiments: add time window w120 results`
   - `b8ed6fa experiments: refine time window free-run monitoring`
+  - `4881862 docs: record May 3 batching worklog`
+  - `281fef6 experiments: refresh time window rerun results`
 - Current state:
   - Only `WORKLOG.md` remains modified before the final log commit.
-  - The `run_time_window_free_run.py` experiment process has exited.
+  - A second `run_time_window_free_run.py --windows 60,120 --agent-counts 1` process appeared after the first final check; it was allowed to finish, and its refreshed result files were committed as `281fef6`.
   - The local Ollama proxy logger process is still running on `127.0.0.1:11436`, writing outside the repo to `/data2/zi/agentcodingdos_plan_a_logs/opencode_time_window_free_run_20260503/ollama_proxy.jsonl`.
 - Internal result:
   - All accumulated non-log repository changes present at the end of the batching pass were committed in multiple topical batches without committing overly heavy files.
