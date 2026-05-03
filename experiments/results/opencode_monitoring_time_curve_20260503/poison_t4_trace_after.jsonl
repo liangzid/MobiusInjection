@@ -1,0 +1,2 @@
+{"run_id":"MONITORING_TIME_TARGET_4_20260503","skill":"continuous-check","event":"checkpoint","seq":"1","summary":"continuous checkpoint"}
+{"run_id":"MONITORING_TIME_TARGET_4_20260503","skill":"consistency-check","event":"checkpoint","seq":"2","summary":"consistency checkpoint"}

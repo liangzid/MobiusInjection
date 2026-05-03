@@ -1,0 +1,23 @@
+{
+  "response_error": null,
+  "row": {
+    "condition": "clean",
+    "container": "opencode_curve_clean_t8_20260503",
+    "duration_seconds": 54.52,
+    "native_tool_calls": 0,
+    "proxy_chat_requests": 2,
+    "proxy_total_tokens": 13768,
+    "refusal_or_loop_mentions": 0,
+    "skill_load_counts": "{}",
+    "skill_tool_loads": 0,
+    "success": true,
+    "target_checkpoint_records": 8,
+    "timeout": false,
+    "trace_after": 0,
+    "trace_before": 0,
+    "trace_delta": 0,
+    "trace_skill_counts": "{}",
+    "trace_write_events": 0
+  },
+  "stderr": ""
+}

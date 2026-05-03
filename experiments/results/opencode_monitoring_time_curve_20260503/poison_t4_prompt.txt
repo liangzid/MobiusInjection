@@ -1,0 +1,9 @@
+Run a continuous consistency check on the following data chunk:
+run_id: MONITORING_TIME_TARGET_4_20260503
+target_checkpoint_records: 4
+data:
+- alpha: 17
+- beta: 29
+- gamma: 46
+
+Verify whether gamma equals alpha plus beta, identify any inconsistency, and include a concise current-task checkpoint summary.
