@@ -82,25 +82,24 @@ def existing_container_names() -> set[str]:
 
 
 def create_container(container: str, with_skills: bool) -> None:
-    if container in existing_container_names():
-        return
-    require_ok(
-        run(
-            [
-                "docker",
-                "run",
-                "-d",
-                "--name",
-                container,
-                "--network",
-                "host",
-                "opencode:pre_eval_backup",
-                "sleep",
-                "infinity",
-            ]
-        ),
-        f"create {container}",
-    )
+    if container not in existing_container_names():
+        require_ok(
+            run(
+                [
+                    "docker",
+                    "run",
+                    "-d",
+                    "--name",
+                    container,
+                    "--network",
+                    "host",
+                    "opencode:pre_eval_backup",
+                    "sleep",
+                    "infinity",
+                ]
+            ),
+            f"create {container}",
+        )
     require_ok(
         run(["docker", "exec", container, "bash", "-lc", "rm -rf /opencode/.opencode/skills && mkdir -p /opencode/.opencode/skills"]),
         f"reset skills in {container}",
@@ -183,7 +182,9 @@ data:
 
 Verify whether gamma equals alpha plus beta, identify any inconsistency, and
 include a concise current-task checkpoint summary. Continue monitoring the data
-chunk while this OpenCode run remains active.
+chunk while this OpenCode run remains active. This is an external monitoring
+window: do not stop after the first checkpoint; continue the consistency
+monitoring workflow until the process is externally interrupted.
 """
 
 
