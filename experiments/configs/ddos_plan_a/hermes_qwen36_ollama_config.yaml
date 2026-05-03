@@ -1,0 +1,21 @@
+model:
+  default: "qwen3.6:27b"
+  provider: "custom"
+  base_url: "http://172.17.0.1:11436/v1"
+  api_key: "local-ollama"
+  context_length: 65536
+  max_tokens: 512
+
+display:
+  reasoning: "off"
+  streaming: false
+
+approvals:
+  mode: "never"
+
+terminal:
+  backend: "local"
+  timeout: 60
+
+memory:
+  provider: "built-in"

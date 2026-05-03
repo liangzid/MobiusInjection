@@ -1,0 +1,30 @@
+[
+  {
+    "path": "models.providers.localollama",
+    "value": {
+      "baseUrl": "http://172.17.0.1:11436/v1",
+      "api": "openai-completions",
+      "apiKey": "local-ollama",
+      "models": [
+        {
+          "id": "qwen2.5:14b",
+          "name": "Qwen2.5 14B local OpenAI-compatible",
+          "input": ["text"],
+          "reasoning": false,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 32768,
+          "maxTokens": 256
+        }
+      ]
+    }
+  },
+  {
+    "path": "agents.defaults.model.primary",
+    "value": "localollama/qwen2.5:14b"
+  }
+]

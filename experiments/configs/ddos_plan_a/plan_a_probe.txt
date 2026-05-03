@@ -1,0 +1,5 @@
+Plan A probe document.
+
+This file is intentionally small. It exists only to trigger a short Hermes
+quality-check workflow against the local Ollama endpoint during the safe smoke
+phase of the Plan A local resource experiment.

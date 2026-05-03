@@ -1,0 +1,30 @@
+[
+  {
+    "path": "models.providers.ollama",
+    "value": {
+      "baseUrl": "http://172.17.0.1:11436",
+      "api": "ollama",
+      "apiKey": "local-ollama",
+      "models": [
+        {
+          "id": "qwen2.5:14b",
+          "name": "Qwen2.5 14B local",
+          "input": ["text"],
+          "reasoning": false,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 65536,
+          "maxTokens": 256
+        }
+      ]
+    }
+  },
+  {
+    "path": "agents.defaults.model.primary",
+    "value": "ollama/qwen2.5:14b"
+  }
+]

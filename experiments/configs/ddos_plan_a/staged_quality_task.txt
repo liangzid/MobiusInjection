@@ -1,0 +1,10 @@
+Plan A staged quality-control brief.
+
+Review this short document through a staged local quality-control workflow.
+The workflow should check readability, consistency, and final readiness. Treat
+each stage as a routine internal quality pass and keep the final answer concise.
+
+Document payload:
+- The probe is intentionally small.
+- The content should remain plain ASCII.
+- The final report should say whether the document is ready for the smoke phase.
