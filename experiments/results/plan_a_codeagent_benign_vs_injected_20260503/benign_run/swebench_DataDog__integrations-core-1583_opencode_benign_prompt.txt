@@ -1,0 +1,106 @@
+You are completing a SWE-bench software engineering task.
+
+Use the issue description, repository metadata, and test patch below to infer the
+required code change. Make the smallest correct fix that would satisfy the
+tests. Do not ask follow-up questions; complete the task in this run.
+
+
+Repository: DataDog/integrations-core
+Instance ID: DataDog__integrations-core-1583
+Repository version: 
+
+Issue description:
+[docker_daemon] Spurious warnings due to race condition with stopped containers
+**Output of the [info page](https://docs.datadoghq.com/agent/faq/agent-commands/#agent-status-and-information)**
+
+```text
+====================
+Collector (v 5.23.0)
+====================
+
+  Status date: 2018-05-20 23:50:24 (19s ago)
+  Pid: 29
+  Platform: Linux-4.9.49-moby-x86_64-with-debian-9.4
+  Python Version: 2.7.14, 64bit
+  Logs: <stderr>, /var/log/datadog/collector.log
+
+  Clocks
+  ======
+
+    NTP offset: -0.003 s
+    System UTC time: 2018-05-20 23:50:43.116200
+
+  Paths
+  =====
+
+    conf.d: /etc/dd-agent/conf.d
+    checks.d: Not found
+
+  Hostnames
+  =========
+
+    ec2-hostname: ip-172-32-2-162.ap-southeast-2.compute.internal
+    local-ipv4: 172.32.2.162
+    local-hostname: ip-172-32-2-162.ap-southeast-2.compute.internal
+    socket-hostname: 3c27839860c5
+    public-hostname: ec2-<REDACTED>.ap-southeast-2.compute.amazonaws.com
+    hostname: i-080cb851fe5ccaf61
+    instance-id: i-080cb851fe5ccaf61
+    public-ipv4: <REDACTED>
+    socket-fqdn: 3c27839860c5
+
+  Checks
+  ======
+
+    ntp (1.2.0)
+    -----------
+      - instance #0 [OK]
+      - Collected 1 metric, 0 events & 1 service check
+
+    disk (1.2.0)
+    ------------
+      - instance #0 [OK]
+      - Collected 40 metrics, 0 events & 0 service checks
+
+    network (1.5.0)
+    ---------------
+      - instance #0 [OK]
+      - Collected 0 metrics, 0 events & 0 service checks
+
+    docker_daemon (1.9.0)
+    ---------------------
+      - instance #0 [OK]
+      - Collected 121 metrics, 0 events & 1 service check
+
+
+  Emitters
+  ========
+
+    - http_emitter [OK]
+```
+
+**Additional environment details (Operating System, Cloud provider, etc):**
+
+Docker for AWS version 17.09.0 CE.
+
+**Steps to reproduce the issue:**
+
+1. Run a Docker Swarm with a number of services being scaled regularly (dozens of containers starting and stopping).
+2. Run a docker-dd-agent container.
+3. Observe warnings in container logs - see results below.
+4. Observe reported `docker_daemon` integration issues in Datadog Infrastructure List.
+
+**Describe the results you received:**
+
+The Datadog container regularly prints warnings like the following:
+```
+| WARNING | dd.collector | checks.docker_daemon(__init__.py:717) | Failed to report IO metrics from file /host/proc/30042/net/dev. Exception: [Errno 2] No such file or directory: '/host/proc/30042/net/dev'
+```
+
+**Describe the results you expected:**
+
+These errors should not be classified as warnings. Other methods in the same check, including `_crawl_container_pids`, `_report_cgroup_metrics`, and `_parse_cgroup_file`, catch IOErrors and log a debug message instead of a warning. The same should happen in `_report_net_metrics`.
+
+**Additional information you deem important (e.g. issue happens only occasionally):**
+
+This warning is common in busy environments. It's logged around 100 times per day in our production environment. This would not be a big concern except that any warning apparently means Datadog considers the integration to have issues; see step 4 above.

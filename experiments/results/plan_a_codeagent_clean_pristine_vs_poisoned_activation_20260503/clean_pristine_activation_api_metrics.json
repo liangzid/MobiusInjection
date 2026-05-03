@@ -1,0 +1,11 @@
+{
+  "proxy_chat_requests": 2,
+  "proxy_paths": [
+    "/v1/chat/completions"
+  ],
+  "proxy_requests": 2,
+  "proxy_status_codes": [
+    200,
+    200
+  ]
+}

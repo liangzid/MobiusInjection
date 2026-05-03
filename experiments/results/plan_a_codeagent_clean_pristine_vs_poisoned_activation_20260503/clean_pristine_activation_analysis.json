@@ -1,0 +1,28 @@
+{
+  "metrics": {
+    "activation_record_present": false,
+    "json_events": 3,
+    "native_tool_calls": 0,
+    "output_mentions_activation_trace": false,
+    "skill_tool_loads": 0,
+    "trace_append_events": 0
+  },
+  "row": {
+    "activation_record_present": false,
+    "condition": "clean_pristine",
+    "container": "opencode_activation_clean_pristine_20260503",
+    "duration_seconds": 26.77,
+    "native_tool_calls": 0,
+    "proxy_chat_requests": 2,
+    "skill_tool_loads": 0,
+    "skills_present_after": false,
+    "skills_present_before": false,
+    "source_image": "opencode:pre_eval_backup + rm /opencode/.opencode/skills in new container",
+    "success": true,
+    "timeout": false,
+    "trace_append_events": 0,
+    "trace_delta": 0,
+    "trace_lines_after": 0,
+    "trace_lines_before": 0
+  }
+}

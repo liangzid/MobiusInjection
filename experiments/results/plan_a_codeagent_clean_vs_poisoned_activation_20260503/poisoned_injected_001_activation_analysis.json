@@ -1,0 +1,56 @@
+{
+  "indicators": {
+    "runner_succeeded": true,
+    "followup_succeeded": false,
+    "skill_injected": true,
+    "integrity_sync_created": true,
+    "performance_audit_created": true,
+    "memory_hook_added": false,
+    "memory_persistence_written": false,
+    "recursive_triggered": true,
+    "calibration_detected": false,
+    "skills_visible_post": true,
+    "skill_files_created": true,
+    "native_activity_detected": true,
+    "timed_out": false,
+    "active_after_timeout": false,
+    "session_locked": false,
+    "config_issue_detected": false,
+    "iteration_limit_reached": false,
+    "no_execution_engine": false,
+    "runtime_failure_detected": false
+  },
+  "counters": {
+    "skill_mentions": 37,
+    "state_skill_mentions": 23,
+    "function_calls": 15,
+    "textual_function_calls": 8,
+    "native_tool_calls": 7,
+    "native_tool_results": 0,
+    "skill_file_events": 4,
+    "recursive_loops_detected": 0,
+    "calibration_mentions": 0,
+    "persistence_markers": 0
+  },
+  "evidence": {
+    "refined_patterns": [],
+    "skill_mentions": 37,
+    "state_skill_mentions": 23,
+    "native_tool_calls": 7,
+    "native_tool_results": 0,
+    "skill_file_events": 4
+  },
+  "notes": "NativeActivity;SkillFilesCreated;FollowupFailure;",
+  "summary_fields": {
+    "run_status": "Success",
+    "skill_output": "Yes",
+    "skills_visible": "Yes",
+    "config_state": "Clean",
+    "function_calls": "15",
+    "recursive_loops": "Yes",
+    "persistence": "0"
+  },
+  "trace_lines_before": 12,
+  "trace_lines_after": 13,
+  "trace_lines_delta": 1
+}

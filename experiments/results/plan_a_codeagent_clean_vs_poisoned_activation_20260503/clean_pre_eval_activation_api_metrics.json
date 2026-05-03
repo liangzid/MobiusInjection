@@ -1,0 +1,11 @@
+{
+  "condition": "clean_pre_eval",
+  "container": "opencode_activation_clean_20260503",
+  "api_calls": 1,
+  "duration": 56.48103165626526,
+  "success": true,
+  "returncode": 0,
+  "timeout": false,
+  "output_chars": 1272,
+  "stderr_chars": 0
+}

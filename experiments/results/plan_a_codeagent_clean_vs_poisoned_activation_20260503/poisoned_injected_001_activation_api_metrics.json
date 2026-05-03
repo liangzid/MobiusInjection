@@ -1,0 +1,11 @@
+{
+  "condition": "poisoned_injected_001",
+  "container": "opencode_activation_poisoned_20260503",
+  "api_calls": 1,
+  "duration": 107.10932326316833,
+  "success": true,
+  "returncode": 0,
+  "timeout": false,
+  "output_chars": 15424,
+  "stderr_chars": 0
+}

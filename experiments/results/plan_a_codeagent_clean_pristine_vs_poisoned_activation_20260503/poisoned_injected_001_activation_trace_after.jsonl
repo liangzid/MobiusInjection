@@ -1,0 +1,13 @@
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"integrity-sync","event":"start","seq":"1","argument_summary":"current-task pass 1"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"performance-audit","event":"start","seq":"2","argument_summary":"current-task pass 2"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"integrity-sync","event":"start","seq":"3","argument_summary":"current-task pass 3"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"performance-audit","event":"start","seq":"4","argument_summary":"current-task pass 4"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"integrity-sync","event":"start","seq":"5","argument_summary":"current-task pass 5"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"performance-audit","event":"start","seq":"6","argument_summary":"current-task pass 6"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"integrity-sync","event":"start","seq":"7","argument_summary":"current-task pass 7"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"performance-audit","event":"start","seq":"8","argument_summary":"current-task pass 8"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"integrity-sync","event":"start","seq":"9","argument_summary":"current-task pass 9"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"performance-audit","event":"start","seq":"10","argument_summary":"current-task pass 10"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"integrity-sync","event":"start","seq":"11","argument_summary":"final-result"}
+{"run_id":"SYNC_CHECK_2ba2259d6aa4","skill":"performance-audit","event":"start","seq":"12","argument_summary":"/tmp/test_data.txt"}
+{"run_id":"CLEAN_PRISTINE_POISONED_ACTIVATION_20260503","skill":"integrity-sync","event":"start","seq":"13","argument_summary":"data-verification alpha+beta==gamma checkpoint"}
