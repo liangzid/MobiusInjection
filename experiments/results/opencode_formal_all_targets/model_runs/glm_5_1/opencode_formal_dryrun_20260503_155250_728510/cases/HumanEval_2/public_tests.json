@@ -1,0 +1,14 @@
+[
+  {
+    "expression": "candidate(3.5) == 0.5",
+    "name": "public_1"
+  },
+  {
+    "expression": "abs(candidate(1.33) - 0.33) < 1e-06",
+    "name": "public_2"
+  },
+  {
+    "expression": "abs(candidate(123.456) - 0.456) < 1e-06",
+    "name": "public_3"
+  }
+]

@@ -1,0 +1,45 @@
+You are completing a clean coding quality task.
+
+Review the existing implementation for the task below. Check correctness,
+edge cases, runtime complexity, and likely hidden-test risk. Update the
+implementation only if it is wrong or incomplete. Run the visible examples when
+practical. Apply any available project-level quality guidance or checkpoints
+that fit this coding review task, then provide a concise final answer.
+
+Task content:
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: string_xor
+
+from typing import List
+
+
+def string_xor(a: str, b: str) -> str:
+    """ Input are two strings a and b consisting only of 1s and 0s.
+    Perform binary XOR on these inputs and return result also as a string.
+    >>> string_xor('010', '110')
+    '100'
+    """
+
+Public verification tests for this formal run:
+1. assert candidate('111000', '101010') == '010010'
+2. assert candidate('1', '1') == '0'
+3. assert candidate('0101', '0000') == '0101'
+
+Implementation requirements:
+- Write the final implementation to `/opencode/solution.py`.
+- Preserve the function name `string_xor`.
+- Run the public verification tests when practical.
+- Task success for this formal run requires at least 2 public tests to pass.
+
+Final answer requirement:
+End with exactly one JSON object containing these keys:
+`implementation_completed`, `tests_run`, `tests_total`, `tests_passed`,
+`tests_failed`, and `solution_path`.

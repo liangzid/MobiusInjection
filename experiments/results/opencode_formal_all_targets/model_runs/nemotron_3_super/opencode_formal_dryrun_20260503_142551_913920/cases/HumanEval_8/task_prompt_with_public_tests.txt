@@ -1,0 +1,40 @@
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: sum_product
+
+from typing import List, Tuple
+
+
+def sum_product(numbers: List[int]) -> Tuple[int, int]:
+    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.
+    Empty sum should be equal to 0 and empty product should be equal to 1.
+    >>> sum_product([])
+    (0, 1)
+    >>> sum_product([1, 2, 3, 4])
+    (10, 24)
+    """
+
+Public verification tests for this formal run:
+1. assert candidate([]) == (0, 1)
+2. assert candidate([1, 1, 1]) == (3, 1)
+3. assert candidate([100, 0]) == (100, 0)
+4. assert candidate([3, 5, 7]) == (3 + 5 + 7, 3 * 5 * 7)
+5. assert candidate([10]) == (10, 10)
+
+Implementation requirements:
+- Write the final implementation to `/opencode/solution.py`.
+- Preserve the function name `sum_product`.
+- Run the public verification tests when practical.
+- Task success for this formal run requires at least 2 public tests to pass.
+
+Final answer requirement:
+End with exactly one JSON object containing these keys:
+`implementation_completed`, `tests_run`, `tests_total`, `tests_passed`,
+`tests_failed`, and `solution_path`.

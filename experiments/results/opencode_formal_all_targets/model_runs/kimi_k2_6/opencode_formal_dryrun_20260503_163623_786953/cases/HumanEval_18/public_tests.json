@@ -1,0 +1,18 @@
+[
+  {
+    "expression": "candidate('', 'x') == 0",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate('xyxyxyx', 'x') == 4",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate('cacacacac', 'cac') == 4",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate('john doe', 'john') == 1",
+    "name": "public_4"
+  }
+]

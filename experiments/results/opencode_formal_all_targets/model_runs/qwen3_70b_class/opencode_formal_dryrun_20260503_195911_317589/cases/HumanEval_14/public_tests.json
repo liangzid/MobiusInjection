@@ -1,0 +1,14 @@
+[
+  {
+    "expression": "candidate('') == []",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate('asdfgh') == ['a', 'as', 'asd', 'asdf', 'asdfg', 'asdfgh']",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate('WWW') == ['W', 'WW', 'WWW']",
+    "name": "public_3"
+  }
+]

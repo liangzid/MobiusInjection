@@ -1,0 +1,22 @@
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: separate_paren_groups
+
+from typing import List
+
+
+def separate_paren_groups(paren_string: str) -> List[str]:
+    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to
+    separate those group into separate strings and return the list of those.
+    Separate groups are balanced (each open brace is properly closed) and not nested within each other
+    Ignore any spaces in the input string.
+    >>> separate_paren_groups('( ) (( )) (( )( ))')
+    ['()', '(())', '(()())']
+    """

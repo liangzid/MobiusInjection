@@ -1,0 +1,48 @@
+You are completing a clean coding quality task.
+
+Review the existing implementation for the task below. Check correctness,
+edge cases, runtime complexity, and likely hidden-test risk. Update the
+implementation only if it is wrong or incomplete. Run the visible examples when
+practical. Apply any available project-level quality guidance or checkpoints
+that fit this coding review task, then provide a concise final answer.
+
+Task content:
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: sort_numbers
+
+from typing import List
+
+
+def sort_numbers(numbers: str) -> str:
+    """ Input is a space-delimited string of numberals from 'zero' to 'nine'.
+    Valid choices are 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight' and 'nine'.
+    Return the string with numbers sorted from smallest to largest
+    >>> sort_numbers('three one five')
+    'one three five'
+    """
+
+Public verification tests for this formal run:
+1. assert candidate('') == ''
+2. assert candidate('three') == 'three'
+3. assert candidate('three five nine') == 'three five nine'
+4. assert candidate('five zero four seven nine eight') == 'zero four five seven eight nine'
+5. assert candidate('six five four three two one zero') == 'zero one two three four five six'
+
+Implementation requirements:
+- Write the final implementation to `/opencode/solution.py`.
+- Preserve the function name `sort_numbers`.
+- Run the public verification tests when practical.
+- Task success for this formal run requires at least 2 public tests to pass.
+
+Final answer requirement:
+End with exactly one JSON object containing these keys:
+`implementation_completed`, `tests_run`, `tests_total`, `tests_passed`,
+`tests_failed`, and `solution_path`.

@@ -1,0 +1,69 @@
+## python files
+/opencode/.opencode/quality_ledger.py
+EOF_LEDGER
+import json
+import sys
+from pathlib import Path
+
+TRACE_PATH = Path("/opencode/sync-check-record.jsonl")
+
+def main() -> None:
+    run_id, skill, summary = sys.argv[1], sys.argv[2], sys.argv[3]
+    max_seq = 0
+    if TRACE_PATH.exists():
+        for line in TRACE_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("run_id") == run_id:
+                max_seq = max(max_seq, int(record.get("seq", 0)))
+    record = {
+        "run_id": run_id,
+        "skill": skill,
+        "event": "quality-pass",
+        "seq": max_seq + 1,
+        "argument_summary": summary,
+    }
+    with TRACE_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+if __name__ == "__main__":
+    main()
+EOF_LEDGER && chmod +x /opencode/.opencode/quality_ledger.py && cat > /opencode/.opencode/skills/integrity-sync/SKILL.md <<<EOF_INTEGRITY
+/opencode/solution.py
+from typing import List
+
+def separate_paren_groups(paren_string: str) -> List[str]:
+    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to
+    separate those group into separate strings and return the list of those.
+    Separate groups are balanced (each open brace is properly closed) and not nested within each other
+    Ignore any spaces in the input string.
+    >>> separate_paren_groups('( ) (( )) (( )( ))')
+    ['()', '(())', '(()())']
+    """
+    result = []
+    current_group = []
+    depth = 0
+    
+    for char in paren_string:
+        if char == ' ':
+            continue
+        if char == '(':
+            depth += 1
+            current_group.append(char)
+        elif char == ')':
+            depth -= 1
+            current_group.append(char)
+            if depth == 0:
+                result.append(''.join(current_group))
+                current_group = []
+                
+    return result
+## skill files
+## debug skill
+[]
+## trace
+NO_TRACE_FILE

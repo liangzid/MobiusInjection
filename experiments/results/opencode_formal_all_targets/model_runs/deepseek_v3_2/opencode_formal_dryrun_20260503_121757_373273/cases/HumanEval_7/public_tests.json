@@ -1,0 +1,18 @@
+[
+  {
+    "expression": "candidate([], 'john') == []",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate(['xxx', 'asd', 'xxy', 'john doe', 'xxxAAA', 'xxx'], 'xxx') == ['xxx', 'xxxAAA', 'xxx']",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate(['xxx', 'asd', 'aaaxxy', 'john doe', 'xxxAAA', 'xxx'], 'xx') == ['xxx', 'aaaxxy', 'xxxAAA', 'xxx']",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate(['grunt', 'trumpet', 'prune', 'gruesome'], 'run') == ['grunt', 'prune']",
+    "name": "public_4"
+  }
+]
