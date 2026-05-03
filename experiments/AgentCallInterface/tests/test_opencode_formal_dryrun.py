@@ -9,8 +9,12 @@ from experiments.AgentCallInterface.coding_evaluation.opencode_formal_dryrun imp
     build_task_prompt_with_public_tests,
     build_verifier_script,
     extract_agent_report,
+    load_humaneval_tasks,
     make_paths,
     parse_verifier_output,
+    sanitize_task_id,
+    summarize_cases,
+    write_run_package,
 )
 
 
@@ -34,7 +38,7 @@ def test_task_prompt_embeds_public_tests_and_solution_contract():
 
     prompt = build_task_prompt_with_public_tests(task, cases, pass_threshold=2)
 
-    assert "Public verification tests for this dry run" in prompt
+    assert "Public verification tests for this formal run" in prompt
     assert "Write the final implementation to `/opencode/solution.py`" in prompt
     assert "at least 2 public tests" in prompt
     assert "`tests_passed`" in prompt
@@ -136,3 +140,88 @@ def test_case_metrics_fail_tsr_when_verified_passes_below_threshold(tmp_path):
     )
 
     assert metrics["TSR"] is False
+
+
+def test_limit_loader_returns_first_n_real_humaneval_tasks():
+    tasks = load_humaneval_tasks(3)
+
+    assert [task.task_id for task in tasks] == ["HumanEval/0", "HumanEval/1", "HumanEval/2"]
+
+
+def test_task_id_sanitizer_is_path_safe():
+    assert sanitize_task_id("HumanEval/19") == "HumanEval_19"
+
+
+def test_summary_aggregates_multi_case_metrics():
+    cases = [
+        {
+            "TSR": True,
+            "STRICT_TSR": False,
+            "P_ASR": True,
+            "T_ASR": True,
+            "R_ASR": False,
+            "STRICT_E2E_ASR": False,
+            "runner_succeeded": True,
+            "verifier_ran": True,
+            "verified_tests_passed": 2,
+            "verified_tests_total": 4,
+            "trace_record_count": 7,
+            "clean_followup_trace_record_count": 0,
+        },
+        {
+            "TSR": False,
+            "STRICT_TSR": False,
+            "P_ASR": True,
+            "T_ASR": False,
+            "R_ASR": False,
+            "STRICT_E2E_ASR": False,
+            "runner_succeeded": True,
+            "verifier_ran": True,
+            "verified_tests_passed": 1,
+            "verified_tests_total": 4,
+            "trace_record_count": 3,
+            "clean_followup_trace_record_count": 0,
+        },
+    ]
+
+    summary = summarize_cases(cases)
+
+    assert summary["N"] == 2
+    assert summary["TSR"] == 0.5
+    assert summary["avg_verified_tests_passed"] == 1.5
+    assert summary["avg_verified_pass_rate"] == 0.375
+
+
+def test_run_package_writes_aggregate_outputs(tmp_path):
+    case = {
+        "case_id": "qwen_3_6_plus_HumanEval_0",
+        "TSR": True,
+        "STRICT_TSR": True,
+        "P_ASR": True,
+        "T_ASR": True,
+        "R_ASR": False,
+        "STRICT_E2E_ASR": False,
+        "runner_succeeded": True,
+        "verifier_ran": True,
+        "verified_tests_passed": 7,
+        "verified_tests_total": 7,
+        "trace_record_count": 7,
+        "clean_followup_trace_record_count": 0,
+    }
+
+    write_run_package(
+        tmp_path,
+        [case],
+        {
+            "model_label": "qwen_3_6_plus",
+            "model_id": "qwen/qwen3.6-plus",
+            "dataset": "humaneval",
+            "limit": 1,
+            "pass_threshold": 2,
+            "container": "opencode",
+        },
+    )
+
+    assert (tmp_path / "metrics.json").exists()
+    assert (tmp_path / "case_metrics.csv").exists()
+    assert "TSR" in (tmp_path / "metrics_report.md").read_text(encoding="utf-8")

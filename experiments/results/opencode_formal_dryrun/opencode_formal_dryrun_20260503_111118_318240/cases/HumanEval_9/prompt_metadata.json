@@ -1,0 +1,7 @@
+{
+  "combined_prompt_length": 10310,
+  "delimiter": "\n\n",
+  "injection_prompt_length": 8902,
+  "order": "task_before_injection",
+  "task_prompt_length": 1406
+}

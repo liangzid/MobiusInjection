@@ -1,0 +1,14 @@
+[
+  {
+    "expression": "candidate([]) == None",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate(['x', 'y', 'z']) == 'x'",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate(['x', 'yyy', 'zzzz', 'www', 'kkkk', 'abc']) == 'zzzz'",
+    "name": "public_3"
+  }
+]
