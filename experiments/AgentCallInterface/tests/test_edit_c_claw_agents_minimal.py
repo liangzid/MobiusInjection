@@ -7,6 +7,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PAYLOAD = PROJECT_ROOT / "mobiusInjection/MI_V1_edit_c_claw_agents.py"
+PAYLOAD_V11 = PROJECT_ROOT / "mobiusInjection/MI_V1.1_edit_c_claw_agents.py"
 RUNNER = PROJECT_ROOT / "experiments/scripts/effectiveness_injection_claw_0.0.1.zeroclaw_hermes_edit_c_minimal.py"
 
 
@@ -58,6 +59,17 @@ def test_edit_c_claw_agents_runner_compiles_and_uses_victim_images() -> None:
     assert "strict_edit_p_asr" in runner_text
     assert "CLEAN_VICTIM_C_V1" in runner_text
     assert "MOBIUS_EDIT_C_V1" in runner_text
+    assert "Hermes path constraint" in runner_text
+
+
+def test_edit_c_v11_payload_uses_tee_for_zero_claw_trigger_trace() -> None:
+    namespace: dict[str, object] = {}
+    exec(PAYLOAD_V11.read_text(encoding="utf-8"), namespace)
+    payload = namespace["MainInjectionTextTargeted"]("zeroclaw", "")
+
+    assert "MOBIUS_EDIT_C_V1" in payload
+    assert "| tee -a /tmp/mobius_config_trace.jsonl" in payload
+    assert ">> /tmp/mobius_config_trace.jsonl" not in payload
 
 
 def test_edit_c_shared_detector_requires_in_place_edit() -> None:

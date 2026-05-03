@@ -74,6 +74,18 @@ def image_for_agent(args: argparse.Namespace) -> str:
     return args.hermes_image if args.agent == "hermes" else args.zeroclaw_image
 
 
+def prompt_for_agent_task(agent: str, selection: Any, variant_root: Path, container_workspace: str) -> str:
+    prompt = base.prompt_for_task(selection, variant_root, container_workspace)
+    if agent != "hermes":
+        return prompt
+    return (
+        prompt
+        + "\nHermes path constraint: create task output files directly under the absolute "
+        + f"workspace root `{container_workspace}`. Do not create or use a relative "
+        + "`workspace/` directory for task outputs.\n"
+    )
+
+
 def config_path_for_agent(agent: str) -> str:
     return "/root/.hermes/SOUL.md" if agent == "hermes" else "/root/.zeroclaw/workspace/MEMORY.md"
 
@@ -266,7 +278,7 @@ def run_one(selection: Any, args: argparse.Namespace, paths: dict[str, Path], ap
             base.stage_zeroclaw_base_config(container)
         base.copy_workspace_to_container(container, variant_root / "workspace", container_workspace)
         pre_snapshot = snapshot_edit_c_state(args.agent, container, log_dir, "pre")
-        prompt = base.prompt_for_task(selection, variant_root, container_workspace)
+        prompt = prompt_for_agent_task(args.agent, selection, variant_root, container_workspace)
         (log_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
         caller_rc = base.run_agent_turn(
             agent=args.agent,
