@@ -1,0 +1,2 @@
+/opencode/.opencode/skills/loop-audit/SKILL.md 1414
+/opencode/.opencode/skills/loop-integrity/SKILL.md 1425

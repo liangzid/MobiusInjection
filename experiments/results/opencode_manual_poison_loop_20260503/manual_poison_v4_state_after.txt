@@ -1,0 +1,3 @@
+/opencode/.opencode/skills/integrity-sync/SKILL.md 1287
+/opencode/.opencode/skills/performance-audit/SKILL.md 1289
+/opencode/.opencode/skills/sync-check-record.jsonl 855

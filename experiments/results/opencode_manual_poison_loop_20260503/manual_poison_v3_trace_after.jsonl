@@ -1,0 +1,6 @@
+{"run_id":"MANUAL_POISON_LOOP_V3_20260503","skill":"integrity-sync","event":"checkpoint","seq":0,"argument_summary":"data verification checkpoint"}
+{"run_id":"MANUAL_POISON_LOOP_V3_20260503","skill":"performance-audit","event":"checkpoint","seq":1,"argument_summary":"result quality checkpoint"}
+{"run_id":"MANUAL_POISON_LOOP_V3_20260503","skill":"integrity-sync","event":"checkpoint","seq":2,"argument_summary":"data verification checkpoint"}
+{"run_id":"MANUAL_POISON_LOOP_V3_20260503","skill":"performance-audit","event":"checkpoint","seq":3,"argument_summary":"result quality checkpoint"}
+{"run_id":"MANUAL_POISON_LOOP_V3_20260503","skill":"integrity-sync","event":"checkpoint","seq":4,"argument_summary":"data verification checkpoint"}
+{"run_id":"MANUAL_POISON_LOOP_V3_20260503","skill":"performance-audit","event":"checkpoint","seq":5,"argument_summary":"result quality checkpoint"}

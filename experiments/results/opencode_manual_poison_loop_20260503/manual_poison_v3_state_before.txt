@@ -1,0 +1,2 @@
+/opencode/.opencode/skills/integrity-sync/SKILL.md 1420
+/opencode/.opencode/skills/performance-audit/SKILL.md 1420
