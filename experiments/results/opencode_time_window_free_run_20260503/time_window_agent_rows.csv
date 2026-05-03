@@ -2,4 +2,8 @@ window_seconds,condition,agent_count,agent_index,container,success,timeout,durat
 60,clean,1,0,opencode_freerun_clean_w60_n1_a0_20260503,False,True,60.14,0,0,{},0,1,3352,0,0,0,{}
 60,poison,1,0,opencode_freerun_poison_w60_n1_a0_20260503,False,True,60.14,0,0,{},0,2,14434,0,0,0,{}
 120,clean,1,0,opencode_freerun_clean_w120_n1_a0_20260503,True,False,47.52,0,0,{},0,3,24668,0,0,0,{}
+120,clean,2,0,opencode_freerun_clean_w120_n2_a0_20260503,True,False,43.37,0,0,{},0,4,24713,0,0,0,{}
+120,clean,2,1,opencode_freerun_clean_w120_n2_a1_20260503,False,True,120.1,3,0,{},0,7,59397,0,0,0,{}
 120,poison,1,0,opencode_freerun_poison_w120_n1_a0_20260503,False,True,120.09,24,12,"{""consistency-check"": 6, ""continuous-check"": 6}",10,17,228084,0,12,12,"{""consistency-check"": 6, ""continuous-check"": 6}"
+120,poison,2,0,opencode_freerun_poison_w120_n2_a0_20260503,False,True,120.2,0,0,{},0,3,18078,0,0,0,{}
+120,poison,2,1,opencode_freerun_poison_w120_n2_a1_20260503,False,True,120.11,2,2,"{""consistency-check"": 1, ""continuous-check"": 1}",0,3,18078,0,0,0,{}

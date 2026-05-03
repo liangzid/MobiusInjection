@@ -457,8 +457,8 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "window_seconds": window,
                 "condition": condition,
                 "agent_count": agent_count,
-                "agents_completed": sum(1 for row in group if row["success"]),
-                "agents_timed_out": sum(1 for row in group if row["timeout"]),
+                "agents_completed": sum(1 for row in group if as_bool(row["success"])),
+                "agents_timed_out": sum(1 for row in group if as_bool(row["timeout"])),
                 "max_duration_seconds": max(float(row["duration_seconds"]) for row in group),
                 "native_tool_calls": sum(int(row["native_tool_calls"]) for row in group),
                 "skill_tool_loads": sum(int(row["skill_tool_loads"]) for row in group),
@@ -468,6 +468,14 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return aggregate
+
+
+def as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    return bool(value)
 
 
 def write_table(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -489,6 +497,22 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def load_existing_rows(path: Path) -> list[dict[str, Any]]:
+    if not path.exists() or path.stat().st_size == 0:
+        return []
+    with path.open("r", newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def row_key(row: dict[str, Any]) -> tuple[int, str, int, int]:
+    return (
+        int(row["window_seconds"]),
+        str(row["condition"]),
+        int(row["agent_count"]),
+        int(row["agent_index"]),
+    )
 
 
 def specs_for(windows: list[int], agent_counts: list[int]) -> list[list[RunSpec]]:
@@ -549,9 +573,14 @@ def main() -> None:
     os.environ["OPENCODE_PROVIDER_NAME"] = "Ollama local proxy"
     os.environ["OPENCODE_API_KEY"] = "ollama-local"
 
-    all_rows: list[dict[str, Any]] = []
+    all_rows: list[dict[str, Any]] = load_existing_rows(ROOT / "time_window_agent_rows.csv")
     for group in specs_for(parse_csv_ints(args.windows), parse_csv_ints(args.agent_counts)):
+        existing_keys = {row_key(row) for row in all_rows}
+        group = [spec for spec in group if (spec.window_seconds, spec.condition, spec.agent_count, spec.agent_index) not in existing_keys]
+        if not group:
+            continue
         all_rows.extend(run_group(group))
+        all_rows = sorted(all_rows, key=row_key)
         aggregate = aggregate_rows(all_rows)
         write_csv(ROOT / "time_window_agent_rows.csv", all_rows)
         write_table(ROOT / "time_window_agent_rows.md", all_rows)

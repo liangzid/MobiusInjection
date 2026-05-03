@@ -1,0 +1,2 @@
+/opencode/.opencode/skills/consistency-check/SKILL.md 1601
+/opencode/.opencode/skills/continuous-check/SKILL.md 1582
