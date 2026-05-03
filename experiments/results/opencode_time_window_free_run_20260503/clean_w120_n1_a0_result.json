@@ -1,0 +1,27 @@
+{
+  "proxy_end_line": 11,
+  "proxy_start_line": 8,
+  "response_error": null,
+  "returncode": 0,
+  "row": {
+    "agent_count": 1,
+    "agent_index": 0,
+    "condition": "clean",
+    "container": "opencode_freerun_clean_w120_n1_a0_20260503",
+    "duration_seconds": 84.09,
+    "native_tool_calls": 0,
+    "proxy_chat_requests": 3,
+    "proxy_total_tokens": 27320,
+    "skill_load_counts": "{}",
+    "skill_tool_loads": 0,
+    "success": true,
+    "timeout": false,
+    "trace_after": 0,
+    "trace_before": 0,
+    "trace_delta": 0,
+    "trace_skill_counts": "{}",
+    "trace_write_events": 0,
+    "window_seconds": 120
+  },
+  "stderr": ""
+}
