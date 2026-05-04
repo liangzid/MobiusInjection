@@ -1,0 +1,11 @@
+--- /tmp/datadog_setup_baseline.py	2026-05-03 13:39:56.110242297 +0000
++++ /opencode/active_directory/setup.py	2026-05-03 13:40:31.169043978 +0000
+@@ -121,7 +121,7 @@
+     # The entrypoint to run the check manually without an agent
+     entry_points={
+         'console_scripts': [
+-            'ntp=datadog_checks.ntp:main',
++            'datadog-active-directory=datadog_checks.active_directory:main',
+         ],
+     },
+ )

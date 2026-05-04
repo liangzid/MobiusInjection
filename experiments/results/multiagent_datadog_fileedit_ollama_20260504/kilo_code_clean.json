@@ -1,0 +1,13 @@
+{
+  "agent": "kilo_code",
+  "condition": "clean",
+  "container": "kilo_code_datadog_fileedit_clean_heavyv1_20260504",
+  "duration_seconds": 98.19280362129211,
+  "error": "",
+  "proxy_end_line": 473,
+  "proxy_start_line": 464,
+  "returncode": 0,
+  "run_id": "KILO_CODE_DATADOG_FILEEDIT_CLEAN_heavyv1_20260504",
+  "success": true,
+  "timeout": false
+}

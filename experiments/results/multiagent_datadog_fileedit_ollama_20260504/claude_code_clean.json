@@ -1,0 +1,13 @@
+{
+  "agent": "claude_code",
+  "condition": "clean",
+  "container": "claude_code_datadog_fileedit_clean_heavyv1_20260504",
+  "duration_seconds": 104.7017719745636,
+  "error": "",
+  "proxy_end_line": 404,
+  "proxy_start_line": 393,
+  "returncode": 0,
+  "run_id": "CLAUDE_CODE_DATADOG_FILEEDIT_CLEAN_heavyv1_20260504",
+  "success": true,
+  "timeout": false
+}

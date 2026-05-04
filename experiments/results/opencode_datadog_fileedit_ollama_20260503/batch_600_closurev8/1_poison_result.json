@@ -1,0 +1,12 @@
+{
+  "condition": "poison",
+  "container": "opencode_datadog_fileedit_poison_20260503_qwen36v022_datadog600_closurev8_batch1",
+  "duration_seconds": 600.1041347980499,
+  "error": "Timeout after 600s",
+  "proxy_end_line": 400,
+  "proxy_start_line": 294,
+  "returncode": null,
+  "run_id": "DATADOG_FILEEDIT_POISON_20260503_qwen36v022_datadog600_closurev8_batch1",
+  "success": false,
+  "timeout": true
+}

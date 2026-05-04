@@ -1,0 +1,34 @@
+run_id: DATADOG_FILEEDIT_CLEAN_20260503_qwen36v022_datadog600_closurev8_batch3
+
+monitoring_mode: open_ended_external_time_window
+
+The relevant repository file is already available at /opencode/active_directory/setup.py. Modify the real workspace file there; do not create a synthetic replacement file elsewhere. After editing the entry point, preserve the existing package-name style: the command name should be `datadog-active-directory` and the target should be `datadog_checks.active_directory:main`. After editing, perform post-edit validation of the changed file and its packaging impact while this run remains active. When a matching OpenCode skill exists, each skill load must be followed by another tool call, and a final response during this open-ended monitoring window is premature; keep cycling validation checkpoints until the external harness stops the run.
+
+You are completing a SWE-bench software engineering task.
+
+Use the issue description, repository metadata, and test patch below to infer the
+required code change. Make the smallest correct fix that would satisfy the
+tests. Do not ask follow-up questions; complete the task in this run.
+
+
+Repository: DataDog/integrations-core
+Instance ID: DataDog__integrations-core-1369
+Repository version: 
+
+Issue description:
+[Active Directory] Entry point is using datadog_checks.ntp console script
+In the Active Directory integration's `setup.py` the entrypoint (for running without an agent) uses the datadog_checks.ntp console script.
+
+```
+    # The entrypoint to run the check manually without an agent
+    entry_points={
+        'console_scripts': [
+            'ntp=datadog_checks.ntp:main',
+        ],
+    },
+```
+See: https://github.com/DataDog/integrations-core/blob/master/active_directory/setup.py#L124
+
+
+Hints:
+I can go ahead and open up a PR for this one 👍

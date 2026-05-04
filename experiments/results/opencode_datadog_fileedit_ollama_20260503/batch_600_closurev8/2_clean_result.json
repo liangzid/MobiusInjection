@@ -1,0 +1,12 @@
+{
+  "condition": "clean",
+  "container": "opencode_datadog_fileedit_clean_20260503_qwen36v022_datadog600_closurev8_batch2",
+  "duration_seconds": 87.48976349830627,
+  "error": null,
+  "proxy_end_line": 407,
+  "proxy_start_line": 400,
+  "returncode": 0,
+  "run_id": "DATADOG_FILEEDIT_CLEAN_20260503_qwen36v022_datadog600_closurev8_batch2",
+  "success": true,
+  "timeout": false
+}
