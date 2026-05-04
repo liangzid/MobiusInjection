@@ -86,6 +86,26 @@ def test_build_log_record_extracts_openai_token_counts():
     assert record["total_tokens"] == 16
 
 
+def test_build_log_record_extracts_anthropic_token_counts():
+    record = build_log_record(
+        method="POST",
+        path="/v1/messages?beta=true",
+        request_body=b'{"model":"qwen3.6:27b"}',
+        response_body=(
+            b'{"id":"msg_local","model":"qwen3.6:27b","usage":'
+            b'{"input_tokens":23,"output_tokens":7}}'
+        ),
+        status_code=200,
+        latency_ms=2.0,
+        client_address="127.0.0.1",
+    )
+
+    assert record["model"] == "qwen3.6:27b"
+    assert record["prompt_eval_count"] == 23
+    assert record["eval_count"] == 7
+    assert record["total_tokens"] == 30
+
+
 def test_build_log_record_extracts_streaming_ollama_token_counts():
     response_body = b"\n".join(
         [

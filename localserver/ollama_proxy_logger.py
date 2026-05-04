@@ -90,6 +90,8 @@ def token_counts(response_json: Any | None) -> dict[str, int | None]:
     prompt_count, eval_count, total = ollama_token_counts(response_json)
     if prompt_count is None and eval_count is None and total is None:
         prompt_count, eval_count, total = openai_token_counts(response_json)
+    if prompt_count is None and eval_count is None and total is None:
+        prompt_count, eval_count, total = anthropic_token_counts(response_json)
     return {
         "prompt_eval_count": prompt_count,
         "eval_count": eval_count,
@@ -122,6 +124,18 @@ def openai_token_counts(response_json: dict[str, Any]) -> tuple[int | None, int 
         eval_count if isinstance(eval_count, int) else None,
         total if isinstance(total, int) else None,
     )
+
+
+def anthropic_token_counts(response_json: dict[str, Any]) -> tuple[int | None, int | None, int | None]:
+    usage = response_json.get("usage")
+    if not isinstance(usage, dict):
+        return None, None, None
+    prompt_count = usage.get("input_tokens")
+    eval_count = usage.get("output_tokens")
+    prompt = prompt_count if isinstance(prompt_count, int) else None
+    completion = eval_count if isinstance(eval_count, int) else None
+    total = prompt + completion if prompt is not None and completion is not None else None
+    return prompt, completion, total
 
 
 def model_name(request_json: Any | None, response_json: Any | None) -> str | None:
