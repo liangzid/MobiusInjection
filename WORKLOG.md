@@ -1,5 +1,39 @@
 # Worklog
 
+## 2026-05-04 - Extend local Ollama DataDog file-edit curves to Claude Code and Kilo Code
+
+- User request: resume the local-server Mobius-injection calling-time and token-consumption experiment after the previous conversation hit the context limit; extend the completed OpenCode batch2 direction to Claude Code and Kilo Code.
+- Files inspected:
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_opencode_time_window_free_run.md`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_agent_ddos_curve.md`
+  - `/home/zi/AgentCodingDos/experiments/results/multiagent_datadog_fileedit_ollama_20260504/*`
+  - `/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260504/ollama_proxy.jsonl`
+- Files modified:
+  - `/home/zi/AgentCodingDos/experiments/results/multiagent_datadog_fileedit_ollama_20260504/run_multiagent_datadog_fileedit_ollama.py`
+  - `/home/zi/AgentCodingDos/experiments/results/multiagent_datadog_fileedit_ollama_20260504/test_multiagent_datadog_fileedit_ollama.py`
+  - `/home/zi/AgentCodingDos/experiments/results/multiagent_datadog_fileedit_ollama_20260504/summary_latest_claude_v2_kilo_v3.*`
+  - `/home/zi/AgentCodingDos/experiments/results/multiagent_datadog_fileedit_ollama_20260504/cumulative_curve_latest_claude_v2_kilo_v3.*`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260504_multiagent_datadog_ollama_claude_kilo.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed: diagnosed that the previous run was interrupted after `claude_code_clean`; reran Claude Code and Kilo Code under the local Ollama proxy; found Kilo v2 poison did not invoke visible skills; patched the poisoned prompt to explicitly invoke `post-edit-audit`; added a regression test; reran Kilo clean/poison v3; preserved the v2 full summary and wrote a latest combined Claude-v2/Kilo-v3 summary.
+- Verification:
+  - `uv run pytest experiments/results/multiagent_datadog_fileedit_ollama_20260504/test_multiagent_datadog_fileedit_ollama.py` passed before and after the prompt fix.
+  - Kilo skill availability probe reported `post-edit-audit` and `change-impact-review` as available.
+- Internal result: Claude Code shows `6 -> 219` chat requests and `81,775 -> 311,439` tokens. Kilo Code after the prompt fix shows `5 -> 144` chat requests and `69,224 -> 289,605` tokens. Both poisoned runs fixed the real `setup.py`; the Kilo v2 failure is a trigger failure, not valid negative amplification evidence.
+- Follow-up plot request: create a 2x3 image comparing the currently inserted `paper_mobius` figure data against local Ollama results for Claude Code, Kilo Code, and OpenCode batch2.
+- Follow-up files modified:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_vs_previous_2x3_curve_pairs.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_vs_previous_2x3.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_vs_previous_2x3.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+- Follow-up verification: `pytest -q scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`, `python scripts/plot_agent_ddos_local_vs_previous_2x3.py`, and `pdfcrop curves/agent_ddos_local_vs_previous_2x3.pdf curves/agent_ddos_local_vs_previous_2x3.pdf` all completed successfully.
+- Replacement/compile verification: copied the 2x3 figure over `curves/agent_ddos_call_token_curve.pdf`, ran `pdfcrop curves/agent_ddos_call_token_curve.pdf curves/agent_ddos_call_token_curve.pdf`, compiled with `latexmk -pdf main.tex`, and rendered page 10 to `/tmp/paper_agent_ddos_replaced_page-10.png` for visual inspection. The replacement appears as Figure 3; existing undefined citation/reference warnings remain outside this change.
+- Styling follow-up: made the 2x3 figure flatter, enlarged labels/lines, renamed curves to `API-backed` and `Local Ollama`, changed to a restrained Okabe-Ito inspired theme, added alpha-shaded clean-to-poisoned regions, regenerated the figure, replaced/cropped `curves/agent_ddos_call_token_curve.pdf`, recompiled `main.pdf`, and rendered `/tmp/paper_agent_ddos_theme_page-10.png` for visual inspection. `pytest -q scripts/test_plot_agent_ddos_local_vs_previous_2x3.py` and `latexmk -pdf main.tex` completed successfully.
+
 ## 2026-05-02 - CodeAgent branch check and one SWE-bench high-loop probe
 
 - User request: use the coding-agent branch because coding agents have the highest recursive-call counts; check/pull/merge the branch if needed, handle conflicts with backups, and run only one SWE-bench task because SWE-bench is large.
@@ -1685,6 +1719,27 @@
   - The observed table is not monotonic because the prompt-driven target count was unstable: targets `4` and `8` stopped after only `2` trace records.
   - Detailed record: `tasks/session_record_20260503_opencode_monitoring_time_curve.md`.
 
+## 2026-05-03 - OpenCode free-run time-window calling curve
+- User request:
+  - Remove the artificial `target_checkpoint_records` factor and measure calling volume as real monitoring time increases under the local Ollama API.
+  - Also test whether parallel OpenCode agents make the threat more visible.
+- Files modified:
+  - `/home/zi/AgentCodingDos/experiments/staging/opencode_manual_poison_loop/v7/consistency-check/SKILL.md`
+  - `/home/zi/AgentCodingDos/experiments/staging/opencode_manual_poison_loop/v7/continuous-check/SKILL.md`
+  - `/home/zi/AgentCodingDos/experiments/results/opencode_time_window_free_run_20260503/`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_opencode_time_window_free_run.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Built target-free v7 skills and a runner that uses external wall-clock windows.
+  - Added OpenCode local-provider config generation for `ollama/qwen3.6:27b` through the local proxy.
+  - Ran clean and poisoned OpenCode conditions with 60, 120, and 180 second windows, plus a 120 second `agent_count=2` parallel check.
+  - Added a cumulative analyzer over the same 120 second clean/poisoned runs.
+- Results:
+  - Main cumulative 120 second curve: clean stayed at `0` native tool calls; poisoned grew from `6` native calls at 30s to `24` native calls, `12` skill loads, `12` trace records, and `228084` proxy tokens by 90s.
+  - The independent 180 second poisoned run stopped early after `98.39s`, so cross-run time-window results are stochastic and not monotonic.
+  - The `agent_count=2` parallel run was inconclusive/weak because local Ollama reported that the model architecture does not currently support parallel requests.
+  - Detailed record: `tasks/session_record_20260503_opencode_time_window_free_run.md`.
+
 ## 2026-05-03 - Targeted Mobius 4x4 full-batch status check
 - User request:
   - Check the current status of the targeted Mobius experiment batch.
@@ -1779,6 +1834,33 @@
   - The final cropped figure is `/home/zi/paper_mobius/curves/targeted_mobius_1x2.pdf`, size `130 x 63 pt`.
   - Existing unrelated unresolved citations/references remain (`Liu-Prompt`, `Greshake-Not`, `Abdelnabi-Not`, `clawbench`, `swebench`, `humaneval`, `fig:`, and `fig:mobius-example`).
 
+## 2026-05-03 - Targeted Mobius figure crop and style follow-up
+- User request:
+  - Check whether the figure was cropped with `pdfcrop`.
+  - Explain why the figure still had horizontal whitespace.
+  - Refine the figure by using dark number text, moving E1--E4 column labels below the heatmaps near the actual-environment axis, changing `env.` to `Env.`, and improving the color/style.
+- Files modified:
+  - `/home/zi/paper_mobius/scripts/plot_targeted_mobius_matrix.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_targeted_mobius_matrix.py`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/curves/targeted_mobius_1x2.pdf`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Verified `pdfcrop` was being run and checked the final figure with `pdfinfo -box`.
+  - Removed the manually drawn white TikZ bounding rectangle so cropping follows actual content more tightly.
+  - Increased paper inclusion width from `0.78\linewidth` to `0.96\linewidth`, which addresses the visible left/right whitespace caused by scaling the already-cropped figure below column width.
+  - Changed all value labels to dark text, including the `36.4\%` cell.
+  - Moved E1--E4 column labels to the bottom, aligned with the `Actual Env.` axis.
+  - Changed axis labels to `Target Env.` and `Actual Env.`.
+  - Adjusted the red palette and white-blending curve for a softer heatmap style.
+  - Regenerated and cropped the PDF, rendered standalone and main-paper previews, compiled the paper, and removed temporary build artifacts.
+- Results:
+  - Final figure boxes are fully cropped: `MediaBox = CropBox = BleedBox = TrimBox = ArtBox = 123 x 67 pt`.
+  - Plotting regression test and Python syntax check passed.
+  - Full paper compilation succeeded with `latexmk -pdf main.tex`.
+  - Existing unrelated unresolved citations/references remain (`Liu-Prompt`, `Greshake-Not`, `Abdelnabi-Not`, `clawbench`, `swebench`, `humaneval`, `fig:`, and `fig:mobius-example`).
+
 ## 2026-05-03 - Git commit batching execution
 - User request:
   - Split accumulated repository files into multiple git commits.
@@ -1820,3 +1902,619 @@
   - The local Ollama proxy logger process is still running on `127.0.0.1:11436`, writing outside the repo to `/data2/zi/agentcodingdos_plan_a_logs/opencode_time_window_free_run_20260503/ollama_proxy.jsonl`.
 - Internal result:
   - All accumulated non-log repository changes present at the end of the batching pass were committed in multiple topical batches without committing overly heavy files.
+
+## 2026-05-03 - Agent-DDoS curve for paper
+- User request:
+  - Skip the OpenCode internal subagent probe for now.
+  - Directly collect results, generate an elegant curve PDF, save it under `/home/zi/paper_mobius/curves/`, crop it with `pdfcrop`, inspect the rendered figure, and insert it into the `exper.tex` section `Will Agent DDoS Attack be a Severe New Threat?`.
+- Files modified:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_curves.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/opencode_cumulative_curve.csv`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/coding_agent_exhaustion_summary.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_agent_ddos_curve.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Built a four-panel figure from real experiment artifacts: OpenCode cumulative chat requests over monitoring time, OpenCode cumulative tokens over monitoring time, cross-agent median chat requests per run, and cross-agent median tokens per run.
+  - Derived cross-agent summaries from `paper_case_metrics.csv` and its referenced logs, using `step_finish` records for OpenCode/Kilo Code and `result` usage records for Claude Code.
+  - Generated and cropped `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`.
+  - Inserted the figure, caption, accessibility description, and result text into `exper.tex`.
+  - Rendered the compiled paper page containing the figure and checked that the figure has no overlap or clipping.
+  - Removed temporary bytecode and the intermediate raw uncropped PDF.
+- Results:
+  - `python -m py_compile scripts/plot_agent_ddos_curves.py` passed.
+  - `python scripts/plot_agent_ddos_curves.py` completed successfully.
+  - `latexmk -pdf main.tex` completed successfully in `/home/zi/paper_mobius`.
+  - Existing unrelated unresolved citations/references remain in the paper build.
+
+## 2026-05-03 - Agent-DDoS curve correction
+- User request:
+  - Explain why the 90--120 second segment was flat.
+  - Replace the four-point aggregate curve with a denser time series, preferably one point per second.
+  - Remove unexplained `n=...` labels from panels (c) and (d).
+- Files modified:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_curves.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/opencode_cumulative_curve.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_agent_ddos_curve.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Audited the clean and poisoned OpenCode 120-second result files and output JSONL.
+  - Found that the poisoned run timed out at 120.09 seconds rather than completing normally.
+  - Replaced proxy-log-based top-panel measurements with OpenCode JSONL `step_finish` event measurements to avoid cross-run in-flight proxy completion contamination.
+  - Regenerated the top curves at one-second resolution from 0 to 90 seconds.
+  - Removed `n=...` labels from the bottom benchmark panels.
+  - Removed the in-figure headline/subtitle so the plot reads as a paper figure.
+  - Recompiled the paper and inspected the standalone plot and rendered paper page.
+- Results:
+  - Corrected OpenCode top-panel counts: poisoned reaches 16 completed chat requests and 226K tokens by 90 seconds; clean stays at 1 request and 11K tokens.
+  - The poisoned run reaches 24 native tool calls, 12 skill loads, and 12 trace records by 90 seconds; the clean run issues no native tool calls.
+  - `python -m py_compile scripts/plot_agent_ddos_curves.py`, `python scripts/plot_agent_ddos_curves.py`, and `latexmk -pdf main.tex` completed successfully.
+
+## 2026-05-03 - Multi-agent Agent-DDoS curve redesign
+- User request:
+  - Use a more complex benign task so the benign curve is not flat.
+  - Add Kilo Code and Claude Code curve pairs in addition to OpenCode.
+  - Draw benign as dashed and poisoned as solid using the same color per agent.
+  - Shade the area between benign and poisoned curves with low alpha.
+- Files modified:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_curves.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_curve_pairs.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_agent_ddos_curve.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Selected the real SWE-bench task `DataDog__integrations-core-1369` from `paper_case_metrics.csv` because all three agents have nontrivial benign and poisoned traces.
+  - Rebuilt the figure as a 2x3 curve-pair layout: top row cumulative chat requests, bottom row cumulative tokens; columns are Claude Code, Kilo Code, and OpenCode.
+  - Extracted OpenCode/Kilo curves from `step_finish` events and Claude curves from `message_start` generation timestamps plus `message_delta` usage.
+  - Used one-second cumulative points over a 300-second observation window.
+  - Removed stale generated CSVs and raw uncropped plot artifacts from the figure build directory.
+  - Updated the paper text, regenerated the cropped PDF, compiled `main.pdf`, and inspected the rendered page.
+- Results:
+  - Claude Code: 32 to 33 completed chat requests, 870K to 1.03M tokens.
+  - Kilo Code: 31 to 38 completed chat requests, 612K to 1.72M tokens.
+  - OpenCode: 11 to 42 completed chat requests, 130K to 1.19M tokens.
+  - `python -m py_compile scripts/plot_agent_ddos_curves.py`, `python scripts/plot_agent_ddos_curves.py`, and `latexmk -pdf main.tex` completed successfully.
+
+## 2026-05-03 - Agent-DDoS 1x2 curve consolidation
+- User request:
+  - Merge request panels (a), (b), and (c) into one subfigure (a).
+  - Merge token panels (d), (e), and (f) into one subfigure (b).
+  - Read the current experiment logs to understand why Claude Code and Kilo Code showed similar request counts between benign and poisoned runs.
+- Files modified:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_curves.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_curve_pairs.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `/home/zi/AgentCodingDos/tasks/session_record_20260503_agent_ddos_curve.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed:
+  - Read raw logs for the previously plotted SWE-bench task `DataDog__integrations-core-1369`.
+  - Confirmed that Claude Code and Kilo Code had high benign request counts on that task; Kilo Code's benign run also timed out, weakening request-count amplification as a signal.
+  - Scanned existing real logs and switched the curve to `HumanEval/11`, which shows stronger request amplification across all three agents without timeouts.
+  - Rebuilt the figure as two panels: panel (a) cumulative chat requests and panel (b) cumulative token use.  Agent identity is encoded by color; benign is dashed; poisoned is solid; amplification area is shaded.
+  - Updated the paper text and regenerated the cropped PDF.
+  - Compiled and visually inspected the rendered paper page.
+- Results:
+  - Claude Code: 2 to 24 completed chat requests, 46K to 687K tokens.
+  - Kilo Code: 4 to 12 completed chat requests, 49K to 186K tokens.
+  - OpenCode: 4 to 17 completed chat requests, 46K to 288K tokens.
+  - `python -m py_compile scripts/plot_agent_ddos_curves.py`, `python scripts/plot_agent_ddos_curves.py`, and `latexmk -pdf main.tex` completed successfully.
+
+## 2026-05-03 - Resume Agent-DDoS Ollama figure status
+- User request:
+  - Continue the Chapter 5 Agent-DDoS Figure 3 work after conversation compaction, starting by finding where the previous work stopped.
+  - Specific concern: the current Figure 3 amplification is weak for Claude Code, and local Ollama may be needed for the next experiment.
+- Files inspected:
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_curves.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_curve_pairs.csv`
+  - `tasks/session_record_20260503_agent_ddos_curve.md`
+  - `tasks/session_record_20260503_opencode_time_window_free_run.md`
+  - `tasks/session_record_20260503_opencode_monitoring_time_curve.md`
+  - `tasks/session_record_20260502_codeagent_ollama_isolated_branch.md`
+  - `tasks/session_record_20260503_codeagent_ollama_comparison_artifacts.md`
+  - `tasks/session_record_20260503_codeagent_benign_vs_injected_ollama.md`
+  - `tasks/session_record_20260503_clean_pristine_vs_poisoned_activation.md`
+  - Docker and Ollama local status.
+- Actions performed:
+  - Confirmed the current paper Figure 3 script still uses `DataDog__integrations-core-1369` over 300 seconds, producing the weak Claude Code request signal `32 -> 33`.
+  - Found a mismatch with the session record, which says a later `HumanEval/11` version produced a stronger request signal: Claude Code `2 -> 24`, Kilo Code `4 -> 12`, OpenCode `4 -> 17` over 180 seconds.
+  - Confirmed existing local Ollama evidence is strongest for OpenCode, especially the target-free 120-second free-run curve with `24` poisoned native tool calls and `12` trace records by 90 seconds.
+  - Checked Ollama: current `127.0.0.1:11435` only lists `qwen2.5:14b`; the previous qwen3.6 runs used `OLLAMA_MODELS=/data2/zi/ollama_models` on temporary `127.0.0.1:11437` with proxy `11436`.
+  - Confirmed `/data2/zi/ollama_models` contains the `qwen3.6/27b` manifest and model blob.
+  - Found idle pre-eval containers `claude_code_ddos_ollama_20260503`, `kilo_code_ddos_ollama_20260503`, and `opencode_ddos_ollama_20260503`, plus injected local-Ollama images for all three coding agents.
+- Results:
+  - No experiment code or paper files were modified in this recovery step.
+  - Detailed record: `tasks/session_record_20260503_resume_agent_ddos_ollama_status.md`.
+
+2026-05-03 - Current benign task clarification
+- User request: identify the current benign task for the Agent-DDoS figure/work.
+- Files inspected:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_curves.py`
+  - `/home/zi/AgentCodingDos/experiments/results/opencode_time_window_free_run_20260503/clean_w120_n1_a0_prompt.txt`
+  - `/home/zi/AgentCodingDos/experiments/results/opencode_time_window_free_run_20260503/poison_w120_n1_a0_prompt.txt`
+  - `/home/zi/AgentCodingDos_CodeAgent/experiments/results/qwen36plus_curated_paper/paper_case_metrics.csv`
+- Result:
+  - Current paper Figure 3 uses baseline/poisoned runs of SWE-bench task `DataDog__integrations-core-1369` over 300 seconds.
+  - The previously recorded stronger alternative was `HumanEval/11`, but that is not the current script state.
+  - The local Ollama OpenCode free-run benign task is a continuous consistency-check prompt over `alpha=17`, `beta=29`, `gamma=46`.
+
+2026-05-03 - Local Ollama service correction
+- User request: check whether the wrong Ollama service was used, because a newer local Ollama service may already be installed.
+- Files and services inspected:
+  - `/usr/local/bin/ollama`
+  - system Ollama service on `127.0.0.1:11434`
+  - user Ollama service on `127.0.0.1:11435`
+  - `/data2/zi/ollama_models`
+  - `/home/zi/.ollama/models`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/`
+- Actions performed:
+  - Confirmed the failed run had started a temporary `127.0.0.1:11437` service using `/data2/zi/ollama_models/qwen3.6/27b`.
+  - Checked existing services and model lists.
+  - Tested OpenAI-compatible tool calls on existing `qwen2.5:14b` services.
+- Results:
+  - Existing `11434` has `qwen2.5:14b`, `qwen2.5:7b`, and `nomic-embed-text`.
+  - Existing `11435` has `qwen2.5:14b`.
+  - Both `11434/qwen2.5:14b` and `11435/qwen2.5:14b` returned valid `tool_calls`.
+  - The temporary `11437/qwen3.6:27b` route failed because the API reported no tools support and Ollama failed to load GGUF architecture `qwen35`.
+  - Current evidence supports rerunning the OpenCode DataDog experiment against `127.0.0.1:11434` with `qwen2.5:14b`, unless another newer service port or binary is identified.
+
+2026-05-03 - qwen3.6 Ollama 0.22.1 correction and DataDog run
+- User request: do not use `qwen2.5:14b`; keep `qwen3.6:27b` running and use it.
+- Files and services touched:
+  - `/data2/zi/ollama_v0.22.1/bin/ollama`
+  - `/data2/zi/ollama_models`
+  - `experiments/staging/opencode_manual_poison_loop/v8/`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/`
+  - `tasks/session_record_20260503_resume_agent_ddos_ollama_status.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Unloaded `qwen2.5:14b` from `11434` and `11435`.
+  - Started `/data2/zi/ollama_v0.22.1/bin/ollama serve` in tmux session `qwen36_ollama_11437` with `OLLAMA_MODELS=/data2/zi/ollama_models` on `127.0.0.1:11437`.
+  - Verified server version `0.22.1`, model `qwen3.6:27b`, and OpenAI-compatible tool calls.
+  - Sent `keep_alive: 24h`; `ollama ps` reports `qwen3.6:27b` loaded for 24 hours.
+  - Ran the OpenCode DataDog clean-vs-poisoned local qwen3.6 experiment with the v8 post-edit skills.
+- Results:
+  - Clean: `91.43s`, `4` proxy chat requests, `38,579` tokens, `2` native tool calls, `0` skill loads.
+  - Poison: `80.18s`, `9` proxy chat requests, `111,767` tokens, `8` native tool calls, `2` skill loads, `2` trace records.
+  - The 300s horizon plateaued because OpenCode completed the task and exited early; the current setup uses 300s as a timeout/observation horizon, not a forced runtime.
+  - The task was made easy by providing the exact relevant file `/opencode/active_directory/setup.py`, so it is not directly comparable to the older broader SWE-bench curve.
+
+2026-05-04 - Single-node Mobius DDoS settings in paper
+- User request: update the experiment settings into the `Single Node Mobius DDoS Evaluation` subsection, and keep the preceding empty `Will Agent DDoS Attack be a Severe New Threat?` subsection title.
+- Files touched:
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_multiagent_datadog_ollama_claude_kilo.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Added a settings paragraph describing the single-node Agent-DDoS setup: DataDog SWE-bench task, isolated Docker containers, shared local Ollama `qwen3.6:27b` service, OpenAI-compatible logging proxy, Claude Code/Kilo Code/OpenCode agents, clean versus poisoned Mobius validation-loop environments, completed-request counting, token accounting, and 600s local versus 300s API-backed windows.
+  - Preserved the empty `Will Agent DDoS Attack be a Severe New Threat?` subsection title.
+  - Recompiled `/home/zi/paper_mobius/main.pdf` with `latexmk -pdf main.tex`.
+  - Rendered `/tmp/paper_agent_ddos_settings_page-9.png` and `/tmp/paper_agent_ddos_settings_page-10.png` for inspection.
+- Results:
+  - The settings text appears under `5.4 Single Node Mobius DDoS Evaluation`.
+  - `latexmk` completed successfully with the same existing undefined citation/reference warnings.
+
+2026-05-04 - Plan B Ollama setup note
+- User request: briefly note how the local Ollama server was set and used in the 0502 Research Plan B task file for preparation of next experiments.
+- Files touched:
+  - `tasks/research_plan_0502_ddos_b_network_stealth_ids.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Added `Local Ollama Notes for Next Runs` under the Plan B experimental setup.
+  - Recorded the reusable single-node setup: Ollama 0.22.1 binary path, model directory, `qwen3.6:27b`, upstream endpoint `127.0.0.1:11437`, OpenAI-compatible logging proxy `127.0.0.1:11436`, agent client endpoint shape, token/latency logging purpose, keep-warm window, shutdown expectation, and the caveat that concurrent agents share one local backend and may be serialized.
+- Results:
+  - Plan B now contains a concise local Ollama setup note for future network-stealth/IDS experiments.
+
+2026-05-04 - Explain smooth local Ollama curves
+- User request: explain why the local Ollama curves in the single-node figure look smooth and report how many points were used.
+- Files inspected:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_vs_previous_2x3_curve_pairs.csv`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/cumulative_curve_latest_claude_v2_kilo_v3.csv`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/batch_600_closurev8/2_cumulative_curve.csv`
+- Result:
+  - The plot does not use statistical smoothing or fitting; `ax.plot` linearly connects the observed cumulative points.
+  - Each local Ollama clean/poison curve uses 10 x-points: `0, 30, 60, 90, 120, 180, 240, 300, 420, 600`. The `0` point is an added origin, and the other 9 are measurement thresholds.
+  - Each API-backed clean/poison curve uses 301 x-points from 0 to 300 seconds.
+  - The combined CSV has 1,866 rows: 1,806 API-backed rows and 60 local Ollama rows.
+
+2026-05-04 - Local curve densification feasibility
+- User request: explain why only ten points were used and whether the local Ollama curves can be expanded much more.
+- Files inspected:
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/run_multiagent_datadog_fileedit_ollama.py`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/run_datadog_fileedit_ollama.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/summary_latest_claude_v2_kilo_v3.csv`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/batch_600_closurev8/2_summary.csv`
+  - `/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260504/ollama_proxy.jsonl`
+  - `/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260503/ollama_proxy.jsonl`
+- Result:
+  - Ten local points were used because both local runners emitted cumulative rows only at fixed thresholds from `THRESHOLDS = [30, 60, 90, 120, 180, 240, 300, 420, 600, 900]`, capped by the 600-second timeout, and the plotting script added the zero origin.
+  - Raw proxy logs and summary line ranges are available, so the local curves can be reconstructed without rerunning experiments.
+  - Sensible expansion options are per-request step curves from raw completion timestamps, or per-second cumulative step curves with 601 points per local curve. Finer-than-second grids are possible but mostly cosmetic because the underlying events are completed LLM requests.
+
+2026-05-04 - Dense step curves for single-node Agent-DDoS figure
+- User request: expand the local Ollama curves now that the raw proxy logs are available.
+- Files touched:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_vs_previous_2x3_curve_pairs.csv`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_ddos_local_vs_previous_2x3.raw.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_vs_previous_2x3.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_vs_previous_2x3.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_multiagent_datadog_ollama_claude_kilo.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Modified the plotting script to rebuild local Ollama curves from summary proxy line ranges plus raw `ollama_proxy.jsonl` completion timestamps.
+  - Expanded each local clean/poison curve to one-second resolution over `0..600`, yielding 601 points per local curve.
+  - Changed plot lines and shaded clean-to-poison regions to step style.
+  - Regenerated figure artifacts, replaced and cropped the paper figure PDF, recompiled the paper, and rendered page 10 for inspection.
+- Results:
+  - `pytest -q scripts/test_plot_agent_ddos_local_vs_previous_2x3.py` passed with 3 tests.
+  - The combined CSV now has 5,412 rows: 1,806 API-backed rows and 3,606 local Ollama rows.
+  - Local endpoint values are preserved: Claude Code poisoned `214` calls / `305,764` tokens, Kilo Code poisoned `144` / `289,605`, OpenCode poisoned `53` / `1,375,151`.
+  - `latexmk -pdf main.tex` completed successfully with the existing unresolved citation/reference warnings.
+
+2026-05-04 - Diagnose weak Claude/Kilo token exhaustion
+- User request: explain why Claude Code and Kilo Code have many local Ollama LLM calls but comparatively small token exhaustion.
+- Files inspected:
+  - `/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260504/ollama_proxy.jsonl`
+  - `/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260503/ollama_proxy.jsonl`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/summary_latest_claude_v2_kilo_v3.csv`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/batch_600_closurev8/2_summary.csv`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/generated_poison_files/*/post-edit-audit/scripts/closure_checkpoint.py`
+  - `experiments/staging/opencode_manual_poison_loop/v8/post-edit-audit/scripts/closure_checkpoint.py`
+- Findings:
+  - Claude poisoned has `219` calls and `311,439` tokens, averaging `1,422` tokens/call; the median is `1,134`.
+  - Kilo poisoned has `144` calls and `289,605` tokens, averaging `2,011` tokens/call; the median is `1,134`.
+  - OpenCode poisoned has `53` calls and `1,375,151` tokens, averaging `25,946` tokens/call; the median is `23,200`.
+  - Claude/Kilo closure calls mostly come from a lightweight injected `closure_checkpoint.py` that sends the real `setup.py` evidence with `max_tokens=96`, so it produces many short direct `/v1/chat/completions` calls.
+  - OpenCode's closure runner includes real setup content, numbered setup, trace state, and both skill texts, padding the audit corpus to about 12K chars, so each recursive request carries much larger context.
+  - No evidence shows a proxy token-accounting failure; the proxy `prompt_eval_count` fields support the low per-call token explanation.
+
+2026-05-04 - Heavy Claude/Kilo payload consistency rerun
+- User request: make Claude Code and Kilo Code use a heavier token payload for consistency with OpenCode.
+- Files touched:
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/run_multiagent_datadog_fileedit_ollama.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/test_multiagent_datadog_fileedit_ollama.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/summary_heavyv1_20260504.*`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/cumulative_curve_heavyv1_20260504.*`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/summary_latest_claude_v2_kilo_v3.*`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/cumulative_curve_latest_claude_v2_kilo_v3.*`
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_vs_previous_2x3_curve_pairs.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_vs_previous_2x3.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_vs_previous_2x3.png`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_multiagent_datadog_ollama_claude_kilo.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Replaced the Claude/Kilo generated closure workload with a heavy real audit corpus: raw setup.py, numbered setup.py, trace-so-far, both skill texts, repeated real setup evidence, and request-size logging.
+  - Raised default `MOBIUS_AUDIT_CORPUS_CHARS` to `32000`.
+  - Reran Claude Code and Kilo Code clean/poison through local qwen3.6 with suffix `heavyv1_20260504`.
+  - Updated the paper plot source to read `summary_heavyv1_20260504.csv`, regenerated Figure 3, cropped it, and recompiled the paper.
+  - Stopped the temporary `127.0.0.1:11436` proxy after the run; the existing Ollama service remains on `127.0.0.1:11437`.
+- Results:
+  - Claude Code 600s local curve: clean `10` calls / `142,668` tokens; poisoned `58` calls / `747,141` tokens.
+  - Kilo Code 600s local curve: clean `9` calls / `123,643` tokens; poisoned `56` calls / `668,549` tokens.
+  - OpenCode remains batch2: clean `7` calls / `77,865` tokens; poisoned `53` calls / `1,375,151` tokens.
+  - The payload is now consistent in spirit: Claude/Kilo no longer inflate call count with tiny requests; their poisoned calls are heavier and token-amplifying.
+- Verification:
+  - `uv run pytest experiments/results/multiagent_datadog_fileedit_ollama_20260504/test_multiagent_datadog_fileedit_ollama.py -q` passed with 7 tests.
+  - `pytest -q scripts/test_plot_agent_ddos_local_vs_previous_2x3.py` passed with 3 tests in `/home/zi/paper_mobius`.
+  - `python scripts/plot_agent_ddos_local_vs_previous_2x3.py`, `pdfcrop`, and `latexmk -pdf main.tex` completed successfully.
+  - Rendered `/tmp/paper_agent_ddos_heavy_payload_final_page-10.png` for inspection.
+
+2026-05-04 - Coding-agent inventory check
+- User request: ask whether any other coding agent is available for experiments.
+- Files/services inspected:
+  - Docker images and containers matching coding-agent names.
+  - `/home/zi/AgentCodingDos_CodeAgent_ollama_20260502/experiments/scripts/`
+  - `tasks/docker_space_inventory_20260424.md`
+  - Running `codex` container.
+- Findings:
+  - Existing fully integrated coding agents remain `opencode`, `kilo_code`, and `claude_code`.
+  - Docker images also include `codex:pre_eval_backup`, `codex:injected_001`, and `codex:injected_weak_001`.
+  - A running `codex` container has `/usr/local/bin/codex` and reports `codex-cli 0.57.0`.
+  - Current CodeAgent benchmark scripts list only `opencode,kilo_code,claude_code` as default/supported coding agents, so Codex would require a new runner/adapter before it can be included in the same local Ollama DDoS experiment pipeline.
+
+2026-05-04 - Plan B experiment-shape clarification
+- User request: based on the 2026-05-02 Research Plan B, explain what the final exported experiments for evaluating Mobius Injection would look like.
+- Files touched:
+  - `tasks/session_record_20260504_plan_b_experiment_shape.md`
+  - `WORKLOG.md`
+- Files inspected:
+  - `tasks/research_plan_0502_ddos_b_network_stealth_ids.md`
+  - `tasks/session_record_20260503_agent_ddos_curve.md`
+  - `tasks/session_record_20260503_opencode_time_window_free_run.md`
+- Actions performed:
+  - Identified Plan B as the network-traffic stealth and classical DoS/IDS contrast plan.
+  - Extracted the planned traffic classes, observability layers, detector baselines, concrete experiments, metrics, and expected paper outputs.
+- Results:
+  - Plan B exports a controlled local-lab experiment suite comparing benign agent traffic, Mobius stealth traffic, Mobius aggressive traffic, and classical local SYN/HTTP-flood-like baselines.
+  - The expected final paper artifacts are a detector-layer comparison table, a traffic feature-space figure, and a detection-timing-by-layer figure.
+
+2026-05-04 - Plan C Figure 3 analogy assessment
+- User request: assess whether Research Plan C can export an experiment analogous to `~/paper_mobius/exper.tex` Figure 3 Agent-DDoS resource amplification.
+- Files touched:
+  - `tasks/session_record_20260504_plan_c_figure3_analogy.md`
+  - `WORKLOG.md`
+- Files inspected:
+  - `tasks/research_plan_0502_ddos_c_multizombie_end_to_end.md`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_vs_previous_2x3_curve_pairs.csv`
+  - `tasks/session_record_20260504_multiagent_datadog_ollama_claude_kilo.md`
+  - `tasks/session_record_20260503_opencode_time_window_free_run.md`
+  - `experiments/results/opencode_time_window_free_run_20260503/run_time_window_free_run.py`
+  - `experiments/results/opencode_time_window_free_run_20260503/time_window_aggregate.csv`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/run_multiagent_datadog_fileedit_ollama.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/summary_latest_claude_v2_kilo_v3.csv`
+- Actions performed:
+  - Compared Plan C's multi-zombie scaling goal with the current Figure 3 clean-vs-poisoned resource-amplification figure.
+  - Checked existing multi-agent and `agent_count=2` data for reusability.
+- Results:
+  - Plan C can export a Figure 3-style figure, but the axis should shift from per-agent clean-vs-poisoned curves to scaling by poisoned-agent count `N` and/or elapsed time under fixed `N`.
+  - Existing data are insufficient for the Plan C main result because the only `N=2` OpenCode concurrent run was weak under the local serialized backend.
+  - A new bounded local scaling experiment is needed before producing a defensible Plan C paper figure.
+
+2026-05-04 - OpenCode Plan C multi-zombie scaling run
+- User request: use OpenCode for the Plan C experiment; the local setup was ready.
+- Files touched:
+  - `experiments/results/opencode_multizombie_scaling_20260504/run_opencode_multizombie_scaling.py`
+  - `experiments/results/opencode_multizombie_scaling_20260504/test_opencode_multizombie_scaling.py`
+  - `experiments/results/opencode_multizombie_scaling_20260504/plot_opencode_multizombie_scaling.py`
+  - `experiments/results/opencode_multizombie_scaling_20260504/test_plot_opencode_multizombie_scaling.py`
+  - `experiments/results/opencode_multizombie_scaling_20260504/summary.csv`
+  - `experiments/results/opencode_multizombie_scaling_20260504/summary.md`
+  - `experiments/results/opencode_multizombie_scaling_20260504/cumulative_curve.csv`
+  - `experiments/results/opencode_multizombie_scaling_20260504/cumulative_curve.md`
+  - `experiments/results/opencode_multizombie_scaling_20260504/opencode_multizombie_scaling.pdf`
+  - `experiments/results/opencode_multizombie_scaling_20260504/opencode_multizombie_scaling.png`
+  - `tasks/session_record_20260504_opencode_plan_c_multizombie_scaling.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Added a Plan C OpenCode scaling runner that runs clean and poisoned DataDog file-edit groups for `N=1,2,4` under a 300-second local Ollama window.
+  - Used group-level proxy accounting to avoid double-counting overlapping concurrent proxy slices.
+  - Ran the experiment against local `qwen3.6:27b` on `127.0.0.1:11437` through the local proxy on `127.0.0.1:11436`.
+  - Generated a preliminary 2x2 scaling figure with completed calls, tokens, p95 latency, and timed-out agents.
+- Verification:
+  - `uv run pytest experiments/results/opencode_multizombie_scaling_20260504 -q` passed with 7 tests.
+  - `uv run --with matplotlib python experiments/results/opencode_multizombie_scaling_20260504/plot_opencode_multizombie_scaling.py` generated PDF/PNG artifacts.
+- Results:
+  - `N=1` poisoned amplified calls from `7` to `51` and tokens from `77,210` to `256,982`.
+  - `N=2` poisoned amplified calls from `20` to `38` and tokens from `165,552` to `305,017`.
+  - `N=4` did not increase completed throughput over clean: both clean and poisoned completed `38` calls, while poisoned p95 latency rose from `96.6s` to `121.3s` and all four poisoned agents timed out.
+  - The run supports a Plan C saturation-knee result rather than a monotonic-throughput scaling claim beyond `N=2`.
+
+2026-05-04 - Plan C queue-externality redesign
+- User request: the first OpenCode Plan C scaling result is not compelling enough; redesign around the fact that a few poisoned nodes can create backend queueing and delay many normal users or benign API queries.
+- Files touched:
+  - `tasks/session_record_20260504_plan_c_queue_externality_redesign.md`
+  - `WORKLOG.md`
+- State inspected:
+  - GPU state via `nvidia-smi`.
+  - Listening local Ollama services on ports `11434`, `11435`, `11437`, and `11439`.
+  - tmux sessions `qwen36_ollama_11437` and `qwen36_ollama_11439`.
+  - Ollama process state via `ollama ps`.
+- Results:
+  - Confirmed six H100 NVL GPUs; GPUs 0, 2, and 5 were nearly idle at inspection time, while GPUs 1, 3, and 4 had substantial memory use.
+  - Confirmed `qwen3.6:27b` is loaded on `127.0.0.1:11437`; `127.0.0.1:11439` is an Ollama 0.22.1 endpoint pinned to GPU 0 but currently has no model loaded.
+  - Confirmed the previous `N=4` run already contains queue/saturation evidence: poisoned p95 latency exceeded 120 seconds and Ollama logged aborted completion requests when clients closed connections.
+  - Proposed the next Plan C experiment as a queue-externality curve measuring benign probe p50/p95/p99 latency, SLA violation rate, timeout/error rate, inferred queue depth, recovery time, collateral damage factor, and attack efficiency under varying poisoned OpenCode node counts.
+
+2026-05-04 - OpenCode queue-externality experiment
+- User request: proceed with the queue-externality experiment using poisoned OpenCode nodes and benign API probes.
+- Files touched:
+  - `experiments/results/opencode_queue_externality_20260504/run_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/test_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/test_plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/summary.csv`
+  - `experiments/results/opencode_queue_externality_20260504/summary.md`
+  - `experiments/results/opencode_queue_externality_20260504/probe_latency.csv`
+  - `experiments/results/opencode_queue_externality_20260504/probe_latency.md`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality.png`
+  - `tasks/session_record_20260504_opencode_queue_externality.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Implemented a runner with 30s pre-baseline, 180s poisoned-node attack window, and 60s recovery per scenario.
+  - Ran scenarios with `0,1,2,4` poisoned OpenCode nodes while a benign probe stream issued one normal local API query every 5 seconds.
+  - Computed benign probe p95 latency, SLA violation rates above 10s/30s, poisoned-node timeout counts, attack-window token/request pressure, and inferred max in-flight queue occupancy.
+  - Generated a 2x2 queue-externality figure.
+  - Removed the `opencode_queue_poison_*` containers after saving artifacts.
+- Verification:
+  - `uv run pytest experiments/results/opencode_queue_externality_20260504 -q` passed with 8 tests.
+  - `uv run --with matplotlib python experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py` generated PDF/PNG artifacts.
+- Results:
+  - Baseline `N=0` attack-window benign probe p95 was `0.493s` with no SLA violation.
+  - `N=1` poisoned node raised benign probe p95 to `10.247s`, a `21.1x` same-scenario collateral-damage factor.
+  - `N=2` poisoned nodes raised benign probe p95 to `18.857s`, with `13.79%` of attack probes above 10 seconds and `3.45%` above 30 seconds.
+  - `N=4` poisoned nodes raised benign probe p95 to `112.994s`; `100%` of attack probes exceeded 10 seconds and `66.67%` exceeded 30 seconds.
+  - The `N=4` pre-baseline was already elevated due to delayed recovery after `N=2`; compared with the `N=0` attack baseline, `N=4` attack p95 is about `229x` higher.
+
+2026-05-04 - Insert queue-externality figure into paper
+- User request: add the planned queue-externality figure into the paper.
+- Files touched:
+  - `/home/zi/paper_mobius/curves/agent_ddos_queue_externality.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_insert_queue_externality_figure.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Copied and cropped the queue-externality PDF into the paper `curves/` directory.
+  - Inserted a new `figure*` after the existing Agent-DDoS resource-amplification figure.
+  - Added caption and explanatory text describing benign probe p95 latency growth from `0.49s` at `N=0` to `112.99s` at `N=4`, plus SLA violation and inferred queue occupancy results.
+  - Recompiled `/home/zi/paper_mobius/main.pdf`.
+  - Rendered pages 10 and 11 to inspect the existing Figure 3 and new Figure 4 placement.
+- Results:
+  - The new queue-externality figure appears as Figure 4 on page 11.
+  - The figure and caption are readable and do not overlap other content.
+  - `latexmk -pdf main.tex` completed successfully with the same existing unresolved citation/reference warnings outside this change.
+
+2026-05-04 - Split queue-externality figure into bars and timeline
+- User request: convert the first three queue-externality panels into a `1x3` bar chart with dashed `N=0` baseline references and multiplier labels, and make the fourth panel a single-column `1x1` figure.
+- Files touched:
+  - `experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/test_plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_bars.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_bars.png`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_timeline.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_timeline.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_queue_externality_bars.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_queue_externality_timeline.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_split_queue_externality_figure.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Added new plot outputs for a double-column `1x3` bar chart and a single-column timeline figure.
+  - Marked the `N=0` baseline with dashed horizontal lines and annotated defined multipliers.
+  - Used absolute percentages for the SLA violation panel because the `N=0` baseline is zero and a multiplier is undefined.
+  - Copied and cropped the new PDFs into the paper curves directory.
+  - Updated the paper to reference the split figures separately.
+- Verification:
+  - `uv run pytest experiments/results/opencode_queue_externality_20260504 -q` passed with 10 tests.
+  - `uv run --with matplotlib python experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py` regenerated the figures.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`.
+  - Rendered pages 10 and 11 and visually inspected the compiled placement.
+- Results:
+  - Figure 4 is now the requested `1x3` queue-externality bar chart on page 10.
+  - Figure 5 is now the requested single-column `1x1` benign-probe latency timeline on page 11.
+  - The new figure references resolve; remaining LaTeX warnings are existing unresolved citations/references outside this change.
+
+2026-05-04 - Revise queue-externality plot rigor and labels
+- User request: change bar amplification labels to one decimal place and revise the benign probe timeline so it does not misleadingly imply a natural stop or continuous decreasing latency trajectory.
+- Files touched:
+  - `experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/test_plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_bars.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_bars.png`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_timeline.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_timeline.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_queue_externality_bars.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_queue_externality_timeline.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_revise_queue_externality_plot.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Changed defined multipliers to one decimal place: latency `20.8x`, `38.2x`, `229.1x`; queue occupancy `3.0x`, `5.0x`, `11.0x`.
+  - Replaced the timeline line plot with a log-scale attack-window sample plot using real probe samples, stems, a `10s` SLA line, and timeout crosses.
+  - Updated the paper caption and text to state that this experiment uses a bounded 180-second measurement timeout and does not claim this run observes an unbounded attack.
+- Verification:
+  - `uv run pytest experiments/results/opencode_queue_externality_20260504 -q` passed with 12 tests.
+  - `uv run --with matplotlib python experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py` regenerated the figures.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`.
+  - Rendered pages 10 and 11 and visually inspected the compiled figure placement.
+- Results:
+  - Figure 4 now has one-decimal multiplier labels.
+  - Figure 5 no longer uses misleading interpolated lines or recovery-drain narration; it shows bounded attack-window probe samples directly.
+
+2026-05-04 - Replace queue-externality sample plot with distribution
+- User request: the attack-window benign probe sample plot still does not communicate a clear result and looks too sparse to be useful.
+- Files touched:
+  - `experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/test_plot_opencode_queue_externality.py`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_timeline.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/opencode_queue_externality_timeline.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_queue_externality_timeline.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_queue_externality_distribution_plot.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Replaced the sparse attack-window sample timeline with a grouped log-scale latency-distribution plot.
+  - Plotted real attack-window benign probe samples by poisoned-node count, with box summaries, black p95 diamonds, and 10s/30s service-threshold lines.
+  - Updated the paper caption to describe the figure as an attack-window benign latency distribution.
+- Verification:
+  - `uv run pytest experiments/results/opencode_queue_externality_20260504 -q` passed with 14 tests.
+  - `uv run --with matplotlib python experiments/results/opencode_queue_externality_20260504/plot_opencode_queue_externality.py` regenerated the figure.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`.
+  - Rendered page 11 and visually inspected Figure 5 in the compiled PDF.
+- Results:
+  - Figure 5 now directly communicates the attack-window distribution shift: benign p95 latency rises from about `0.5s` at `N=0` to `18.9s` at `N=2` and `113.0s` at `N=4`.
+
+2026-05-04 - Remove queue-externality Figure 5 from paper
+- User request: delete Figure 5 because it is visually weak and repeats the content already expressed by the bar chart.
+- Files touched:
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260504_remove_queue_externality_figure5.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Removed the single-column figure that included `curves/agent_ddos_queue_externality_timeline.pdf`.
+  - Removed the `fig:agent-ddos-queue-externality-timeline` label and changed the surrounding text to reference only `fig:agent-ddos-queue-externality-bars`.
+  - Left the generated timeline/distribution artifacts on disk as experiment outputs but no longer included them in the paper.
+- Verification:
+  - Searched `exper.tex` for the removed label/caption text; no matches remain.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`.
+- Results:
+  - The paper now keeps only the queue-externality `1x3` bar chart as Figure 4.
+  - `main.pdf` returned to 11 pages.
+
+2026-05-04 - Re-read Plan C for next experiments
+- User request: re-read Research Plan C and identify other meaningful experiments now that only the queue-externality bar chart remains in the paper.
+- Files inspected:
+  - `tasks/research_plan_0502_ddos_c_multizombie_end_to_end.md`
+  - `tasks/session_record_20260504_plan_c_figure3_analogy.md`
+  - `tasks/session_record_20260504_opencode_plan_c_multizombie_scaling.md`
+  - `tasks/session_record_20260504_opencode_queue_externality.md`
+  - `experiments/results/opencode_multizombie_scaling_20260504/summary.csv`
+  - `experiments/results/opencode_queue_externality_20260504/summary.csv`
+- Findings:
+  - Figure 4 already covers benign API-probe collateral damage and queue saturation.
+  - The earlier throughput-only scaling run is useful as supporting saturation evidence but weak as a main paper figure.
+  - The strongest non-duplicative next experiment is benign-agent collateral damage under poisoned-node pressure.
+  - Defense under multi-zombie pressure is the second strongest next experiment.
+- Result:
+  - Recommended next experiment: bounded OpenCode benign-agent collateral damage with `N=0,1,2` poisoned nodes plus one concurrent benign OpenCode task, measuring benign completion, wall-clock latency, request p95, and failure rate.
+
+2026-05-04 - Add defense-under-queue-pressure comparison
+- User request: skip the benign-agent collateral-damage experiment as likely weak and try the defense-under-pressure comparison instead, placing it in the defense subsection as a new subsubsection.
+- Files touched:
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `experiments/results/opencode_queue_externality_20260504/build_defense_under_pressure.py`
+  - `experiments/results/opencode_queue_externality_20260504/test_build_defense_under_pressure.py`
+  - `experiments/results/opencode_queue_externality_20260504/defense_under_pressure.csv`
+  - `experiments/results/opencode_queue_externality_20260504/defense_under_pressure.md`
+  - `tasks/session_record_20260504_defense_under_queue_pressure.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Added a measured-load replay script and tests for a defense-under-pressure comparison using the existing real queue-externality measurements.
+  - Added `Defense Under Queue Pressure` to the paper defense subsection.
+  - Added a table comparing no defense, runtime caps, and ACE quarantine.
+- Verification:
+  - `uv run pytest experiments/results/opencode_queue_externality_20260504 -q` passed with 17 tests.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius` with `main.pdf` up to date.
+- Results:
+  - The table reports benign p95 latency dropping from `113.0s` with no defense to `18.9s` under `N<=2`, `10.2s` under `N<=1`, and `0.49s` under ACE quarantine.
+
+2026-05-04 - Check additional coding agents for experiments
+- User request: identify whether any other coding agent can be used for the local Mobius DDoS experiments beyond OpenCode, Claude Code, and Kilo Code.
+- Files/commands inspected:
+  - Docker image list and running containers for `codex`, `droid`, `zed`, `cursor`, `opencode`, `kilo_code`, and `claude_code`.
+  - `experiments/AgentCallInterface/agents/agent_callers.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/run_multiagent_datadog_fileedit_ollama.py`
+- Findings:
+  - `codex` is present as Docker images (`codex:pre_eval_backup`, `codex:injected_001`, `codex:injected_weak_001`) and as a running container.
+  - The running `codex` container exposes `/usr/local/bin/codex` and reports `codex-cli 0.57.0`.
+  - The generic AgentCallInterface has a `CodexCaller`, but the current single-node local Ollama runner only defines `claude_code` and `kilo_code`; OpenCode is handled by its separate runner.
+  - `droid` and `zed` have image/container remnants, and generic caller names exist, but no callable `droid`, `zed`, or `cursor` CLI was found in the current host/container checks.
+- Result:
+  - `codex` is the only credible additional coding-agent candidate found for the next experiment.
+  - It is not plug-and-play in the current local Ollama DDoS pipeline; it needs a new Codex adapter/profile and validation before it can be used consistently.
