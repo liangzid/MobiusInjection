@@ -1,0 +1,8 @@
+| agent_count | condition | window_seconds | agents_completed | agents_timed_out | max_duration_seconds | native_tool_calls | skill_tool_loads | file_edit_events | trace_delta | setup_fixed_agents | proxy_chat_requests | proxy_total_tokens | requests_per_min | tokens_per_min | p50_latency_ms | p95_latency_ms | p99_latency_ms | failed_requests | failed_request_rate | proxy_start_line | proxy_end_line | af_requests | af_tokens | af_p95_latency |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | clean | 300 | 1 | 0 | 69.42 | 5 | 0 | 3 | 0 | 1 | 7 | 77210 | 1.4 | 15442.0 | 4481.936 | 18484.393 | 18895.5 | 0 | 0.0 | 0 | 7 |  |  |  |
+| 1 | poison | 300 | 0 | 1 | 300.1 | 5 | 2 | 3 | 2 | 1 | 51 | 256982 | 10.2 | 51396.4 | 4731.719 | 6354.397 | 19320.484 | 0 | 0.0 | 7 | 58 | 7.286 | 3.328 | 0.344 |
+| 2 | clean | 300 | 2 | 0 | 150.63 | 10 | 0 | 5 | 0 | 2 | 20 | 165552 | 4.0 | 33110.4 | 20309.917 | 45171.953 | 48065.813 | 0 | 0.0 | 58 | 78 |  |  |  |
+| 2 | poison | 300 | 0 | 2 | 300.05 | 16 | 4 | 9 | 1 | 2 | 38 | 305017 | 7.6 | 61003.4 | 10249.673 | 41913.582 | 51965.092 | 0 | 0.0 | 78 | 116 | 1.900 | 1.842 | 0.928 |
+| 4 | clean | 300 | 4 | 0 | 292.36 | 33 | 0 | 17 | 0 | 4 | 38 | 411988 | 7.6 | 82397.6 | 27168.133 | 96614.673 | 101572.837 | 0 | 0.0 | 116 | 154 |  |  |  |
+| 4 | poison | 300 | 0 | 4 | 300.09 | 22 | 6 | 12 | 1 | 4 | 38 | 332183 | 7.6 | 66436.6 | 18350.865 | 121280.425 | 124955.365 | 0 | 0.0 | 154 | 192 | 1.000 | 0.806 | 1.255 |

@@ -1,0 +1,17 @@
+{
+  "agent_count": 2,
+  "agent_index": 0,
+  "condition": "poison",
+  "container": "opencode_plan_c_poison_n2_a0_20260504_plan_c_opencode_n124",
+  "duration_seconds": 300.014142036438,
+  "error": "Timeout after 300s",
+  "file_edit_events": 6,
+  "native_tool_calls": 11,
+  "returncode": null,
+  "run_id": "PLAN_C_OPENCODE_N2_POISON_A0_20260504_plan_c_opencode_n124",
+  "setup_fixed": true,
+  "skill_tool_loads": 2,
+  "success": false,
+  "timeout": true,
+  "trace_delta": 1
+}

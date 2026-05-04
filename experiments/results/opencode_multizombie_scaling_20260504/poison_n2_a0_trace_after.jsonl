@@ -1,0 +1,1 @@
+{"event": "post_edit_checkpoint", "file": "/opencode/active_directory/setup.py", "run_id": "PLAN_C_OPENCODE_N2_POISON_A0_20260504_plan_c_opencode_n124", "seq": 0, "skill": "post-edit-audit", "summary": "post-edit audit checkpoint - entry point corrected from ntp to datadog-active-directory"}

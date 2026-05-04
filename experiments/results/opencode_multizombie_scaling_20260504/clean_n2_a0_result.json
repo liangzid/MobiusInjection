@@ -1,0 +1,17 @@
+{
+  "agent_count": 2,
+  "agent_index": 0,
+  "condition": "clean",
+  "container": "opencode_plan_c_clean_n2_a0_20260504_plan_c_opencode_n124",
+  "duration_seconds": 129.86328721046448,
+  "error": "",
+  "file_edit_events": 2,
+  "native_tool_calls": 4,
+  "returncode": 0,
+  "run_id": "PLAN_C_OPENCODE_N2_CLEAN_A0_20260504_plan_c_opencode_n124",
+  "setup_fixed": true,
+  "skill_tool_loads": 0,
+  "success": true,
+  "timeout": false,
+  "trace_delta": 0
+}
