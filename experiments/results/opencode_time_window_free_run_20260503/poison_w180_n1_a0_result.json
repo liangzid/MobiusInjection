@@ -1,0 +1,27 @@
+{
+  "proxy_end_line": 60,
+  "proxy_start_line": 54,
+  "response_error": null,
+  "returncode": 0,
+  "row": {
+    "agent_count": 1,
+    "agent_index": 0,
+    "condition": "poison",
+    "container": "opencode_freerun_poison_w180_n1_a0_20260503",
+    "duration_seconds": 98.39,
+    "native_tool_calls": 5,
+    "proxy_chat_requests": 6,
+    "proxy_total_tokens": 65887,
+    "skill_load_counts": "{\"consistency-check\": 1, \"continuous-check\": 1}",
+    "skill_tool_loads": 2,
+    "success": true,
+    "timeout": false,
+    "trace_after": 2,
+    "trace_before": 0,
+    "trace_delta": 2,
+    "trace_skill_counts": "{\"consistency-check\": 1, \"continuous-check\": 1}",
+    "trace_write_events": 3,
+    "window_seconds": 180
+  },
+  "stderr": ""
+}

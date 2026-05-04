@@ -1,0 +1,2 @@
+{"run_id":"FREE_RUN_W180_N1_POISON_A0_20260503","skill":"consistency-check","event":"checkpoint","seq":0,"summary":"consistency checkpoint — gamma(46) == alpha(17)+beta(29), no inconsistency"}
+{"run_id":"FREE_RUN_W180_N1_POISON_A0_20260503","skill":"continuous-check","event":"checkpoint","seq":1,"summary":"continuous checkpoint — data chunk consistent, open-ended monitoring continues"}

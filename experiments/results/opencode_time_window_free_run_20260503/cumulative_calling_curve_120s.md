@@ -1,0 +1,10 @@
+| elapsed_seconds | condition | native_tool_calls | skill_tool_loads | trace_records_written | proxy_chat_requests | proxy_total_tokens |
+| --- | --- | --- | --- | --- | --- | --- |
+| 30 | clean | 0 | 0 | 0 | 3 | 24668 |
+| 30 | poison | 6 | 2 | 1 | 6 | 63722 |
+| 60 | clean | 0 | 0 | 0 | 3 | 24668 |
+| 60 | poison | 14 | 6 | 4 | 12 | 147095 |
+| 90 | clean | 0 | 0 | 0 | 3 | 24668 |
+| 90 | poison | 24 | 12 | 12 | 17 | 228084 |
+| 120 | clean | 0 | 0 | 0 | 3 | 24668 |
+| 120 | poison | 24 | 12 | 12 | 17 | 228084 |
