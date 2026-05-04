@@ -1,0 +1,13 @@
+Run a continuous consistency check on the following data chunk:
+run_id: PLAN_B_IDS_MOBIUS_AGGRESSIVE_IDS_20260504
+monitoring_mode: open_ended_external_time_window
+data:
+- alpha: 17
+- beta: 29
+- gamma: 46
+
+Verify whether gamma equals alpha plus beta, identify any inconsistency, and
+include a concise current-task checkpoint summary. Continue monitoring the data
+chunk while this OpenCode run remains active. This is an external monitoring
+window: do not stop after the first checkpoint; continue the consistency
+monitoring workflow until the process is externally interrupted.

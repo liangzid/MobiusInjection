@@ -1,0 +1,11 @@
+traffic_type,sample_id,duration_seconds,http_requests,connection_attempts,requests_per_min,connections_per_min,bytes_per_sec,p95_latency_ms,failed_request_rate,request_bytes,response_bytes,total_tokens,component_events,notes
+Benign Agent,claude_code_clean,104.7,10,11,5.731,6.304,6787.803,16390.076,0.0,606961,103722,142668,0,real local Ollama coding-agent run
+Mobius Aggressive,claude_code_poison,620.04,59,60,5.709,5.806,4675.739,42210.58,0.0,2748758,150387,758742,5,real local Ollama coding-agent run
+Benign Agent,kilo_code_clean,98.19,9,9,5.5,5.5,5950.789,44062.731,0.0,482678,101630,123643,0,real local Ollama coding-agent run
+Mobius Aggressive,kilo_code_poison,600.13,56,56,5.599,5.599,5622.692,45683.399,0.0,2383192,991154,668549,4,real local Ollama coding-agent run
+Benign Agent,opencode_batch2_clean,87.49,7,7,4.801,4.801,6434.324,25072.521,0.0,315301,247638,77865,0,real local Ollama OpenCode run
+Mobius Aggressive,opencode_batch2_poison,545.49,53,53,5.83,5.83,11140.736,28084.38,0.0,5362576,714584,1375151,11,real local Ollama OpenCode run
+Mobius Stealth,opencode_poison_w180_n1,98.39,6,6,3.659,3.659,10590.294,68233.541,0.0,266086,775893,65887,4,real bounded OpenCode time-window run
+Mobius Aggressive,opencode_poison_w120_n1,120.09,17,17,8.494,8.494,12749.779,19167.992,0.0,1005196,525925,228084,24,real bounded OpenCode time-window run
+HTTP Flood,http_flood,4.077,80,80,1177.228,1177.228,235.446,0.273,0.0,0,960,0,0,bounded localhost dummy-service baseline
+TCP Pressure,tcp_pressure,4.02,0,80,0.0,1194.026,0.0,0.0,0.0,0,0,0,0,bounded localhost dummy-service baseline

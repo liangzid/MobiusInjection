@@ -1,0 +1,6 @@
+traffic_type,sample_id,duration_seconds,http_requests,connection_attempts,requests_per_min,connections_per_min,total_tokens,component_events,pcap,zeek_conn,zeek_http,zeek_notice,suricata_events,suricata_alert,suricata_flow,suricata_http
+Benign Agent,benign_agent_ids,39.56,0,0,0.0,0.0,0,0,/home/zi/AgentCodingDos/experiments/results/plan_b_network_stealth_ids_20260504/pcaps/benign_agent_ids.pcap,39,0,0,62,0,14,13
+Mobius Stealth,mobius_stealth_ids,180.11,0,0,0.0,0.0,0,8,/home/zi/AgentCodingDos/experiments/results/plan_b_network_stealth_ids_20260504/pcaps/mobius_stealth_ids.pcap,57,0,0,91,0,20,19
+Mobius Aggressive,mobius_aggressive_ids,120.13,0,0,0.0,0.0,0,2,/home/zi/AgentCodingDos/experiments/results/plan_b_network_stealth_ids_20260504/pcaps/mobius_aggressive_ids.pcap,25,0,0,37,0,12,7
+HTTP Flood,http_flood_ids,4.078,80,80,1177.04,1177.04,0,0,/home/zi/AgentCodingDos/experiments/results/plan_b_network_stealth_ids_20260504/pcaps/http_flood_ids.pcap,160,0,0,241,0,80,80
+TCP Pressure,tcp_pressure_ids,4.018,0,80,0.0,1194.495,0,0,/home/zi/AgentCodingDos/experiments/results/plan_b_network_stealth_ids_20260504/pcaps/tcp_pressure_ids.pcap,160,0,0,81,0,80,0

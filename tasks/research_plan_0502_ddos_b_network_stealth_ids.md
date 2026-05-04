@@ -47,6 +47,25 @@ Optional monitoring containers:
 
 All experiments must remain local. The target is always the local LLM server or a local dummy HTTP service.
 
+### Local Ollama Notes for Next Runs
+
+Use the same local single-node LLM setup as the recent Agent-DDoS runs:
+
+- run Ollama from `/data2/zi/ollama_v0.22.1/bin/ollama` with
+  `OLLAMA_MODELS=/data2/zi/ollama_models`;
+- serve the model `qwen3.6:27b` on the host-local upstream endpoint
+  `127.0.0.1:11437`;
+- place the OpenAI-compatible logging proxy at `127.0.0.1:11436`, upstreaming
+  to the Ollama service;
+- point agent clients at the proxy, for example `http://127.0.0.1:11436/v1`
+  or `/v1/chat/completions`, so every completed request can be logged with
+  timestamp, latency, status, and response usage/token fields;
+- keep the model warm during bounded runs with a long `keep_alive` window, then
+  stop the proxy and Ollama service after the experiment;
+- treat this as a single-node backend: multiple agent containers may run, but
+  they share one local model service, and the observed `qwen3.6:27b` backend may
+  serialize concurrent requests.
+
 ### Traffic Classes
 
 Collect four classes of traffic:

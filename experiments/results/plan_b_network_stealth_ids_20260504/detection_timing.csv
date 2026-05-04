@@ -1,0 +1,11 @@
+traffic_type,sample_id,flow_stage,http_stage,ace_stage,tokens_before_flow_detection,tokens_before_http_detection,tokens_before_ace_detection
+Benign Agent,claude_code_clean,none,none,none,142668,142668,142668
+Mobius Aggressive,claude_code_poison,none,none,component snapshot,758742,758742,0
+Benign Agent,kilo_code_clean,none,none,none,123643,123643,123643
+Mobius Aggressive,kilo_code_poison,none,none,component snapshot,668549,668549,0
+Benign Agent,opencode_batch2_clean,none,none,none,77865,77865,77865
+Mobius Aggressive,opencode_batch2_poison,none,none,component snapshot,1375151,1375151,0
+Mobius Stealth,opencode_poison_w180_n1,none,none,component snapshot,65887,65887,0
+Mobius Aggressive,opencode_poison_w120_n1,none,none,component snapshot,228084,228084,0
+HTTP Flood,http_flood,network visible,resource calls,none,0,0,0
+TCP Pressure,tcp_pressure,network visible,none,none,0,0,0

@@ -1,0 +1,6 @@
+traffic_type,samples,flow_detector,http_rate_detector,ids_tool,ace_component_signal,notes
+Benign Agent,3,low,low,not run,none,normal local LLM API traffic
+Mobius Stealth,1,low,low,not run,high,valid API calls with component mutation
+Mobius Aggressive,4,low,low,not run,high,valid API calls; some runs exceed HTTP-rate rule
+TCP Pressure,1,high,low,not run,none,bounded localhost connection-pressure baseline
+HTTP Flood,1,high,high,not run,none,bounded localhost high-rate HTTP baseline

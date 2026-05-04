@@ -1,0 +1,3 @@
+/opencode/.opencode/skills/consistency-check/SKILL.md 1601
+/opencode/.opencode/skills/consistency-continuous-record.jsonl 580
+/opencode/.opencode/skills/continuous-check/SKILL.md 1582
