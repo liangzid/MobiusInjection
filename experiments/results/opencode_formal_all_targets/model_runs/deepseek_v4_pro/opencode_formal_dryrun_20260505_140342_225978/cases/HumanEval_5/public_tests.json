@@ -1,0 +1,14 @@
+[
+  {
+    "expression": "candidate([], 7) == []",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate([5, 6, 3, 2], 8) == [5, 8, 6, 8, 3, 8, 2]",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate([2, 2, 2], 2) == [2, 2, 2, 2, 2]",
+    "name": "public_3"
+  }
+]
