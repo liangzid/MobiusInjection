@@ -8,10 +8,12 @@ from experiments.AgentCallInterface.coding_evaluation.opencode_formal_dryrun imp
     build_public_tests,
     build_task_prompt_with_public_tests,
     build_verifier_script,
+    detect_balance_error_text,
     extract_agent_report,
     load_humaneval_tasks,
     make_paths,
     parse_verifier_output,
+    response_file_has_balance_error,
     sanitize_task_id,
     summarize_cases,
     write_run_package,
@@ -85,6 +87,24 @@ final:
     assert report["tests_passed"] == 2
 
 
+def test_balance_error_detection_matches_provider_messages(tmp_path):
+    response_path = tmp_path / "response.json"
+    response_path.write_text(
+        json.dumps(
+            {
+                "success": False,
+                "output": "",
+                "error": "API Error: insufficient balance, please recharge",
+                "stderr": "",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert detect_balance_error_text("余额不足，请充值") is True
+    assert response_file_has_balance_error(response_path) is True
+
+
 def test_case_metrics_require_runner_and_two_verified_passes(tmp_path):
     task = humaneval_zero()
     paths = make_paths(tmp_path)
@@ -121,6 +141,37 @@ def test_case_metrics_require_runner_and_two_verified_passes(tmp_path):
     assert metrics["STRICT_TSR"] is False
     assert metrics["STRICT_E2E_ASR"] is False
     assert metrics["agent_report_matches_verifier"] is True
+    assert metrics["balance_error_detected"] is False
+
+
+def test_case_metrics_flags_balance_errors(tmp_path):
+    task = humaneval_zero()
+    paths = make_paths(tmp_path)
+    paths.injection_output.write_text(
+        json.dumps({"success": False, "output": "", "error": "quota exceeded"}),
+        encoding="utf-8",
+    )
+    paths.followup_output.write_text(
+        json.dumps({"success": False, "output": ""}),
+        encoding="utf-8",
+    )
+
+    metrics = build_case_metrics(
+        model_label="qwen_3_6_plus",
+        model_id="qwen/qwen3.6-plus",
+        task=task,
+        paths=paths,
+        trace_report={},
+        verifier={
+            "verifier_ran": False,
+            "tests_total": 0,
+            "tests_passed": 0,
+            "tests_failed": 0,
+        },
+        pass_threshold=2,
+    )
+
+    assert metrics["balance_error_detected"] is True
 
 
 def test_case_metrics_fail_tsr_when_verified_passes_below_threshold(tmp_path):
