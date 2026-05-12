@@ -21,3 +21,6 @@
 
 # Local task notes and session records; tracked files remain tracked.
 /tasks/*.md
+
+# Local editor state.
+*.~undo-tree~
