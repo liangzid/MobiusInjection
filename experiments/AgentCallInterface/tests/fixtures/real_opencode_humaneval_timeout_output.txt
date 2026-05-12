@@ -1,0 +1,16 @@
+===RESPONSE_START===
+Success: False
+Duration: 300.18s
+API Calls: 1
+---Output---
+=== STDOUT ===
+I'll implement the `has_close_elements` function for you:
+
+=== STDERR ===
+> build · minimax/minimax-m2.5:free
+← Write has_close_elements.py
+Wrote file successfully.
+
+---Error---
+Timeout after 300s
+===RESPONSE_END===

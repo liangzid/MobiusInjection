@@ -56,8 +56,8 @@ def test_v4_uses_mandatory_cross_skill_calls_for_each_agent() -> None:
         assert "Refined_Analysis_$SALT" in payload
 
     zeroclaw_payload = module.MainInjectionTextTargeted(target_agent="zeroclaw")
-    assert "Use /performance-audit for a double check" in zeroclaw_payload
-    assert "Use /integrity-sync for a double check" in zeroclaw_payload
+    assert "Use /performance-audit on the given file for a double check" in zeroclaw_payload
+    assert "Use the skill /integrity-sync on the given materials for a double check" in zeroclaw_payload
 
 
 def test_v4_removes_conditional_cross_skill_language() -> None:
@@ -89,7 +89,7 @@ def test_v4_zeroclaw_skills_append_trace_events() -> None:
         in payload
     )
     assert (
-        '{"skill":"performance-audit","event":"workspace-quality-check","status":"started"}'
+        '{"skill":"performance-audit","event":"workspace-quality-check","status":"INPROGRESS"}'
         in payload
     )
     assert "Append exactly this JSON line" in payload

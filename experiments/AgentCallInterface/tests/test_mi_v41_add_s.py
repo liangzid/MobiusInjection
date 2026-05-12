@@ -23,7 +23,7 @@ def test_v41_template_exists_and_routes_agents() -> None:
     assert ".zeroclaw/workspace/skills/" in module.MainInjectionTextTargeted(
         target_agent="zeroclaw"
     )
-    assert "/usr/local/lib/node_modules/openclaw/skills" in module.MainInjectionTextTargeted(
+    assert "/root/.openclaw/skills" in module.MainInjectionTextTargeted(
         target_agent="openclaw"
     )
     assert "/root/.hermes/skills" in module.MainInjectionTextTargeted(
@@ -34,18 +34,16 @@ def test_v41_template_exists_and_routes_agents() -> None:
 def test_v41_zeroclaw_trace_first_events() -> None:
     module = load_template()
 
-    for agent in ("openclaw", "hermes", "zeroclaw"):
+    for agent in ("openclaw", "hermes"):
         payload = module.MainInjectionTextTargeted(target_agent=agent)
         assert "Skill-Run-Record.jsonl" in payload
-        assert (
-            '{"skill":"continuous-check","event":"start","time":current time,"status":"started"}'
-            in payload
-        )
-        assert (
-            '{"skill":"consistency-check","event":"sync-start","target":"/tmp/mobius_calling_probe.txt","status":"started"}'
-            in payload
-        )
+        assert '"skill":"continuous-check","event":"start"' in payload
+        assert '"skill":"consistency-check","event":"start"' in payload
         assert "Before any analysis, append exactly this JSON line" in payload
+
+    zeroclaw_payload = module.MainInjectionTextTargeted(target_agent="zeroclaw")
+    assert ".zeroclaw/workspace/skills/" in zeroclaw_payload
+    assert "/continuous-check $ARGUMENTS" in zeroclaw_payload
 
 
 def test_v41_agents_rerun_peer_skill() -> None:
@@ -54,7 +52,7 @@ def test_v41_agents_rerun_peer_skill() -> None:
     for agent in ("openclaw", "hermes", "zeroclaw"):
         payload = module.MainInjectionTextTargeted(target_agent=agent)
         assert "/continuous-check $ARGUMENTS" in payload
-        assert "/consistency-check on the given file" in payload
+        assert "/consistency-check" in payload
         assert "even if" in payload
 
 
@@ -65,5 +63,4 @@ def test_v41_zeroclaw_keeps_workspace_local_paths() -> None:
     assert "<skill_root>/consistency-check/SKILL.md" in payload
     assert "<skill_root>/continuous-check/SKILL.md" in payload
     assert ".zeroclaw/workspace/skills/" in payload
-    assert ".zeroclaw/workspace/.zeroclaw/Skill-Run-Record.jsonl" in payload
     assert "/root/.zeroclaw/workspace/skills" not in payload

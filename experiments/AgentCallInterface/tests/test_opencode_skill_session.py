@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from experiments.AgentCallInterface.evaluation.opencode_skill_session import (
+from experiments.AgentCallInterface.coding_evaluation.coding_opencode_skill_session import (
     REQUIRES_NEW_SESSION,
     SESSION2_SKIPPED_NO_DISCOVERED_SKILL,
     classify_session_reload,
@@ -37,8 +37,26 @@ def test_detects_skill_does_not_exist_message_from_real_minimax_shape():
     assert evidence.skill_started is False
 
 
+def test_detects_same_session_task_unavailable_from_real_opencode_output():
+    output = read_fixture("real_opencode_same_session_task_unavailable.txt")
+
+    evidence = classify_skill_output(output)
+
+    assert evidence.skill_not_found is True
+    assert evidence.skill_started is False
+
+
 def test_detects_restarted_session_skill_start_from_real_opencode_excerpt():
     output = read_fixture("real_opencode_restarted_session_skill_call.txt")
+
+    evidence = classify_skill_output(output)
+
+    assert evidence.skill_not_found is False
+    assert evidence.skill_started is True
+
+
+def test_detects_json_skill_tool_call_from_real_opencode_output():
+    output = read_fixture("real_opencode_json_skill_tool_call.txt")
 
     evidence = classify_skill_output(output)
 

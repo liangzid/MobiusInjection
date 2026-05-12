@@ -1,5 +1,5 @@
 import json
-from experiments.AgentCallInterface.agents.agent_callers import (
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import (
     AgentResponse,
     ClaudeCodeCaller,
     HermesCaller,
@@ -19,7 +19,7 @@ def test_claude_code_command_uses_docker_exec():
     command = caller._build_claude_command(
         "Report the current directory.",
         run_id="caller-test",
-        model="openrouter/free",
+        model="anthropic/claude-sonnet-4.6",
         api_key="test-key",
     )
 
@@ -31,11 +31,57 @@ def test_claude_code_command_uses_docker_exec():
     assert "ANTHROPIC_BASE_URL=https://openrouter.ai/api" in command
     assert "OPENROUTER_BASE_URL=https://openrouter.ai/api" in command
     assert "ANTHROPIC_AUTH_TOKEN=test-key" in command
-    assert "CLAUDE_MODEL=openrouter/free" in command
+    assert "ANTHROPIC_API_KEY=" in command
+    assert "CLAUDE_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "ANTHROPIC_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "ANTHROPIC_SMALL_FAST_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "ANTHROPIC_DEFAULT_OPUS_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "ANTHROPIC_DEFAULT_SONNET_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "ANTHROPIC_DEFAULT_HAIKU_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "CLAUDE_CODE_SUBAGENT_MODEL=anthropic/claude-sonnet-4.6" in command
+    assert "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1" in command
+    assert "CLAUDE_CODE_MAX_TURNS=60" in command
+    assert any(part.startswith("CLAUDE_SETTINGS_B64=") for part in command)
     assert command[-6:-3] == ["claude_code", "bash", "-lc"]
-    assert "claude --dangerously-skip-permissions --model" in command[-3]
+    assert "claude --dangerously-skip-permissions" in command[-3]
+    assert "--model \"$CLAUDE_MODEL\"" in command[-3]
+    assert "--max-turns \"$CLAUDE_CODE_MAX_TURNS\"" in command[-3]
+    assert "--output-format stream-json" in command[-3]
+    assert "--include-partial-messages" in command[-3]
     assert command[-2] == "claude-code-runner"
     assert command[-1] == "Report the current directory."
+
+
+def test_claude_code_command_supports_local_base_url_and_container():
+    caller = ClaudeCodeCaller()
+    command = caller._build_claude_command(
+        "Report the current directory.",
+        run_id="caller-test",
+        model="qwen2.5:14b",
+        api_key="local-key",
+        base_url="http://127.0.0.1:11437",
+        container_name="claude_code_local",
+    )
+
+    assert "ANTHROPIC_BASE_URL=http://127.0.0.1:11437" in command
+    assert "OPENROUTER_BASE_URL=http://127.0.0.1:11437" in command
+    assert "ANTHROPIC_AUTH_TOKEN=local-key" in command
+    assert "ANTHROPIC_API_KEY=local-key" in command
+    assert "CLAUDE_MODEL=qwen2.5:14b" in command
+    assert command[-6:-3] == ["claude_code_local", "bash", "-lc"]
+
+
+def test_claude_code_max_turns_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("CLAUDE_CODE_MAX_TURNS", "12")
+    caller = ClaudeCodeCaller()
+    command = caller._build_claude_command(
+        "Report the current directory.",
+        run_id="caller-test",
+        model="anthropic/claude-sonnet-4.6",
+        api_key="test-key",
+    )
+
+    assert "CLAUDE_CODE_MAX_TURNS=12" in command
 
 
 def test_claude_code_run_id_is_path_safe():
@@ -43,12 +89,121 @@ def test_claude_code_run_id_is_path_safe():
     command = caller._build_claude_command(
         "Report the current directory.",
         run_id="../unsafe task/id",
-        model="openrouter/free",
+        model="anthropic/claude-sonnet-4.6",
         api_key="test-key",
     )
 
     assert "HOME=/tmp/claude-code-runs/unsafe_task_id/home" in command
     assert "CLAUDE_WORKSPACE=/tmp/claude-code-runs/unsafe_task_id/workspace" in command
+
+
+def test_claude_code_model_normalization_strips_openrouter_prefix():
+    caller = ClaudeCodeCaller()
+
+    assert (
+        caller._resolve_claude_model("openrouter/anthropic/claude-sonnet-4.6")
+        == "anthropic/claude-sonnet-4.6"
+    )
+    assert (
+        caller._resolve_claude_model("openrouter/minimax/minimax-m2.5:free")
+        == "minimax/minimax-m2.5:free"
+    )
+    assert caller._resolve_claude_model("ollama/qwen2.5:14b") == "qwen2.5:14b"
+
+
+def test_claude_code_model_normalization_maps_free_alias_to_minimax():
+    caller = ClaudeCodeCaller()
+
+    assert caller._resolve_claude_model("openrouter/free") == "minimax/minimax-m2.5:free"
+    assert caller._resolve_claude_model("free") == "minimax/minimax-m2.5:free"
+
+
+def test_claude_code_stream_parser_extracts_success_text_delta():
+    caller = ClaudeCodeCaller()
+    response = caller._parse_claude_stream_response(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {"type": "thinking_delta", "thinking": "hidden"},
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {"type": "text_delta", "text": "OK"},
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "result",
+                        "is_error": False,
+                        "result": "",
+                        "modelUsage": {"minimax/minimax-m2.5:free": {}},
+                    }
+                ),
+            ]
+        ),
+        "",
+        0,
+        1.0,
+        "claude-json-success",
+    )
+
+    assert response.success is True
+    assert response.output == "OK"
+    assert response.error is None
+    assert response.raw_output
+
+
+def test_claude_code_stream_parser_rejects_empty_success_result():
+    caller = ClaudeCodeCaller()
+    response = caller._parse_claude_stream_response(
+        json.dumps(
+            {
+                "type": "result",
+                "is_error": False,
+                "result": "",
+                "modelUsage": {"minimax/minimax-m2.5:free": {}},
+            }
+        ),
+        "",
+        0,
+        1.0,
+        "claude-json-empty",
+    )
+
+    assert response.success is False
+    assert "did not contain assistant text" in response.error
+    assert "minimax/minimax-m2.5:free" in response.error
+
+
+def test_claude_code_stream_parser_surfaces_error_result():
+    caller = ClaudeCodeCaller()
+    response = caller._parse_claude_stream_response(
+        json.dumps(
+            {
+                "type": "result",
+                "is_error": True,
+                "result": "API Error: invalid model",
+            }
+        ),
+        "",
+        1,
+        1.0,
+        "claude-json-error",
+    )
+
+    assert response.success is False
+    assert response.output == "API Error: invalid model"
+    assert response.error == "API Error: invalid model"
 
 
 def test_claude_code_task_prompt_contains_task_fields():
@@ -63,6 +218,9 @@ def test_claude_code_task_prompt_contains_task_fields():
     )
 
     assert "# Task: caller-test" in prompt
+    assert "## Claude Code Environment" in prompt
+    assert "Project instructions in CLAUDE.md" in prompt
+    assert "project skills in skills/ or .claude/skills" in prompt
     assert "## Problem\nReport the current directory." in prompt
     assert "## Repository\n/workspace/example" in prompt
     assert "## Test Patch\ndiff --git a/test.py b/test.py" in prompt

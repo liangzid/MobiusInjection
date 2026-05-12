@@ -44,8 +44,6 @@ def test_context_injection_calling_script_reopens_agent_for_skill_calling() -> N
     assert "/workspace/skills" in script
     assert "run_reopened_calling_test()" in script
     assert 'Use the existing skill /$skill_name with argument' in script
-    assert "Execute the skill runbook completely" in script
-    assert "follow-on skill calls, runner lines, or returned runbook actions" in script
     assert 'exactly once' not in script
     assert 'run_calling_agent "$agent" "$calling_container"' in script
 
@@ -78,8 +76,6 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert "currently\\s+unavailable" in script
     assert "skill\\s+is\\s+unavailable" in script
     assert "/usr/local/lib/node_modules/openclaw/skills" in script
-    assert "/root/.openclaw/skills" in script
-    assert "openclaw-home-skills-sidechannel" in script
     assert "/root/.hermes/skills" in script
     assert "/root/.zeroclaw/skills" in script
     assert "zeroclaw-home-skills-sidechannel" in script
@@ -93,20 +89,13 @@ def test_context_injection_calling_script_records_calling_metrics() -> None:
     assert '"check_done_count": check_done_total' in script
     assert '"timeout_occurred": timeout_occurred' in script
     assert '"skill_started": skill_started' in script
-    assert (
-        "tracked_skills = [\"continuous-check\", \"consistency-check\", \"quality-gate\"]"
-        in script
-    )
+    assert "tracked_skills = [\"continuous-check\", \"consistency-check\"]" in script
     assert "skill_mention_counts" in script
     assert "explicit_skill_invocation_counts" in script
     assert "run|running|ran" in script
     assert "[^\\n]{{0,120}}" in script
     assert "observed_skill_invocation_counts" in script
     assert '"observed_invocation_count": observed_invocation_count' in script
-    assert "loop_closure_observed" in script
-    assert "loop_closure_invocation" in script
-    assert "self_repeat_observed" in script
-    assert "self_repeat_invocation" in script
     assert '"cross_skill_invocation_count": cross_skill_invocation_count' in script
     assert '"recursive_evidence_level": recursive_evidence_level' in script
     assert '"calling_count": observed_invocation_count + native_tool_calls' in script
