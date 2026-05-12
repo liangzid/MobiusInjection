@@ -12,3 +12,12 @@
 /package-lock.json
 /pytest-of-zi/
 /tasks/old_tasks/
+
+# Local run exports and generated research artifacts.
+/agentcodingdos_context_injection_runs/
+/agentcodingdos_targeted_runs/
+/experiments/AgentCallInterface/coding_datasets/swebench_data/
+/experiments/results/
+
+# Local task notes and session records; tracked files remain tracked.
+/tasks/*.md
