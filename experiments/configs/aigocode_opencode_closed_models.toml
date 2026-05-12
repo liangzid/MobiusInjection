@@ -1,0 +1,29 @@
+# AiGoCode closed-model OpenCode smoke matrix.
+# Model IDs are taken from the AiGoCode OpenCode docs, verified on 2026-05-06.
+
+[[models]]
+label = "claude_opus_4_6"
+model_id = "anthropic/claude-opus-4-6"
+enabled = true
+provider = "aigocode"
+timeout_seconds = 420
+candidate_name = "Claude Opus 4.6"
+resolution_note = "AiGoCode Anthropic-native OpenCode provider via /v1."
+
+[[models]]
+label = "gpt_5_3_codex"
+model_id = "openai/gpt-5.3-codex"
+enabled = true
+provider = "aigocode"
+timeout_seconds = 420
+candidate_name = "GPT-5.3 Codex"
+resolution_note = "AiGoCode OpenAI-native OpenCode provider via /v1."
+
+[[models]]
+label = "gemini_3_1_pro"
+model_id = "gemini/gemini-3.1-pro-preview"
+enabled = true
+provider = "aigocode"
+timeout_seconds = 420
+candidate_name = "Gemini 3.1 Pro Preview"
+resolution_note = "AiGoCode Google-native OpenCode provider via /v1beta."

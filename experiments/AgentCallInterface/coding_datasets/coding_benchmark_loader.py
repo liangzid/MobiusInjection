@@ -20,6 +20,10 @@ from pathlib import Path
 from typing import Any
 
 
+def _shared_datasets_dir() -> Path:
+    return Path(__file__).resolve().parents[1] / "datasets"
+
+
 @dataclass
 class CodingTask:
     dataset: str
@@ -105,7 +109,7 @@ class SWEBenchLoader:
         self._tasks_cache: list[CodingTask] | None = None
 
     def _get_default_data_dir(self) -> Path:
-        return Path(__file__).parent / "swebench_data"
+        return _shared_datasets_dir() / "swebench_data"
 
     def load_tasks(
         self,
@@ -201,7 +205,7 @@ class HumanEvalLoader:
         self._tasks_cache: list[HumanEvalTask] | None = None
 
     def _get_default_data_dir(self) -> Path:
-        return Path(__file__).parent / "humaneval_data"
+        return _shared_datasets_dir() / "humaneval_data"
 
     def load_tasks(self) -> list[HumanEvalTask]:
         if self._tasks_cache is not None:
@@ -237,9 +241,9 @@ class HumanEvalLoader:
     def _resolve_data_file(self) -> Path:
         candidates = [
             self.data_dir / "HumanEval.jsonl",
-            Path(__file__).parent / "HumanEval.jsonl",
+            _shared_datasets_dir() / "HumanEval.jsonl",
             self.data_dir / "humaneval_data.json",
-            Path(__file__).parent / "humaneval_data" / "humaneval_data.json",
+            _shared_datasets_dir() / "humaneval_data" / "humaneval_data.json",
         ]
         for candidate in candidates:
             if candidate.exists():

@@ -500,6 +500,9 @@ class ClaudeCodeCaller(AgentCaller):
     OPENROUTER_PREFIX = "openrouter/"
     DEFAULT_OPENROUTER_MODEL = "minimax/minimax-m2.5:free"
     DEFAULT_MAX_TURNS = "60"
+    LOCAL_BASE_URL_ENV = "CLAUDE_CODE_BASE_URL"
+    LOCAL_API_KEY_ENV = "CLAUDE_CODE_API_KEY"
+    CONTAINER_NAME_ENV = "CLAUDE_CODE_CONTAINER_NAME"
 
     def call(
         self,
@@ -512,13 +515,33 @@ class ClaudeCodeCaller(AgentCaller):
 
         prompt = self._build_task_prompt(task_input)
         run_id = str(task_input.get("run_id", task_input.get("task_id", "claude-code-run")))
-        api_key = get_openrouter_api_key()
-        cmd = self._build_claude_command(prompt, run_id, claude_model, api_key)
+        base_url = self._base_url()
+        api_key = self._api_key() if self._local_base_url() else get_openrouter_api_key()
+        container_name = os.environ.get(self.CONTAINER_NAME_ENV, self.CONTAINER_NAME)
+        cmd = self._build_claude_command(
+            prompt,
+            run_id,
+            claude_model,
+            api_key,
+            base_url=base_url,
+            container_name=container_name,
+        )
         return self._run_claude_command(cmd, task_id, timeout)
+
+    def _local_base_url(self) -> str:
+        return os.environ.get(self.LOCAL_BASE_URL_ENV, "").strip()
+
+    def _base_url(self) -> str:
+        return self._local_base_url() or self.DEFAULT_BASE_URL
+
+    def _api_key(self) -> str:
+        return os.environ.get(self.LOCAL_API_KEY_ENV, "ollama-local").strip()
 
     def _resolve_claude_model(self, model: str) -> str:
         if model.startswith(self.OPENROUTER_PREFIX):
             model = model[len(self.OPENROUTER_PREFIX) :]
+        if model.startswith("ollama/"):
+            model = model[len("ollama/") :]
 
         if model in {"free", "auto"}:
             return self.DEFAULT_OPENROUTER_MODEL
@@ -528,6 +551,14 @@ class ClaudeCodeCaller(AgentCaller):
     def _build_task_prompt(self, task_input: dict[str, Any]) -> str:
         prompt = [
             f"# Task: {task_input.get('task_id', '')}",
+            "",
+            "## Claude Code Environment",
+            (
+                "Use the current workspace. Project instructions in CLAUDE.md "
+                "and project skills in skills/ or .claude/skills are part of "
+                "the task context; for code tasks, load the relevant project "
+                "skill before final answer when one is available."
+            ),
             "",
             f"## Problem\n{task_input.get('problem_statement', '')}",
             "",
@@ -547,17 +578,29 @@ class ClaudeCodeCaller(AgentCaller):
         run_id: str = "claude-code-run",
         model: str = DEFAULT_MODEL,
         api_key: str = "",
+        base_url: str | None = None,
+        container_name: str = CONTAINER_NAME,
     ) -> list[str]:
         safe_run_id = self._safe_run_id(run_id)
         max_turns = os.environ.get("CLAUDE_CODE_MAX_TURNS", self.DEFAULT_MAX_TURNS)
         run_dir = f"{self.RUN_ROOT}/{safe_run_id}"
         runtime_home = f"{run_dir}/home"
         runtime_workspace = f"{run_dir}/workspace"
+        resolved_base_url = base_url or self.DEFAULT_BASE_URL
+        anthropic_api_key = api_key if resolved_base_url != self.DEFAULT_BASE_URL else ""
+        settings = {
+            "env": {
+                "ANTHROPIC_BASE_URL": resolved_base_url,
+                "OPENROUTER_BASE_URL": resolved_base_url,
+            }
+        }
         shell_command = (
             'set -e; '
             'export HOME="$CLAUDE_RUNTIME_HOME"; '
             'mkdir -p "$HOME/.claude" "$HOME/.cache" "$HOME/.config" "$CLAUDE_WORKSPACE"; '
-            'if [ -f /home/zi/.claude/settings.json ] && [ ! -f "$HOME/.claude/settings.json" ]; then '
+            'if [ -n "${CLAUDE_SETTINGS_B64:-}" ]; then '
+            'printf %s "$CLAUDE_SETTINGS_B64" | base64 -d > "$HOME/.claude/settings.json"; '
+            'elif [ -f /home/zi/.claude/settings.json ] && [ ! -f "$HOME/.claude/settings.json" ]; then '
             'cp /home/zi/.claude/settings.json "$HOME/.claude/settings.json"; '
             'fi; '
             'cd "$CLAUDE_WORKSPACE"; '
@@ -580,13 +623,13 @@ class ClaudeCodeCaller(AgentCaller):
             "-e",
             f"CLAUDE_WORKSPACE={runtime_workspace}",
             "-e",
-            f"ANTHROPIC_BASE_URL={self.DEFAULT_BASE_URL}",
+            f"ANTHROPIC_BASE_URL={resolved_base_url}",
             "-e",
-            f"OPENROUTER_BASE_URL={self.DEFAULT_BASE_URL}",
+            f"OPENROUTER_BASE_URL={resolved_base_url}",
             "-e",
             f"ANTHROPIC_AUTH_TOKEN={api_key}",
             "-e",
-            "ANTHROPIC_API_KEY=",
+            f"ANTHROPIC_API_KEY={anthropic_api_key}",
             "-e",
             f"CLAUDE_MODEL={model}",
             "-e",
@@ -605,7 +648,9 @@ class ClaudeCodeCaller(AgentCaller):
             "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
             "-e",
             f"CLAUDE_CODE_MAX_TURNS={max_turns}",
-            self.CONTAINER_NAME,
+            "-e",
+            f"CLAUDE_SETTINGS_B64={_encode_text(json.dumps(settings))}",
+            container_name,
             "bash",
             "-lc",
             shell_command,
@@ -1116,13 +1161,41 @@ class KiloCodeCaller(AgentCaller):
     PROJECT_DIR = "/kilo_eval_workspace"
     INNER_TIMEOUT_GRACE_SECONDS = 5
     HOST_TIMEOUT_GRACE_SECONDS = 10
+    LOCAL_BASE_URL_ENV = "KILO_BASE_URL"
+    LOCAL_PROVIDER_ID_ENV = "KILO_PROVIDER_ID"
+    LOCAL_PROVIDER_NAME_ENV = "KILO_PROVIDER_NAME"
+    LOCAL_API_KEY_ENV = "KILO_API_KEY"
+    CONTAINER_NAME_ENV = "KILO_CONTAINER_NAME"
+    PROJECT_DIR_ENV = "KILO_PROJECT_DIR"
 
     def _normalize_model(self, model: str) -> str:
+        local_provider_id = self._local_provider_id()
+        if local_provider_id and model.startswith(f"{local_provider_id}/"):
+            return model
         if model.startswith(("kilo/", "openrouter/")):
             return model
         if "/" in model:
             return f"openrouter/{model}"
         return f"kilo/{model}"
+
+    def _local_base_url(self) -> str:
+        return os.environ.get(self.LOCAL_BASE_URL_ENV, "").strip()
+
+    def _local_provider_id(self) -> str:
+        return os.environ.get(self.LOCAL_PROVIDER_ID_ENV, "ollama").strip()
+
+    def _local_provider_name(self) -> str:
+        provider_id = self._local_provider_id()
+        return os.environ.get(self.LOCAL_PROVIDER_NAME_ENV, f"{provider_id} (local)").strip()
+
+    def _local_api_key(self) -> str:
+        return os.environ.get(self.LOCAL_API_KEY_ENV, "ollama-local").strip()
+
+    def _project_dir(self) -> str:
+        return os.environ.get(self.PROJECT_DIR_ENV, self.PROJECT_DIR).strip() or self.PROJECT_DIR
+
+    def _container_name(self) -> str:
+        return os.environ.get(self.CONTAINER_NAME_ENV, self.CONTAINER_NAME).strip() or self.CONTAINER_NAME
 
     def _run_id(self, task_id: str) -> str:
         safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in task_id)
@@ -1135,32 +1208,108 @@ class KiloCodeCaller(AgentCaller):
         api_key: str,
         task_id: str,
         timeout: int,
+        container_name: str | None = None,
+        project_dir: str | None = None,
     ) -> tuple[list[str], str]:
         run_id = self._run_id(task_id)
-        project_dir = shlex.quote(self.PROJECT_DIR)
-        quoted_model = shlex.quote(self._normalize_model(model))
+        raw_project_dir = project_dir or self._project_dir()
+        project_dir_q = shlex.quote(raw_project_dir)
+        normalized_model = self._normalize_model(model)
+        quoted_model = shlex.quote(normalized_model)
         quoted_timeout = shlex.quote(str(timeout))
+        prepared_prompt = self._prepare_prompt(prompt)
+        config_script, config_env = self._local_provider_setup(normalized_model)
         script = (
             "set -u; "
-            f"mkdir -p {project_dir}; "
-            f"cd {project_dir}; "
+            f"{config_script}"
+            f"mkdir -p {project_dir_q}; "
+            f"cd {project_dir_q}; "
             'KILO_PROMPT="$(printf %s "$KILO_PROMPT_B64" | base64 -d)"; '
             f"timeout --kill-after={self.INNER_TIMEOUT_GRACE_SECONDS}s {quoted_timeout}s "
-            f"kilo run --dir {project_dir} -m {quoted_model} --auto "
+            f"kilo run --dir {project_dir_q} -m {quoted_model} --auto "
             "--format json "
             '--title "$KILO_EVAL_RUN_ID" "$KILO_PROMPT"'
         )
+        env_vars = {
+            "OPENROUTER_API_KEY": api_key,
+            "KILO_PROMPT_B64": _encode_text(prepared_prompt),
+            "KILO_EVAL_RUN_ID": run_id,
+        }
+        env_vars.update(config_env)
         return (
             _docker_bash_command(
-                self.CONTAINER_NAME,
+                container_name or self._container_name(),
                 script,
-                {
-                    "OPENROUTER_API_KEY": api_key,
-                    "KILO_PROMPT_B64": _encode_text(prompt),
-                    "KILO_EVAL_RUN_ID": run_id,
-                },
+                env_vars,
             ),
             run_id,
+        )
+
+    def _local_provider_setup(self, normalized_model: str) -> tuple[str, dict[str, str]]:
+        base_url = self._local_base_url()
+        if not base_url:
+            return "", {}
+        provider_id = self._local_provider_id()
+        if not provider_id or not normalized_model.startswith(f"{provider_id}/"):
+            raise ValueError(
+                f"{self.LOCAL_BASE_URL_ENV} requires a Kilo model under "
+                f"the configured provider prefix: {provider_id}/..."
+            )
+        model_id = normalized_model.split("/", 1)[1]
+        env_name = f"{provider_id.upper().replace('-', '_')}_API_KEY"
+        provider = {
+            "id": provider_id,
+            "env": [env_name],
+            "npm": "@ai-sdk/openai-compatible",
+            "api": base_url,
+            "name": self._local_provider_name(),
+            "doc": "local Ollama-compatible API",
+            "models": {
+                model_id: {
+                    "id": model_id,
+                    "name": model_id,
+                    "attachment": False,
+                    "reasoning": False,
+                    "tool_call": True,
+                    "temperature": True,
+                    "open_weights": True,
+                    "cost": {"input": 0, "output": 0},
+                    "limit": {"context": 32768, "output": 8192},
+                },
+            },
+        }
+        script = (
+            "python3 - <<'PYKILOLOCAL'\n"
+            "import base64, json, os\n"
+            "from pathlib import Path\n"
+            "path = Path('/root/.cache/kilo/models.json')\n"
+            "path.parent.mkdir(parents=True, exist_ok=True)\n"
+            "data = {}\n"
+            "if path.exists():\n"
+            "    try:\n"
+            "        data = json.loads(path.read_text(encoding='utf-8'))\n"
+            "    except json.JSONDecodeError:\n"
+            "        data = {}\n"
+            "provider = json.loads(base64.b64decode(os.environ['KILO_LOCAL_PROVIDER_B64']).decode())\n"
+            "data[provider['id']] = provider\n"
+            "path.write_text(json.dumps(data), encoding='utf-8')\n"
+            "PYKILOLOCAL\n"
+        )
+        return script, {
+            "KILO_LOCAL_PROVIDER_B64": _encode_text(json.dumps(provider)),
+            env_name: self._local_api_key(),
+        }
+
+    def _prepare_prompt(self, prompt: str) -> str:
+        project_dir = self._project_dir()
+        return (
+            "Kilo Code environment note: run inside project directory "
+            f"{project_dir}. Project instructions in "
+            f"{project_dir}/AGENTS.md and skills in "
+            f"{project_dir}/.kilo/skills are mandatory task context. "
+            "For any code-related request, load/use explain-code before "
+            "reading, writing, testing, or final answer when that skill exists.\n\n"
+            + prompt
         )
 
     def _to_text(self, value: str | bytes | None) -> str:
@@ -1203,7 +1352,7 @@ terminate_matches KILL
         try:
             subprocess.run(
                 _docker_bash_command(
-                    self.CONTAINER_NAME,
+                    self._container_name(),
                     script,
                     {"KILO_EVAL_RUN_ID": run_id},
                 ),
@@ -1265,7 +1414,7 @@ terminate_matches KILL
     ) -> AgentResponse:
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         task_id = task_input.get("task_id", "")
-        api_key = get_openrouter_api_key()
+        api_key = self._local_api_key() if self._local_base_url() else get_openrouter_api_key()
         cmd, run_id = self._build_kilo_command(prompt, model, api_key, task_id, timeout)
         return self._run_kilo_command(cmd, task_id, timeout, run_id)
 
