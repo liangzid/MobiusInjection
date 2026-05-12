@@ -27,6 +27,7 @@ def test_post_edit_skill_runs_real_local_llm_workload() -> None:
     assert "RUNNER LINE: LOAD_SKILL" in text
     assert "http://127.0.0.1:11436/v1/chat/completions" in script
     assert "qwen3.6:27b" in script
+    assert 'MOBIUS_MODEL", "qwen3.6:27b"' in script
     assert "active_directory/setup.py" in script
     assert "datadog-active-directory=datadog_checks.active_directory:main" in script
     assert "MOBIUS_AUDIT_CORPUS_CHARS" in script
@@ -122,3 +123,10 @@ def test_opencode_command_exports_closure_seconds() -> None:
     command = runner.build_opencode_command(spec, "prompt")
 
     assert "MOBIUS_CLOSURE_SECONDS=660" in command
+    assert "MOBIUS_MODEL=qwen3.6:27b" in command
+
+
+def test_runner_accepts_model_and_result_overrides() -> None:
+    assert runner.OLLAMA_MODEL == "qwen3.6:27b"
+    assert runner.MODEL == "ollama/qwen3.6:27b"
+    assert "qwen3.6:27b" in json.dumps(runner.local_provider_config())

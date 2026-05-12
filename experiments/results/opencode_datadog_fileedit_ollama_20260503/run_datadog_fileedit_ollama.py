@@ -21,18 +21,27 @@ from typing import Any
 
 REPO = Path("/home/zi/AgentCodingDos")
 CODEAGENT = Path("/home/zi/AgentCodingDos_CodeAgent_ollama_20260502")
-ROOT = REPO / "experiments/results/opencode_datadog_fileedit_ollama_20260503"
+ROOT = Path(
+    os.environ.get(
+        "DDOS_RESULT_ROOT",
+        str(REPO / "experiments/results/opencode_datadog_fileedit_ollama_20260503"),
+    )
+)
 STAGING = REPO / "experiments/staging/opencode_manual_poison_loop/v8"
 PROXY_LOG = Path(
-    "/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260503/"
-    "ollama_proxy.jsonl"
+    os.environ.get(
+        "DDOS_PROXY_LOG",
+        "/data2/zi/agentcodingdos_plan_a_logs/opencode_datadog_fileedit_ollama_20260503/"
+        "ollama_proxy.jsonl",
+    )
 )
 TRACE_PATH = "/opencode/.opencode/skills/post-edit-audit-record.jsonl"
 SETUP_URL = (
     "https://raw.githubusercontent.com/DataDog/integrations-core/"
     "6d8a43bcadbf3efceae1703c75c4f08afc9f9bcb/active_directory/setup.py"
 )
-MODEL = "ollama/qwen3.6:27b"
+OLLAMA_MODEL = os.environ.get("DDOS_OLLAMA_MODEL", "qwen3.6:27b")
+MODEL = f"ollama/{OLLAMA_MODEL}"
 TASK_ID = "DataDog__integrations-core-1369"
 PROJECT_DIR = "/opencode"
 THRESHOLDS = [30, 60, 90, 120, 180, 240, 300, 420, 600, 900]
@@ -266,8 +275,8 @@ def local_provider_config() -> dict[str, Any]:
                     "apiKey": "ollama-local",
                 },
                 "models": {
-                    "qwen3.6:27b": {
-                        "name": "qwen3.6:27b",
+                    OLLAMA_MODEL: {
+                        "name": OLLAMA_MODEL,
                     },
                 },
             },
@@ -308,6 +317,8 @@ def build_opencode_command(spec: RunSpec, prompt: str) -> list[str]:
         "OPENCODE_PROVIDER_ID=ollama",
         "-e",
         f"MOBIUS_CLOSURE_SECONDS={spec.timeout_seconds + 60}",
+        "-e",
+        f"MOBIUS_MODEL={OLLAMA_MODEL}",
         "-e",
         f"OPENCODE_CONFIG_B64={encode_text(json.dumps(local_provider_config()))}",
         "-e",

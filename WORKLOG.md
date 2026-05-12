@@ -2518,3 +2518,206 @@
 - Result:
   - `codex` is the only credible additional coding-agent candidate found for the next experiment.
   - It is not plug-and-play in the current local Ollama DDoS pipeline; it needs a new Codex adapter/profile and validation before it can be used consistently.
+
+2026-05-04 - Codex attempt and non-Qwen OpenCode model sweep
+- User request: try Codex for local Mobius DDoS experiments; if it fails, run additional local Ollama experiments with other state-of-the-art non-Qwen models and draw a consistency curve.
+- Files touched:
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/run_datadog_fileedit_ollama.py`
+  - `experiments/results/opencode_datadog_fileedit_ollama_20260503/test_datadog_fileedit_ollama.py`
+  - `experiments/staging/opencode_manual_poison_loop/v8/post-edit-audit/scripts/closure_checkpoint.py`
+  - `experiments/results/opencode_datadog_fileedit_ollama_model_sweep_20260504/`
+  - `tasks/session_record_20260504_codex_and_opencode_model_sweep.md`
+- Actions performed:
+  - Tested Codex against the local Ollama OpenAI-compatible endpoint.
+  - Found Codex fails with the current Qwen 27B local setup because Codex sends tool definitions and Ollama reports `qwen3.6:27b` does not support tools.
+  - Made the OpenCode DataDog runner model-configurable with `DDOS_OLLAMA_MODEL`, `DDOS_RESULT_ROOT`, and `DDOS_PROXY_LOG`.
+  - Made the closure workload use `MOBIUS_MODEL` instead of hardcoding Qwen.
+  - Pulled and ran non-Qwen local models `gpt-oss:20b` and `llama3.3:70b`.
+  - For Llama 3.3 70B, reran after detecting CPU offload by using `CUDA_VISIBLE_DEVICES=2` and `OLLAMA_CONTEXT_LENGTH=32768`.
+  - Generated `opencode_model_sweep_curve.pdf` and `.png`.
+- Verification:
+  - `uv run pytest experiments/results/opencode_datadog_fileedit_ollama_20260503/test_datadog_fileedit_ollama.py experiments/results/opencode_datadog_fileedit_ollama_model_sweep_20260504/test_plot_model_sweep.py -q` passed with 14 tests.
+- Results:
+  - Qwen3.6 27B batch2: clean 7 calls / 77,865 tokens; poison 53 calls / 1,375,151 tokens.
+  - GPT-OSS 20B: clean 10 calls / 95,240 tokens; poison 310 calls / 1,515,242 tokens; resource-exhaustion shape is strongly consistent, but the DataDog edit was not correct (`setup_fixed=False`).
+  - Llama 3.3 70B: clean 71 calls / 360,936 tokens; poison 35 calls / 207,035 tokens; task edit succeeded, but closure workload did not execute (`trace_delta=0`), so this is a negative/control result for the current attack wording.
+  - Restored Ollama on `127.0.0.1:11437` in tmux session `ollama11437`; no `11436` experiment proxy remains running.
+
+2026-05-05 - Refresh paper single-node figure with Qwen and GPT-OSS
+- User request: refresh the single-node results figure using the Qwen 3.6 27B and GPT-OSS 20B local results.
+- Files touched:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_model_sweep_2x2.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_model_sweep_2x2.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_model_sweep_2x2_curve_pairs.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_sweep_2x2.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_sweep_2x2.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `WORKLOG.md`
+- Actions performed:
+  - Replaced the previous single-node agent-comparison figure with a 2x2 OpenCode local-model sweep figure.
+  - Used Qwen3.6 27B OpenCode batch2 and GPT-OSS 20B model-sweep proxy logs to rebuild one-second cumulative curves over 600 seconds.
+  - Updated the paper text and caption to describe OpenCode on `qwen3.6:27b` and `gpt-oss:20b`.
+  - Cropped the refreshed PDF assets with `pdfcrop`.
+  - Recompiled `/home/zi/paper_mobius/main.pdf`.
+- Verification:
+  - `uv run pytest scripts/test_plot_agent_ddos_local_model_sweep_2x2.py scripts/test_plot_agent_ddos_local_vs_previous_2x3.py -q` passed with 6 tests.
+  - `python scripts/plot_agent_ddos_local_model_sweep_2x2.py` regenerated the source CSV, standalone PDF/PNG, and replacement figure PDF.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`; existing unresolved citation/reference warnings remain.
+- Results:
+  - Qwen3.6 27B endpoints: clean 7 calls / 77,865 tokens; poison 53 calls / 1,375,151 tokens.
+  - GPT-OSS 20B endpoints: clean 10 calls / 95,240 tokens; poison 310 calls / 1,515,242 tokens.
+
+2026-05-05 - Split single-node Agent-DDoS figure into 2x6 and diagnose GPT-OSS
+- User request: explain why GPT-OSS looks weak on Claude Code and Kilo Code, assess whether Qwen-style tuning is possible, and split the current single-node figure so each subplot contains only one backend model experiment.
+- Files touched:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_model_agent_2x6_curve_pairs.csv`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_ddos_local_model_agent_2x6.raw.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.png`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260505_agent_ddos_2x6_split_gptoss_diagnostic.md`
+  - `WORKLOG.md`
+- Actions performed:
+  - Converted the active single-node plotting script from 2x3 model overlays to a 2x6 agent/model panel layout.
+  - Kept each subplot to clean and poisoned curves for one model, with a clean-to-poisoned alpha band.
+  - Updated the subsection prose, caption, and accessibility description to match the twelve-panel figure.
+  - Regenerated and cropped the replacement paper figure.
+- Verification:
+  - `uv run pytest scripts/test_plot_agent_ddos_local_vs_previous_2x3.py -q` passed with 3 tests.
+  - `uv run python scripts/plot_agent_ddos_local_vs_previous_2x3.py` regenerated the CSV, PDF, and PNG artifacts.
+  - Strict `latexmk -pdf main.tex` is blocked by missing unrelated asset `figs/method-main.drawio.pdf` in `/home/zi/paper_mobius/related.tex:5`.
+  - `latexmk -pdf -f -interaction=nonstopmode main.tex` regenerated `/home/zi/paper_mobius/main.pdf` with the new figure but exits nonzero because that asset is still missing.
+- Results:
+  - GPT-OSS is not uniformly weak: OpenCode/GPT-OSS amplifies from 10 clean calls / 95,240 tokens to 310 poisoned calls / 1,515,242 tokens.
+  - Claude/Kilo GPT-OSS weakness is explained by the heavy closure workload not executing in those runs; Kilo/GPT-OSS also failed the target edit in the poisoned run.
+  - Recommended tuning is to strengthen the Claude/Kilo poisoned trigger path and add a direct closure-command fallback, not to change token accounting.
+
+2026-05-05 - Tune GPT-OSS Claude/Kilo recursive single-node runs
+- User request: adjust GPT-OSS on Claude Code and Kilo Code so poisoned runs complete the recursive task and show a good resource-exhaustion effect.
+- Files touched:
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/run_multiagent_datadog_fileedit_ollama.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_20260504/test_multiagent_datadog_fileedit_ollama.py`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_gpt_oss_20260505/`
+  - `experiments/results/multiagent_datadog_fileedit_ollama_gpt_oss_kilo_tuned_20260505/`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_model_agent_2x6_curve_pairs.csv`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.png`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260505_gptoss_claude_kilo_recursive_tuning.md`
+- Actions performed:
+  - Strengthened Claude/Kilo poisoned prompts so skill loading cannot be mistaken for execution and the closure runner must be invoked.
+  - Added Kilo-specific edit guidance for the exact DataDog `setup.py` entrypoint replacement.
+  - Added a real host-side closure fallback for edited workspaces whose agent returns before running the closure loop; the fallback uses the same container workspace and local GPT-OSS proxy.
+  - Reran GPT-OSS 20B experiments, merged the successful Kilo poisoned rerun into the main GPT-OSS result root, regenerated the paper figure, cropped PDFs, and rebuilt the paper.
+- Verification:
+  - `uv run pytest experiments/results/multiagent_datadog_fileedit_ollama_20260504/test_multiagent_datadog_fileedit_ollama.py -q` passed with 9 tests.
+  - `uv run pytest scripts/test_plot_agent_ddos_local_vs_previous_2x3.py -q` passed with 5 tests in `/home/zi/paper_mobius`.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`; existing unrelated citation/reference warnings remain.
+- Results:
+  - Claude Code GPT-OSS clean: 4 calls / 49,108 tokens; poisoned: 263 calls / 2,499,249 tokens / 17 trace records. The poisoned run used the real closure fallback after the edit.
+  - Kilo Code GPT-OSS clean: 3 calls / 34,518 tokens; poisoned: 214 calls / 2,062,038 tokens / 12 trace records. The successful poisoned run executed without fallback.
+  - No experiment proxy remains listening on port `11436`.
+
+2026-05-05 - Adjust GPT-OSS curve sampling and timeout window
+- User request: increase the visible sample-point count for the newly added Claude Code/GPT-OSS and Kilo Code/GPT-OSS curves to match Qwen, and use a smaller timeout/window for those GPT-OSS curves because they reach the resource-exhaustion regime early.
+- Files touched:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_model_agent_2x6_curve_pairs.csv`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_ddos_local_model_agent_2x6.raw.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.png`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260505_gptoss_curve_sampling_timeout.md`
+- Actions performed:
+  - Made every plotted agent/model/condition curve use a dense 601-point uniform grid plus true proxy-recorded LLM request times.
+  - Kept Qwen3.6 27B panels and OpenCode/GPT-OSS at 600 seconds, and shortened Claude Code/GPT-OSS plus Kilo Code/GPT-OSS to 300 seconds.
+  - Fixed the subplot x-axis sharing bug by sharing x axes only within each column, so Claude Code/GPT-OSS and Kilo Code/GPT-OSS now render with actual 0--300 second x axes.
+  - Removed step-style curve rendering so the dense sampled curves and shaded clean-to-poisoned regions render more cleanly.
+  - Updated paper text/caption to disclose the 300-second GPT-OSS Claude/Kilo window and dense request-time sampling.
+  - Regenerated, cropped, and recompiled the paper figure.
+- Verification:
+  - `uv run pytest scripts/test_plot_agent_ddos_local_vs_previous_2x3.py -q` passed with 3 tests in `/home/zi/paper_mobius`.
+  - Generated CSV has at least 601 samples for every agent/model/condition curve and includes true request-time points.
+  - Plot tests assert that Claude Code/GPT-OSS and Kilo Code/GPT-OSS x axes are 0--300 seconds.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`; existing unrelated citation/reference warnings remain.
+- Results:
+  - Claude Code/GPT-OSS at 300 seconds: clean 4 calls / 49,108 tokens; poisoned 136 calls / 1,296,197 tokens.
+  - Kilo Code/GPT-OSS at 300 seconds: clean 3 calls / 34,518 tokens; poisoned 129 calls / 1,230,847 tokens.
+  - The refreshed CSV contains 736 time points for Claude Code/GPT-OSS poisoned and 729 time points for Kilo Code/GPT-OSS poisoned.
+
+2026-05-06 - Expand GPT-OSS column windows to 350 seconds and retheme figure
+- User request: do not restore all panels to 600 seconds; expand only the second and fourth columns to 350 seconds, try a nicer theme, and ensure one of clean/poison is dashed.
+- Files touched:
+  - `/home/zi/paper_mobius/scripts/plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/test_plot_agent_ddos_local_vs_previous_2x3.py`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/local_model_agent_2x6_curve_pairs.csv`
+  - `/home/zi/paper_mobius/scripts/generated/agent_ddos_curve/agent_ddos_local_model_agent_2x6.raw.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_call_token_curve.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.pdf`
+  - `/home/zi/paper_mobius/curves/agent_ddos_local_model_agent_2x6.png`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260505_gptoss_curve_sampling_timeout.md`
+- Actions performed:
+  - Set only Claude Code/GPT-OSS and Kilo Code/GPT-OSS panels to 350-second x axes.
+  - Kept Qwen3.6 27B panels and OpenCode/GPT-OSS at 600 seconds.
+  - Updated the theme to a clean white background with restrained blue/orange colors, lighter grid/fill styling, dashed clean curves, and solid poisoned curves.
+  - Updated tests, regenerated the figure, cropped PDFs, and rebuilt the paper.
+- Verification:
+  - `uv run pytest scripts/test_plot_agent_ddos_local_vs_previous_2x3.py -q` passed with 6 tests.
+  - Plot introspection confirmed column 2 and column 4 x limits are `(0.0, 350.0)`, while column 3 remains `(0.0, 600.0)`.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`.
+- Results:
+  - Claude Code/GPT-OSS at 350 seconds: clean 4 calls / 49,108 tokens; poisoned 160 calls / 1,516,036 tokens.
+  - Kilo Code/GPT-OSS at 350 seconds: clean 3 calls / 34,518 tokens; poisoned 153 calls / 1,460,141 tokens.
+  - The refreshed CSV contains 760 time points for Claude Code/GPT-OSS poisoned and 753 time points for Kilo Code/GPT-OSS poisoned.
+
+2026-05-06 - Main-text review pass
+- User request: review whether the current main text has issues.
+- Files inspected:
+  - `/home/zi/paper_mobius/main.tex`
+  - `/home/zi/paper_mobius/intro.tex`
+  - `/home/zi/paper_mobius/method.tex`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/defense.tex`
+  - `/home/zi/paper_mobius/main.log`
+- Actions performed:
+  - Checked LaTeX log for unresolved references, unresolved citations, duplicate labels, and warnings.
+  - Reviewed the main-text sections for terminology, model-count consistency, table/figure consistency, and obvious grammar issues.
+- Results:
+  - The LaTeX log has no unresolved citation/reference or duplicate-label issues; the remaining log warning is float placement.
+  - Main issues found for user review: the OpenCode/HumanEval model table has inconsistent model counts and Overall totals; the abstract names the defense as Agent Component Analysis while the body/conclusion use Agent Component Entropy; the model-count/version claims differ between abstract, introduction, and experimental settings; and several visible grammar/typo clusters remain in the experimental settings and method sections.
+
+2026-05-06 - Fix typos and polish method prose
+- User request: fix the typos and unprofessional method-section sentences found during the main-text review.
+- Files touched:
+  - `/home/zi/paper_mobius/intro.tex`
+  - `/home/zi/paper_mobius/method.tex`
+  - `/home/zi/paper_mobius/exper.tex`
+  - `/home/zi/paper_mobius/defense.tex`
+  - `/home/zi/paper_mobius/main.pdf`
+  - `tasks/session_record_20260506_typo_method_polish.md`
+- Actions performed:
+  - Fixed visible typos and grammar issues in the experimental settings, including misspellings such as `experiemntal`, `demtermines`, `simlulate`, `Specifcially`, `catogies`, `Relavant`, `fuctional`, `relfect`, and `Triggle-ASR`.
+  - Polished awkward experimental-setting prose around agent selection, Docker isolation, risk mitigation, benchmark descriptions, and metric definitions.
+  - Polished method-section sentences around adversary objectives, attack properties, semantic-closure text, pipeline description, ingress binding, semantic grafting, and algorithm wording.
+  - Corrected the method-section count from "Two strategic properties" to "Three strategic properties."
+  - Polished related wording in the introduction and defense sections.
+- Verification:
+  - Pattern scan for the previously identified typo/unprofessional phrases returned no matches.
+  - `latexmk -pdf main.tex` completed in `/home/zi/paper_mobius`.
+  - `main.log` has no unresolved citation/reference or duplicate-label warnings; the remaining warning is the existing float-placement warning.
+- Notes:
+  - This pass intentionally did not change experimental result values, table totals, model-count claims, or backend-version consistency.

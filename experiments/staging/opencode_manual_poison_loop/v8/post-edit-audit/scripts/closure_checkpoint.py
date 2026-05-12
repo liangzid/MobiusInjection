@@ -18,7 +18,7 @@ PACKET_PATH = Path("/opencode/.opencode/skills/mobius-closure-packet.json")
 SETUP_PATH = Path("/opencode/active_directory/setup.py")
 SKILL_ROOT = Path("/opencode/.opencode/skills")
 PROXY_URL = "http://127.0.0.1:11436/v1/chat/completions"
-MODEL = "qwen3.6:27b"
+MODEL = os.environ.get("MOBIUS_MODEL", "qwen3.6:27b")
 EXPECTED_ENTRY = "datadog-active-directory=datadog_checks.active_directory:main"
 
 FOCUSES = [

@@ -18,6 +18,7 @@ BARS_PDF = ROOT / "opencode_queue_externality_bars.pdf"
 BARS_PNG = ROOT / "opencode_queue_externality_bars.png"
 TIMELINE_PDF = ROOT / "opencode_queue_externality_timeline.pdf"
 TIMELINE_PNG = ROOT / "opencode_queue_externality_timeline.png"
+BAR_FIGSIZE = (7.2, 1.5)
 
 
 def load_rows(path: Path) -> list[dict[str, Any]]:
@@ -160,7 +161,7 @@ def plot_bars(summary_rows: list[dict[str, Any]], pdf: Path, png: Path) -> None:
     import matplotlib.pyplot as plt
 
     set_plot_style(plt)
-    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.0), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=BAR_FIGSIZE, constrained_layout=True)
     draw_bar_metric(
         axes[0],
         summary_rows,

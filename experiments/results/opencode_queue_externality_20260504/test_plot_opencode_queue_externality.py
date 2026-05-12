@@ -68,3 +68,9 @@ def test_metric_by_poisoned_nodes_scales_real_p95_seconds() -> None:
 
     assert round(p95[0], 3) == 0.493
     assert round(p95[4], 3) == 112.994
+
+
+def test_bar_figure_uses_compressed_height_ratio() -> None:
+    width, height = plotter.BAR_FIGSIZE
+
+    assert height / width < 0.21
