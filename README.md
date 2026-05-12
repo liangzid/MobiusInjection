@@ -6,11 +6,6 @@ the Mobius Injection and agent-oriented denial-of-service experiments.
 
 Publication link: `TO_BE_ADDED`
 
-## Citation:
-
-```bibtex
-TO BE ADDED
-```
 
 ## Safety Boundary
 
@@ -560,3 +555,9 @@ Agent behavior depends on model versions, provider behavior, timeouts,
 container state, and stochastic decoding. Treat full reruns as new
 measurements, not as byte-for-byte regeneration.
 
+
+## Citation:
+
+```bibtex
+TO BE ADDED
+```
