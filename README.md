@@ -4,7 +4,8 @@ Mobius Injection contains the experiment harness, payload templates, local
 service tooling, analysis utilities, tests, and artifact layout for reproducing
 the Mobius Injection and agent-oriented denial-of-service experiments.
 
-Publication link: `TO_BE_ADDED`
+Publication link: [arXiv:2605.11442](https://arxiv.org/abs/2605.11442)
+([DOI](https://doi.org/10.48550/arXiv.2605.11442))
 
 
 ## Safety Boundary
@@ -556,8 +557,19 @@ container state, and stochastic decoding. Treat full reruns as new
 measurements, not as byte-for-byte regeneration.
 
 
-## Citation:
+## Citation
+
+If you use this repository, please cite:
 
 ```bibtex
-TO BE ADDED
+@misc{liang2026singlemessageparalyzeai,
+  title = {Can a Single Message Paralyze the AI Infrastructure? The Rise of AbO-DDoS Attacks through Targeted Mobius Injection},
+  author = {Liang, Zi and Li, Ronghua and Wang, Yanyun and Ye, Qingqing and Hu, Haibo},
+  year = {2026},
+  eprint = {2605.11442},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CR},
+  doi = {10.48550/arXiv.2605.11442},
+  url = {https://arxiv.org/abs/2605.11442}
+}
 ```
