@@ -320,6 +320,10 @@ default_provider = "openrouter"
 default_temperature = 0.0
 provider_timeout_secs = 120
 
+[reliability]
+provider_retries = 8
+provider_backoff_ms = 2000
+
 [autonomy]
 level = "full"
 workspace_only = true

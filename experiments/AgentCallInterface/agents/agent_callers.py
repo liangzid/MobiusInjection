@@ -184,13 +184,59 @@ class OpenClawCaller(AgentCaller):
             and "not allowed for agent" in haystack
         )
 
+    def _openclaw_text_is_api_error(self, text: str) -> bool:
+        lowered = text.lower()
+        return "http 401" in lowered or "user not found" in lowered or "unauthorized" in lowered
+
+    def _openrouter_auth_profile_script(self) -> str:
+        return (
+            "node <<'NODE'\n"
+            "const fs = require('fs');\n"
+            "const path = process.env.OPENCLAW_AUTH_PROFILES_PATH || "
+            "'/root/.openclaw-mobius-eval/agents/main/agent/auth-profiles.json';\n"
+            "const raw = process.env.OPENCLAW_EVAL_OPENROUTER_KEY_B64 || '';\n"
+            "const key = Buffer.from(raw, 'base64').toString('utf8').trim();\n"
+            "if (!key) process.exit(2);\n"
+            "fs.mkdirSync(require('path').dirname(path), { recursive: true });\n"
+            "const payload = {\n"
+            "  profiles: {\n"
+            "    'openrouter:manual': { provider: 'openrouter', type: 'api_key', key },\n"
+            "  },\n"
+            "  order: { openrouter: ['openrouter:manual'] },\n"
+            "};\n"
+            "fs.writeFileSync(path, JSON.stringify(payload, null, 2) + '\\n');\n"
+            "NODE\n"
+        )
+
+    def _build_install_openrouter_auth_command(
+        self,
+        api_key: str,
+        container_name: str | None = None,
+    ) -> list[str]:
+        return _docker_bash_command(
+            container_name or self.CONTAINER_NAME,
+            self._openrouter_auth_profile_script(),
+            {
+                "OPENROUTER_API_KEY": api_key,
+                "OPENCLAW_EVAL_OPENROUTER_KEY_B64": _encode_text(api_key),
+            },
+        )
+
     def _parse_openclaw_output(self, raw_output: str) -> tuple[bool, str, str | None]:
         json_start = raw_output.find("{")
         if json_start == -1:
-            return False, raw_output, "OpenClaw did not return JSON output"
+            error = (
+                "OpenClaw API error"
+                if self._openclaw_text_is_api_error(raw_output)
+                else "OpenClaw did not return JSON output"
+            )
+            return False, raw_output, error
         payload = json.loads(raw_output[json_start:])
         outputs = payload.get("outputs", [])
         text_output = "\n".join(item.get("text", "") for item in outputs).strip()
+        combined = "\n".join(part for part in (raw_output, text_output) if part)
+        if self._openclaw_text_is_api_error(combined):
+            return False, text_output or raw_output.strip(), "OpenClaw API error"
         generated = "couldn't generate a response" not in text_output.lower()
         success = bool(payload.get("ok")) and generated
         error = None if success else text_output or raw_output.strip()
@@ -206,6 +252,18 @@ class OpenClawCaller(AgentCaller):
         container_name = _container_name_from(task_input, self.CONTAINER_NAME)
         api_key = get_openrouter_api_key()
         task_id = task_input.get("task_id", "")
+        install_cmd = self._build_install_openrouter_auth_command(api_key, container_name)
+        install_response = _run_command(install_cmd, task_id, min(timeout, 30))
+        if install_response.returncode != 0:
+            return AgentResponse(
+                success=False,
+                output=install_response.output,
+                error=install_response.error or "Failed to install OpenClaw OpenRouter auth profile",
+                duration=install_response.duration,
+                task_id=task_id,
+                stderr=install_response.stderr,
+                returncode=install_response.returncode,
+            )
         # OpenClaw eval profile may block runtime --model overrides.
         # Set profile default model first, then run inference without --model.
         set_model_cmd = self._build_openclaw_set_primary_model_command(model, api_key, container_name)
@@ -319,6 +377,10 @@ class ZeroClawCaller(AgentCaller):
 default_provider = "openrouter"
 default_temperature = 0.0
 provider_timeout_secs = 120
+
+[reliability]
+provider_retries = 8
+provider_backoff_ms = 2000
 
 [autonomy]
 level = "full"
@@ -458,6 +520,45 @@ class NanobotCaller(AgentCaller):
 
 class HermesCaller(AgentCaller):
     CONTAINER_NAME = "hermes"
+    CONFIG_PATH = "/root/.hermes/config.yaml"
+    VENV_PYTHON = "/root/.hermes/hermes-agent/venv/bin/python"
+
+    def _openrouter_config_script(self) -> str:
+        return (
+            f"{self.VENV_PYTHON} - <<'PY'\n"
+            "import base64, json, os\n"
+            "from pathlib import Path\n"
+            "raw = os.environ.get('HERMES_EVAL_OPENROUTER_KEY_B64', '')\n"
+            "key = base64.b64decode(raw).decode().strip() if raw else ''\n"
+            "if not key:\n"
+            "    raise SystemExit(2)\n"
+            f"path = Path({self.CONFIG_PATH!r})\n"
+            "path.parent.mkdir(parents=True, exist_ok=True)\n"
+            "path.write_text(\n"
+            "    'model:\\n'\n"
+            "    '  default: \"openrouter/auto\"\\n'\n"
+            "    '  provider: \"openrouter\"\\n'\n"
+            "    'providers:\\n'\n"
+            "    '  openrouter:\\n'\n"
+            "    f'    api_key: {json.dumps(key)}\\n'\n"
+            "    '    base_url: \"https://openrouter.ai/api/v1\"\\n'\n"
+            ")\n"
+            "PY\n"
+        )
+
+    def _build_install_openrouter_config_command(
+        self,
+        api_key: str,
+        container_name: str | None = None,
+    ) -> list[str]:
+        return _docker_bash_command(
+            container_name or self.CONTAINER_NAME,
+            self._openrouter_config_script(),
+            {
+                "OPENROUTER_API_KEY": api_key,
+                "HERMES_EVAL_OPENROUTER_KEY_B64": _encode_text(api_key),
+            },
+        )
 
     def _build_hermes_command(
         self,
@@ -467,7 +568,10 @@ class HermesCaller(AgentCaller):
         container_name: str | None = None,
     ) -> list[str]:
         script = (
-            "source ~/.local/bin/env && /root/.hermes/hermes-agent/venv/bin/hermes chat "
+            f"{self._openrouter_config_script()}"
+            "source ~/.local/bin/env && "
+            f'export OPENROUTER_API_KEY="{_decode_b64("HERMES_EVAL_OPENROUTER_KEY_B64")}" && '
+            "/root/.hermes/hermes-agent/venv/bin/hermes chat "
             f"--provider openrouter --model {shlex.quote(model)} -Q -q \"{_decode_b64('HERMES_PROMPT_B64')}\""
         )
         return _docker_bash_command(
@@ -475,6 +579,7 @@ class HermesCaller(AgentCaller):
             script,
             {
                 "OPENROUTER_API_KEY": api_key,
+                "HERMES_EVAL_OPENROUTER_KEY_B64": _encode_text(api_key),
                 "HERMES_PROMPT_B64": _encode_text(prompt),
             },
         )

@@ -348,6 +348,9 @@ def test_zeroclaw_eval_config_is_noninteractive_for_tmp_workspaces():
     assert '"/tmp"' in config
     assert '"/workspace"' in config
     assert f"max_tool_iterations = {caller.MAX_TOOL_ITERATIONS}" in config
+    assert "[reliability]" in config
+    assert "provider_retries = 8" in config
+    assert "provider_backoff_ms = 2000" in config
 
 
 def test_nanobot_temp_config_targets_openrouter():
