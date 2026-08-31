@@ -10,6 +10,12 @@ AGENTS="${AGENTS:-openclaw zeroclaw hermes}"
 LIMIT="${LIMIT:-44}"
 TIMEOUT="${TIMEOUT:-420}"
 CALLING_TIMEOUT="${CALLING_TIMEOUT:-420}"
+TASK_IDS="${TASK_IDS:-}"
+TASK_ID_ARGS=()
+if [[ -n "$TASK_IDS" ]]; then
+  # shellcheck disable=SC2206
+  TASK_ID_ARGS=(--task-ids $TASK_IDS)
+fi
 
 OPENCLAW_RUNNER="$PROJECT_ROOT/experiments/scripts/effectiveness_injection_claw_0.0.1.openclaw_add_c_minimal.py"
 CLAW_RUNNER="$PROJECT_ROOT/experiments/scripts/effectiveness_injection_claw_0.0.1.zeroclaw_hermes_add_c_minimal.py"
@@ -28,7 +34,8 @@ for agent in $AGENTS; do
       --limit "$LIMIT" \
       --model "$MODEL" \
       --timeout "$TIMEOUT" \
-      --calling-timeout "$CALLING_TIMEOUT"
+      --calling-timeout "$CALLING_TIMEOUT" \
+      "${TASK_ID_ARGS[@]}"
   elif [[ "$agent" == "zeroclaw" || "$agent" == "hermes" ]]; then
     uv run python "$CLAW_RUNNER" \
       --agent "$agent" \
@@ -38,7 +45,8 @@ for agent in $AGENTS; do
       --limit "$LIMIT" \
       --model "$MODEL" \
       --timeout "$TIMEOUT" \
-      --calling-timeout "$CALLING_TIMEOUT"
+      --calling-timeout "$CALLING_TIMEOUT" \
+      "${TASK_ID_ARGS[@]}"
   else
     echo "Unknown ADD_C agent: $agent" >&2
     exit 2

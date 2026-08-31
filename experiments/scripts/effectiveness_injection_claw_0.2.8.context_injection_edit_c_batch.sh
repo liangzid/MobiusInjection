@@ -10,6 +10,12 @@ AGENTS="${AGENTS:-openclaw zeroclaw hermes}"
 LIMIT="${LIMIT:-44}"
 TIMEOUT="${TIMEOUT:-420}"
 CALLING_TIMEOUT="${CALLING_TIMEOUT:-420}"
+TASK_IDS="${TASK_IDS:-}"
+TASK_ID_ARGS=()
+if [[ -n "$TASK_IDS" ]]; then
+  # shellcheck disable=SC2206
+  TASK_ID_ARGS=(--task-ids $TASK_IDS)
+fi
 
 OPENCLAW_IMAGE="${OPENCLAW_IMAGE:-openclaw:edit_c_config_victim}"
 ZEROCLAW_IMAGE="${ZEROCLAW_IMAGE:-zeroclaw:edit_c_config_victim}"
@@ -71,7 +77,8 @@ for agent in $AGENTS; do
       --model "$MODEL" \
       --openclaw-image "$OPENCLAW_IMAGE" \
       --timeout "$TIMEOUT" \
-      --calling-timeout "$CALLING_TIMEOUT"
+      --calling-timeout "$CALLING_TIMEOUT" \
+      "${TASK_ID_ARGS[@]}"
   elif [[ "$agent" == "zeroclaw" || "$agent" == "hermes" ]]; then
     uv run python "$CLAW_RUNNER" \
       --agent "$agent" \
@@ -84,7 +91,8 @@ for agent in $AGENTS; do
       --zeroclaw-image "$ZEROCLAW_IMAGE" \
       --hermes-image "$HERMES_IMAGE" \
       --timeout "$TIMEOUT" \
-      --calling-timeout "$CALLING_TIMEOUT"
+      --calling-timeout "$CALLING_TIMEOUT" \
+      "${TASK_ID_ARGS[@]}"
   fi
   echo "[$(date --iso-8601=seconds)] EDIT_C batch done agent=$agent run_id=$agent_run_id"
 done
