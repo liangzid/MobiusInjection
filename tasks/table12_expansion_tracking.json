@@ -1,0 +1,106 @@
+{
+  "updated_at": "2026-08-30T10:40:43.599196+08:00",
+  "coverage_complete": false,
+  "aggregate": "2717/2760",
+  "sections": {
+    "humaneval_add_s": {
+      "valid": 492,
+      "missing": 0,
+      "invalid_401": 0,
+      "invalid_empty": 0,
+      "present_no_asr": 0
+    },
+    "humaneval_edit_s": {
+      "valid": 492,
+      "missing": 0,
+      "invalid_401": 0,
+      "invalid_empty": 0,
+      "present_no_asr": 0
+    },
+    "swebench_add_s": {
+      "valid": 240,
+      "missing": 0,
+      "invalid_401": 0,
+      "invalid_empty": 0,
+      "present_no_asr": 0
+    },
+    "swebench_edit_s": {
+      "valid": 204,
+      "missing": 36,
+      "invalid_401": 0,
+      "invalid_empty": 0,
+      "present_no_asr": 0
+    },
+    "claw_orig_11": {
+      "valid": 792,
+      "missing": 0,
+      "invalid_401": 0,
+      "invalid_empty": 0,
+      "present_no_asr": 0
+    },
+    "claw_new_28": {
+      "valid": 497,
+      "missing": 0,
+      "invalid_401": 0,
+      "invalid_empty": 7,
+      "present_no_asr": 0
+    }
+  },
+  "expected": {
+    "humaneval_add_s": 492,
+    "humaneval_edit_s": 492,
+    "swebench_add_s": 240,
+    "swebench_edit_s": 240,
+    "claw_orig_11": 792,
+    "claw_new_28": 504
+  },
+  "running": {
+    "queue_pid": 2149534,
+    "queue_alive": true,
+    "phase": "swebench_edit_s_offset20",
+    "he_edit_max": {
+      "opencode": 163,
+      "kilo_code": 163,
+      "claude_code": 163
+    },
+    "he_edit_valid_files": {
+      "opencode": 144,
+      "kilo_code": 144,
+      "claude_code": 144
+    },
+    "swe_add_valid_files": {
+      "opencode": 0,
+      "kilo_code": 0,
+      "claude_code": 0
+    },
+    "swe_edit_valid_files": {
+      "opencode": 48,
+      "kilo_code": 48,
+      "claude_code": 48
+    }
+  },
+  "backlog": {
+    "claw_zeroclaw_holes": [
+      "add_s/zeroclaw/doc-005",
+      "edit_s/zeroclaw/eml-011",
+      "add_c/zeroclaw/doc-005",
+      "add_c/zeroclaw/eml-011",
+      "edit_m/zeroclaw/eml-011",
+      "edit_c/zeroclaw/doc-013",
+      "edit_c/zeroclaw/eml-011"
+    ],
+    "claw_hole_count": 7
+  },
+  "queue_log_tail": [
+    "",
+    "Running edit skill case: django__django-13028 kilo_code swebench_django__django-13028_kilo_code_03f905e2673a",
+    "",
+    "Running edit skill case: django__django-13028 claude_code swebench_django__django-13028_claude_code_75abecefb363",
+    "",
+    "Running edit skill case: django__django-13033 opencode swebench_django__django-13033_opencode_d768820224e7",
+    "",
+    "Running edit skill case: django__django-13033 kilo_code swebench_django__django-13033_kilo_code_b3aad6d3a4ea",
+    "",
+    "Running edit skill case: django__django-13033 claude_code swebench_django__django-13033_claude_code_636516a437f8"
+  ]
+}
