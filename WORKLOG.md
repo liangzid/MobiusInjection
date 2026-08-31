@@ -1,5 +1,19 @@
 # Worklog
 
+## 2026-05-22 - Add paper link and citation to README
+
+- User request: modify the README to add the link and citation for `https://arxiv.org/abs/2605.11442`.
+- Files inspected:
+  - `/home/zi/AgentCodingDos/README.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+  - `https://arxiv.org/abs/2605.11442`
+- Files modified:
+  - `/home/zi/AgentCodingDos/README.md`
+  - `/home/zi/AgentCodingDos/WORKLOG.md`
+- Actions performed: replaced the placeholder publication link with the arXiv and DOI links; added a BibTeX citation section using the arXiv metadata.
+- Verification: documentation-only change; no code tests were run.
+- Internal result: README now cites the paper "Can a Single Message Paralyze the AI Infrastructure? The Rise of AbO-DDoS Attacks through Targeted Mobius Injection" as arXiv:2605.11442.
+
 ## 2026-05-04 - Extend local Ollama DataDog file-edit curves to Claude Code and Kilo Code
 
 - User request: resume the local-server Mobius-injection calling-time and token-consumption experiment after the previous conversation hit the context limit; extend the completed OpenCode batch2 direction to Claude Code and Kilo Code.
