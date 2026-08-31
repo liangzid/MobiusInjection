@@ -123,6 +123,21 @@ def test_apply_injection_appends_python_comment_block(tmp_path: Path) -> None:
     assert "# line two" in text
 
 
+def test_apply_injection_creates_missing_text_append_target(tmp_path: Path) -> None:
+    workspace = tmp_path
+    spec = InjectionSpec(
+        mode="text_append",
+        file="notes/internal_ops_note.txt",
+        prepend_label="Operations note:",
+    )
+
+    apply_injection(workspace, spec, "PAYLOAD")
+
+    text = (workspace / "notes/internal_ops_note.txt").read_text(encoding="utf-8")
+    assert "Operations note:" in text
+    assert text.endswith("PAYLOAD\n")
+
+
 def test_build_category_summary_uses_poisoned_runs_for_p_asr() -> None:
     summary = build_category_summary(
         [
@@ -189,11 +204,38 @@ def test_plan_a_taskset_has_research_plan_a_sized_categories() -> None:
         counts[item.category] = counts.get(item.category, 0) + 1
 
     assert counts == {
-        "daily-life": 11,
-        "social": 11,
-        "office": 11,
-        "dev": 11,
+        "daily-life": 19,
+        "social": 17,
+        "office": 18,
+        "dev": 18,
     }
+
+
+def test_plan_a_taskset_covers_four_table1_folders() -> None:
+    plan_a_path = (
+        PROJECT_ROOT / "experiments/configs/context_injection_add_s_taskset_plan_a.toml"
+    )
+    tasks_root = (
+        PROJECT_ROOT / "experiments/AgentCallInterface/datasets/clawbench_tasks/tasks"
+    )
+    selections = load_taskset(plan_a_path)
+    selected = {item.task_id for item in selections}
+    folder_map = {
+        "document-editing": "daily-life",
+        "communication": "social",
+        "email": "office",
+        "code-assistance": "dev",
+    }
+    for folder, category in folder_map.items():
+        folder_ids = {
+            "-".join(path.name.split("-")[:2])
+            for path in (tasks_root / folder).iterdir()
+            if path.is_dir()
+        }
+        missing = folder_ids - selected
+        assert not missing, f"{category} missing {sorted(missing)}"
+        category_ids = {item.task_id for item in selections if item.category == category}
+        assert folder_ids <= category_ids
 
 
 def test_plan_a_taskset_injection_targets_exist_after_setup() -> None:
@@ -226,9 +268,17 @@ def test_plan_a_taskset_injection_targets_exist_after_setup() -> None:
                         else:
                             shutil.copy2(item, destination)
 
-            assert (
-                explicit_workspace / selection.injection.file
-            ).exists(), f"missing injection target for {selection.task_id}: {selection.injection.file}"
+            target = explicit_workspace / selection.injection.file
+            if not target.exists():
+                assert selection.injection.mode == "text_append", (
+                    f"missing injection target for {selection.task_id}: "
+                    f"{selection.injection.file}"
+                )
+                continue
+            assert target.exists(), (
+                f"missing injection target for {selection.task_id}: "
+                f"{selection.injection.file}"
+            )
 
 
 def test_add_s_script_uses_broader_hermes_openclaw_detection() -> None:

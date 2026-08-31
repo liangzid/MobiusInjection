@@ -87,7 +87,10 @@ def apply_injection(
     workspace = Path(workspace_root)
     target = workspace / injection.file
     if not target.exists():
-        raise FileNotFoundError(f"Injection target does not exist: {target}")
+        if injection.mode != "text_append":
+            raise FileNotFoundError(f"Injection target does not exist: {target}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("", encoding="utf-8")
 
     if injection.mode == "json_field_append":
         _apply_json_field_append(target, injection, payload_text)

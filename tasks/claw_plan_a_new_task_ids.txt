@@ -1,0 +1,30 @@
+# New Table-1 folder tasks not in the original plan_a 11×4 sample.
+# Reuse existing 11 per category from add_s_eval_plan_a_20260424_1530.
+doc-005
+doc-006
+doc-010
+doc-012
+doc-013
+doc-014
+doc-015
+doc-018
+comm-002
+comm-003
+comm-007
+comm-012
+comm-014
+comm-015
+eml-003
+eml-008
+eml-011
+eml-014
+eml-016
+eml-017
+eml-018
+code-002
+code-005
+code-007
+code-008
+code-010
+code-011
+code-012
