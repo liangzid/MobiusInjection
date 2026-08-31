@@ -1,5 +1,30 @@
 # Worklog
 
+## 2026-08-31 - Batch commit claw experiment hardening and Table 12 ops scripts
+
+- User request: commit repository work in logical batches.
+- Files committed across 7 commits:
+  - `experiments/AgentCallInterface/agents/agent_callers.py`
+  - `experiments/AgentCallInterface/coding_agents/coding_agent_callers.py`
+  - `experiments/AgentCallInterface/context_injection_add_s.py`
+  - `experiments/AgentCallInterface/tests/test_agent_callers.py`
+  - `experiments/AgentCallInterface/tests/test_openclaw_model_normalization.py`
+  - `experiments/AgentCallInterface/tests/test_context_injection_add_s.py`
+  - `experiments/AgentCallInterface/tests/test_pending_claw_task_ids.py`
+  - `experiments/AgentCallInterface/tests/test_batch_scripts_forward_task_ids.py`
+  - `experiments/configs/context_injection_add_s_taskset_plan_a.toml`
+  - `experiments/scripts/pending_claw_task_ids.py`
+  - `experiments/scripts/evaluate_ingress_defenses.py`
+  - `experiments/scripts/ingress_defense_guards.py`
+  - `experiments/scripts/test_evaluate_ingress_defenses.py`
+  - effectiveness and batch shell scripts under `experiments/scripts/`
+  - `tasks/claw_plan_a_new_task_ids.txt`
+  - `tasks/table12_expansion_tracking.json`
+  - `WORKLOG.md`
+- Actions performed: grouped changes into seven commits covering OpenRouter auth hardening, Plan A taskset expansion, pending task ID utilities, ingress defense evaluation, experiment runner guards, Table 12 backfill/monitoring scripts, and WORKLOG documentation.
+- Verification: `uv run pytest` on the related test modules — 59 passed.
+- Internal result: left untracked runtime artifacts `tasks/claw_zeroclaw_final7.pid` and `tasks/table12_event_watcher.state` out of commits.
+
 ## 2026-05-22 - Add paper link and citation to README
 
 - User request: modify the README to add the link and citation for `https://arxiv.org/abs/2605.11442`.
