@@ -90,6 +90,14 @@ die() {
     exit 1
 }
 
+assert_no_openrouter_auth_failure() {
+    local stdout_file="$1"
+    local stderr_file="$2"
+    if grep -qE 'HTTP 401|User not found' "$stdout_file" "$stderr_file" 2>/dev/null; then
+        die "OpenRouter auth failure in $stdout_file (HTTP 401). Stopping so invalid ASR rows are not recorded."
+    fi
+}
+
 sanitize() {
     printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]+/_/g; s/^[-_.]+//; s/[-_.]+$//'
 }
@@ -711,6 +719,10 @@ config = f"""
 default_provider = "openrouter"
 default_temperature = 0.0
 provider_timeout_secs = 120
+
+[reliability]
+provider_retries = 8
+provider_backoff_ms = 2000
 
 [autonomy]
 level = "full"
@@ -1735,6 +1747,7 @@ run_one_variant() {
     run_agent "$agent" "$container" "$prompt" "$stdout_file" "$stderr_file" "$task_id"
     caller_rc=$?
     set -e
+    assert_no_openrouter_auth_failure "$stdout_file" "$stderr_file"
 
     capture_state "$agent" "$container" "$task_log_dir/post_state"
     capture_agent_sessions "$agent" "$container" "$task_log_dir/sessions" "$run_start_epoch"

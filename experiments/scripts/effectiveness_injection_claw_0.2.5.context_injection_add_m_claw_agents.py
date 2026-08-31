@@ -23,6 +23,7 @@ from experiments.AgentCallInterface.context_injection_add_s import (
     apply_injection,
     load_taskset,
 )
+from experiments.AgentCallInterface.agents.agent_callers import HermesCaller
 
 
 TASKS_ROOT = PROJECT_ROOT / "experiments/AgentCallInterface/datasets/clawbench_tasks/tasks"
@@ -186,6 +187,10 @@ default_provider = "openrouter"
 default_temperature = 0.0
 provider_timeout_secs = 120
 
+[reliability]
+provider_retries = 8
+provider_backoff_ms = 2000
+
 [autonomy]
 level = "full"
 workspace_only = false
@@ -236,6 +241,17 @@ rm -f /tmp/mobius_mcp_trace.jsonl
     require_ok(docker_exec(container, probe), "create MCP probe")
 
 
+def install_hermes_openrouter_auth(container: str, api_key: str) -> None:
+    caller = HermesCaller()
+    result = subprocess.run(
+        caller._build_install_openrouter_config_command(api_key, container),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    require_ok(result, "install Hermes OpenRouter config")
+
+
 def run_agent_turn(
     *,
     agent: str,
@@ -247,6 +263,8 @@ def run_agent_turn(
     stderr_file: Path,
     api_key: str,
 ) -> int:
+    if agent == "hermes":
+        install_hermes_openrouter_auth(container, api_key)
     prompt_b64 = base64.b64encode(prompt.encode()).decode()
     env = {
         "OPENROUTER_API_KEY": api_key,

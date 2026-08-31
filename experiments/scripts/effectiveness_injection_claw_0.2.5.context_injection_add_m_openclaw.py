@@ -26,6 +26,7 @@ from experiments.AgentCallInterface.context_injection_add_s import (
     apply_injection,
     load_taskset,
 )
+from experiments.AgentCallInterface.agents.agent_callers import OpenClawCaller
 
 
 TASKS_ROOT = PROJECT_ROOT / "experiments/AgentCallInterface/datasets/clawbench_tasks/tasks"
@@ -177,6 +178,17 @@ def sh_quote(value: str) -> str:
     return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
+def install_openclaw_openrouter_auth(container: str, api_key: str) -> None:
+    caller = OpenClawCaller()
+    result = subprocess.run(
+        caller._build_install_openrouter_auth_command(api_key, container),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    require_ok(result, "install OpenClaw OpenRouter auth profile")
+
+
 def openclaw_agent_turn(
     *,
     container: str,
@@ -188,6 +200,7 @@ def openclaw_agent_turn(
     api_key: str,
     session_id: str,
 ) -> int:
+    install_openclaw_openrouter_auth(container, api_key)
     prompt_b64 = base64.b64encode(prompt.encode()).decode()
     normalized_model = model if model.startswith("openrouter/") else f"openrouter/{model}"
     script = (
