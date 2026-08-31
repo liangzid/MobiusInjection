@@ -1,10 +1,13 @@
 # Mobius Injection 
 
+This is the source code of paper: `Can a Single Message Paralyze the AI Infrastructure? The Rise of AbO-DDoS Attacks through Targeted Mobius Injection`.
+
+
 Mobius Injection contains the experiment harness, payload templates, local
 service tooling, analysis utilities, tests, and artifact layout for reproducing
 the Mobius Injection and agent-oriented denial-of-service experiments.
 
-Publication link: [arXiv:2605.11442](https://arxiv.org/abs/2605.11442)
+Link: [arXiv:2605.11442](https://arxiv.org/abs/2605.11442)
 ([DOI](https://doi.org/10.48550/arXiv.2605.11442))
 
 
