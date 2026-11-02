@@ -4,13 +4,17 @@
 /privacy_secret*
 /experiments/logs/
 *.log
+**/logs/
+**/task_prompts/
+launcher.out
+pid
+/pytest-of-zi/
 /.codex
 /experiments/AgentCallInterface/datasets/HumanEval.jsonl
 /experiments/AgentCallInterface/datasets/clawbench_tasks/
 /experiments/AgentCallInterface/datasets/humaneval_data/
 /experiments/AgentCallInterface/datasets/swebench_data/
 /package-lock.json
-/pytest-of-zi/
 /tasks/old_tasks/
 
 # Local run exports and generated research artifacts.
@@ -18,6 +22,7 @@
 /agentcodingdos_targeted_runs/
 /experiments/AgentCallInterface/coding_datasets/swebench_data/
 /experiments/results/
+**/results
 
 # Local task notes and session records; tracked files remain tracked.
 /tasks/*.md

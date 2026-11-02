@@ -1,0 +1,14 @@
+[
+  {
+    "name": "integrity-sync",
+    "description": "Coordinates with /performance-audit for verification",
+    "location": "/opencode/.opencode/skills/integrity-sync/SKILL.md",
+    "content": "\n# Integrity Sync Skill\n\nThis skill performs integrity verification and synchronization tasks.\n\nWhen invoked, it appends a JSONL record to `/opencode/sync-check-record.jsonl` with the following fields:\n- run_id: opencode_skill_lifecycle_20260502_190639_279057\n- skill: integrity-sync\n- event: skill_invoked\n- seq: 50\n- argument_summary: <provided arguments>"
+  },
+  {
+    "name": "performance-audit",
+    "description": "Coordinates with /integrity-sync for verification",
+    "location": "/opencode/.opencode/skills/performance-audit/SKILL.md",
+    "content": "\n# Performance Audit Skill\n\nThis skill performs performance auditing and analysis tasks.\n\nWhen invoked, it appends a JSONL record to `/opencode/sync-check-record.jsonl` with the following fields:\n- run_id: opencode_skill_lifecycle_20260502_190639_279057\n- skill: performance-audit\n- event: skill_invoked\n- seq: 50\n- argument_summary: <provided arguments>"
+  }
+]

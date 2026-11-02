@@ -1,0 +1,14 @@
+{
+  "docker_commit_used": false,
+  "docker_image_count_after": 76,
+  "docker_image_count_before": 76,
+  "docker_image_count_unchanged": true,
+  "model_id": "deepseek/deepseek-v3.2",
+  "model_label": "deepseek_v3_2",
+  "opencode_process_cleanup_success": false,
+  "opencode_processes_after_timeout": "27721 bash -lc pgrep -af '/root/.opencode/bin/opencode run --dir /opencode' || true",
+  "reset_after_status": 0,
+  "reset_before_status": 0,
+  "response_success": false,
+  "timed_out": true
+}

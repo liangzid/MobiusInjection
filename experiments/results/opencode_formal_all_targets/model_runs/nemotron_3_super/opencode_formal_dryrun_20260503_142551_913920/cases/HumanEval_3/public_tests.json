@@ -1,0 +1,26 @@
+[
+  {
+    "expression": "candidate([]) == False",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate([1, 2, -3, 1, 2, -3]) == False",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate([1, 2, -4, 5, 6]) == True",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate([1, -1, 2, -2, 5, -5, 4, -4]) == False",
+    "name": "public_4"
+  },
+  {
+    "expression": "candidate([1, -1, 2, -2, 5, -5, 4, -5]) == True",
+    "name": "public_5"
+  },
+  {
+    "expression": "candidate([1, -2, 2, -2, 5, -5, 4, -4]) == True",
+    "name": "public_6"
+  }
+]

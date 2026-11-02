@@ -1,0 +1,98 @@
+[
+  {
+    "duration_seconds": 3.94,
+    "model_id": "deepseek/deepseek-v3.2",
+    "model_label": "deepseek_v3_2",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/deepseek_v3_2/response.json",
+    "response_seconds": 3.94,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 5.623,
+    "model_id": "minimax/minimax-m2.7",
+    "model_label": "minimax_2_7",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/minimax_2_7/response.json",
+    "response_seconds": 5.623,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 2.918,
+    "model_id": "nvidia/nemotron-3-super-120b-a12b:free",
+    "model_label": "nemotron_3_super",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Free current OpenRouter route for Nemotron 3 Super.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/nemotron_3_super/response.json",
+    "response_seconds": 2.917,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 4.438,
+    "model_id": "z-ai/glm-5.1",
+    "model_label": "glm_5_1",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/glm_5_1/response.json",
+    "response_seconds": 4.438,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 14.881,
+    "model_id": "moonshotai/kimi-k2.6",
+    "model_label": "kimi_k2_6",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/kimi_k2_6/response.json",
+    "response_seconds": 14.881,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 7.581,
+    "model_id": "qwen/qwen3.6-plus",
+    "model_label": "qwen_3_6_plus",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/qwen_3_6_plus/response.json",
+    "response_seconds": 7.58,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 90.159,
+    "model_id": "google/gemma-4-31b-it:free",
+    "model_label": "gemma_4",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Free current Gemma 4 route; paid sibling is google/gemma-4-31b-it.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/gemma_4/response.json",
+    "response_seconds": 90.158,
+    "status": "timeout",
+    "success": false
+  },
+  {
+    "duration_seconds": 1.341,
+    "model_id": "qwen/qwen3-next-80b-a3b-instruct:free",
+    "model_label": "qwen3_70b_class",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "No current OpenRouter Qwen3 70B/72B text model was listed; using the closest enabled Qwen3 80B-class instruct route for preflight.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003518_458906/connectivity/qwen3_70b_class/response.json",
+    "response_seconds": 1.341,
+    "status": "model_unavailable",
+    "success": false
+  }
+]

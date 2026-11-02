@@ -1,0 +1,22 @@
+[
+  {
+    "expression": "candidate('') == ''",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate('three') == 'three'",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate('three five nine') == 'three five nine'",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate('five zero four seven nine eight') == 'zero four five seven eight nine'",
+    "name": "public_4"
+  },
+  {
+    "expression": "candidate('six five four three two one zero') == 'zero one two three four five six'",
+    "name": "public_5"
+  }
+]

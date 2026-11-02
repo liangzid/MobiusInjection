@@ -1,0 +1,22 @@
+[
+  {
+    "expression": "candidate('') == ''",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate('x') == 'x'",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate('xyz') == 'xyzyx'",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate('xyx') == 'xyx'",
+    "name": "public_4"
+  },
+  {
+    "expression": "candidate('jerry') == 'jerryrrej'",
+    "name": "public_5"
+  }
+]

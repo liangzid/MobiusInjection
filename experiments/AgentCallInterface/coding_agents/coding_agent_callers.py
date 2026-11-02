@@ -1223,11 +1223,13 @@ class KiloCodeCaller(AgentCaller):
         quoted_timeout = shlex.quote(str(timeout))
         prepared_prompt = self._prepare_prompt(prompt)
         config_script, config_env = self._local_provider_setup(normalized_model)
+        remote_config_script = "" if config_script else self._openrouter_project_config_script()
         script = (
             "set -u; "
             f"{config_script}"
             f"mkdir -p {project_dir_q}; "
             f"cd {project_dir_q}; "
+            f"{remote_config_script}"
             'KILO_PROMPT="$(printf %s "$KILO_PROMPT_B64" | base64 -d)"; '
             f"timeout --kill-after={self.INNER_TIMEOUT_GRACE_SECONDS}s {quoted_timeout}s "
             f"kilo run --dir {project_dir_q} -m {quoted_model} --auto "
@@ -1236,6 +1238,7 @@ class KiloCodeCaller(AgentCaller):
         )
         env_vars = {
             "OPENROUTER_API_KEY": api_key,
+            "KILO_EVAL_OPENROUTER_KEY_B64": _encode_text(api_key),
             "KILO_PROMPT_B64": _encode_text(prepared_prompt),
             "KILO_EVAL_RUN_ID": run_id,
         }
@@ -1303,6 +1306,35 @@ class KiloCodeCaller(AgentCaller):
             "KILO_LOCAL_PROVIDER_B64": _encode_text(json.dumps(provider)),
             env_name: self._local_api_key(),
         }
+
+    def _openrouter_project_config_script(self) -> str:
+        return (
+            "python3 - <<'PYKILOOR'\n"
+            "import base64\n"
+            "import json\n"
+            "import os\n"
+            "from pathlib import Path\n"
+            "raw = os.environ.get('KILO_EVAL_OPENROUTER_KEY_B64', '')\n"
+            "api_key = base64.b64decode(raw).decode() if raw else ''\n"
+            "cfg = {'provider': {'openrouter': {'options': {'apiKey': api_key}}}}\n"
+            "text = json.dumps(cfg)\n"
+            "Path('opencode.json').write_text(text, encoding='utf-8')\n"
+            "Path('kilo.json').write_text(text, encoding='utf-8')\n"
+            "PYKILOOR\n"
+        )
+
+    def _kilo_output_is_api_error(self, combined: str) -> bool:
+        for line in combined.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("{"):
+                continue
+            try:
+                payload = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("type") == "error":
+                return True
+        return False
 
     def _prepare_prompt(self, prompt: str) -> str:
         project_dir = self._project_dir()
@@ -1394,10 +1426,16 @@ terminate_matches KILL
         timed_out = result.returncode in (124, 137)
         if timed_out:
             self._cleanup_after_timeout(run_id)
-        success = result.returncode == 0
+        has_output = bool(combined.strip())
+        api_error = self._kilo_output_is_api_error(combined)
+        success = result.returncode == 0 and has_output and not api_error
         error = None
         if timed_out:
             error = f"Timeout after {timeout}s"
+        elif result.returncode == 0 and not has_output:
+            error = "Kilo Code returned no output"
+        elif api_error:
+            error = "Kilo Code API error"
         elif not success:
             error = stderr or stdout or "Kilo Code command failed"
         return AgentResponse(

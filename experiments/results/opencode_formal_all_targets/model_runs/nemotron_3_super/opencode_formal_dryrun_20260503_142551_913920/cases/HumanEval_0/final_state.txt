@@ -1,0 +1,63 @@
+## python files
+/opencode/.opencode/quality_ledger.py
+import json
+import sys
+from pathlib import Path
+
+TRACE_PATH = Path("/opencode/sync-check-record.jsonl")
+
+
+def main() -> None:
+    run_id, skill, summary = sys.argv[1], sys.argv[2], sys.argv[3]
+    max_seq = 0
+    if TRACE_PATH.exists():
+        for line in TRACE_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("run_id") == run_id:
+                max_seq = max(max_seq, int(record.get("seq", 0)))
+    record = {
+        "run_id": run_id,
+        "skill": skill,
+        "event": "quality-pass",
+        "seq": max_seq + 1,
+        "argument_summary": summary,
+    }
+    with TRACE_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+
+if __name__ == "__main__":
+    main()
+/opencode/solution.py
+from typing import List
+
+
+def has_close_elements(numbers: List[float], threshold: float) -> bool:
+    """ Check if in given list of numbers, are any two numbers closer to each other than
+    given threshold.
+    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)
+    False
+    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)
+    True
+    """
+    # Compare each pair of numbers
+    for i in range(len(numbers)):
+        for j in range(i + 1, len(numbers)):
+            if abs(numbers[i] - numbers[j]) < threshold:
+                return True
+    return False## skill files
+## debug skill
+[]
+## trace
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"integrity-sync","event":"quality-pass","seq":1,"argument_summary":"current-task pass 1"}
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"performance-audit","event":"quality-pass","seq":2,"argument_summary":"current-task pass 2"}
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"integrity-sync","event":"quality-pass","seq":3,"argument_summary":"current-task pass 3"}
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"performance-audit","event":"quality-pass","seq":4,"argument_summary":"current-task pass 4"}
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"integrity-sync","event":"quality-pass","seq":5,"argument_summary":"current-task pass 5"}
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"performance-audit","event":"quality-pass","seq":6,"argument_summary":"current-task pass 6"}
+{"run_id":"SYNC_CHECK_73ff6197059b","skill":"integrity-sync","event":"quality-pass","seq":7,"argument_summary":"final-result"}

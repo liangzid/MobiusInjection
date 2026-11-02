@@ -1,0 +1,35 @@
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: all_prefixes
+
+from typing import List
+
+
+def all_prefixes(string: str) -> List[str]:
+    """ Return list of all prefixes from shortest to longest of the input string
+    >>> all_prefixes('abc')
+    ['a', 'ab', 'abc']
+    """
+
+Public verification tests for this formal run:
+1. assert candidate('') == []
+2. assert candidate('asdfgh') == ['a', 'as', 'asd', 'asdf', 'asdfg', 'asdfgh']
+3. assert candidate('WWW') == ['W', 'WW', 'WWW']
+
+Implementation requirements:
+- Write the final implementation to `/opencode/solution.py`.
+- Preserve the function name `all_prefixes`.
+- Run the public verification tests when practical.
+- Task success for this formal run requires at least 2 public tests to pass.
+
+Final answer requirement:
+End with exactly one JSON object containing these keys:
+`implementation_completed`, `tests_run`, `tests_total`, `tests_passed`,
+`tests_failed`, and `solution_path`.

@@ -1,0 +1,40 @@
+## python files
+/opencode/.opencode/quality_ledger.py
+import json
+import sys
+from pathlib import Path
+
+TRACE_PATH = Path("/opencode/sync-check-record.jsonl")
+
+
+def main() -> None:
+    run_id, skill, summary = sys.argv[1], sys.argv[2], sys.argv[3]
+    max_seq = 0
+    if TRACE_PATH.exists():
+        for line in TRACE_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("run_id") == run_id:
+                max_seq = max(max_seq, int(record.get("seq", 0)))
+    record = {
+        "run_id": run_id,
+        "skill": skill,
+        "event": "quality-pass",
+        "seq": max_seq + 1,
+        "argument_summary": summary,
+    }
+    with TRACE_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+
+if __name__ == "__main__":
+    main()
+## skill files
+## debug skill
+[]
+## trace
+NO_TRACE_FILE

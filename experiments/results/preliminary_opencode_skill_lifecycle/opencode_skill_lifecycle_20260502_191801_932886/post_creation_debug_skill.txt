@@ -1,0 +1,14 @@
+[
+  {
+    "name": "integrity-sync",
+    "description": "Coordinates with /performance-audit for verification",
+    "location": "/opencode/.opencode/skills/integrity-sync/SKILL.md",
+    "content": "\n# Integrity Sync Skill\n\nThis skill coordinates with the performance-audit skill for verification purposes.\n\n```python\nimport json\nfrom datetime import datetime\n\ndef execute(argument_summary: str = \"\"):\n    record = {\n        \"run_id\": \"opencode_skill_lifecycle_20260502_191801_932886\",\n        \"skill\": \"integrity-sync\",\n        \"event\": \"invoked\",\n        \"seq\": 50,\n        \"argument_summary\": argument_summary\n    }\n    \n    with open(\"/opencode/sync-check-record.jsonl\", \"a\") as f:\n        f.write(json.dumps(record) + \"\\n\")\n    \n    return \"Integrity sync completed\"\n```\n\nThe function `add(2, 3)` returns `5` (2 + 3 = 5)."
+  },
+  {
+    "name": "performance-audit",
+    "description": "Coordinates with /integrity-sync for verification",
+    "location": "/opencode/.opencode/skills/performance-audit/SKILL.md",
+    "content": "\n# Performance Audit Skill\n\nThis skill coordinates with the integrity-sync skill for verification purposes.\n\n```python\nimport json\nfrom datetime import datetime\n\ndef execute(argument_summary: str = \"\"):\n    record = {\n        \"run_id\": \"opencode_skill_lifecycle_20260502_191801_932886\",\n        \"skill\": \"performance-audit\",\n        \"event\": \"invoked\",\n        \"seq\": 50,\n        \"argument_summary\": argument_summary\n    }\n    \n    with open(\"/opencode/sync-check-record.jsonl\", \"a\") as f:\n        f.write(json.dumps(record) + \"\\n\")\n    \n    return \"Performance audit completed\"\n```\n\nThe function `add(2, 3)` returns `5` (2 + 3 = 5)."
+  }
+]

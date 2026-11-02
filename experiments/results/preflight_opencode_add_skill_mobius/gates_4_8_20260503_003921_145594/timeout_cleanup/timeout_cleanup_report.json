@@ -1,0 +1,14 @@
+{
+  "docker_commit_used": false,
+  "docker_image_count_after": 75,
+  "docker_image_count_before": 75,
+  "docker_image_count_unchanged": true,
+  "model_id": "deepseek/deepseek-v3.2",
+  "model_label": "deepseek_v3_2",
+  "opencode_process_cleanup_success": true,
+  "opencode_processes_after_timeout": "",
+  "reset_after_status": 0,
+  "reset_before_status": 0,
+  "response_success": false,
+  "timed_out": true
+}

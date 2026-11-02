@@ -16,6 +16,9 @@ class IngressGuard(Protocol):
     def detect(self, text: str, threshold: float = 0.5) -> bool:
         ...
 
+    def detected_score(self, score: float, threshold: float = 0.5) -> bool:
+        ...
+
 
 @dataclass(frozen=True)
 class RegexPromptBoundaryGuard:
@@ -43,12 +46,20 @@ class RegexPromptBoundaryGuard:
         return 1.0 if any(pattern.search(text) for pattern in self._patterns) else 0.0
 
     def detect(self, text: str, threshold: float = 0.5) -> bool:
+        return self.detected_score(self.score(text), threshold)
+
+    def detected_score(self, score: float, threshold: float = 0.5) -> bool:
         del threshold
-        return bool(self.score(text))
+        return bool(score)
 
 
 class PromptGuard86M:
-    """Meta Prompt-Guard-86M indirect-injection scorer."""
+    """Meta Prompt-Guard-86M indirect-injection scorer.
+
+    Meta's model card defines the third-party-content score as
+    P(INJECTION) + P(JAILBREAK). We apply the documented 0.5 operating point
+    without tuning on either the attack or evaluation-negative corpora.
+    """
 
     name = "Prompt-Guard-86M (ingress)"
 
@@ -58,6 +69,7 @@ class PromptGuard86M:
         device: str = "cpu",
         chunk_tokens: int = 512,
         threshold: float = 0.5,
+        name: str | None = None,
     ) -> None:
         import torch
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -66,6 +78,9 @@ class PromptGuard86M:
         self.device = device
         self.chunk_tokens = chunk_tokens
         self.threshold = threshold
+        if name is not None:
+            self.name = name
+        self._score_cache: dict[str, float] = {}
         self._torch = torch
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_id)
         self._model = AutoModelForSequenceClassification.from_pretrained(self.model_id)
@@ -74,11 +89,16 @@ class PromptGuard86M:
 
     def _chunk_texts(self, text: str) -> list[str]:
         token_ids = self._tokenizer.encode(text, add_special_tokens=False)
-        if len(token_ids) <= self.chunk_tokens:
+        content_tokens = self.chunk_tokens - self._tokenizer.num_special_tokens_to_add(
+            pair=False
+        )
+        if content_tokens <= 0:
+            raise ValueError("chunk_tokens must leave room for tokenizer special tokens")
+        if len(token_ids) <= content_tokens:
             return [text]
         chunks: list[str] = []
-        for start in range(0, len(token_ids), self.chunk_tokens):
-            piece = token_ids[start : start + self.chunk_tokens]
+        for start in range(0, len(token_ids), content_tokens):
+            piece = token_ids[start : start + content_tokens]
             chunks.append(self._tokenizer.decode(piece, skip_special_tokens=True))
         return chunks
 
@@ -98,8 +118,15 @@ class PromptGuard86M:
     def score(self, text: str) -> float:
         if not text:
             return 0.0
-        return max(self._indirect_injection_score(chunk) for chunk in self._chunk_texts(text))
+        if text not in self._score_cache:
+            self._score_cache[text] = max(
+                self._indirect_injection_score(chunk) for chunk in self._chunk_texts(text)
+            )
+        return self._score_cache[text]
 
     def detect(self, text: str, threshold: float | None = None) -> bool:
-        cutoff = self.threshold if threshold is None else threshold
-        return self.score(text) >= cutoff
+        return self.detected_score(self.score(text), threshold)
+
+    def detected_score(self, score: float, threshold: float | None = None) -> bool:
+        operating_point = self.threshold if threshold is None else threshold
+        return score >= operating_point

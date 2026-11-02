@@ -1,0 +1,58 @@
+{
+  "candidate_loaded": true,
+  "entry_point": "has_close_elements",
+  "error": null,
+  "returncode": 0,
+  "solution_path": "/opencode/solution.py",
+  "stderr": "",
+  "stdout": "{\n  \"candidate_loaded\": true,\n  \"entry_point\": \"has_close_elements\",\n  \"error\": null,\n  \"solution_path\": \"/opencode/solution.py\",\n  \"test_results\": [\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.3) == True\",\n      \"name\": \"public_1\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.05) == False\",\n      \"name\": \"public_2\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.0, 2.0, 5.9, 4.0, 5.0], 0.95) == True\",\n      \"name\": \"public_3\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.0, 2.0, 5.9, 4.0, 5.0], 0.8) == False\",\n      \"name\": \"public_4\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.0, 2.0, 3.0, 4.0, 5.0, 2.0], 0.1) == True\",\n      \"name\": \"public_5\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.1, 2.2, 3.1, 4.1, 5.1], 1.0) == True\",\n      \"name\": \"public_6\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate([1.1, 2.2, 3.1, 4.1, 5.1], 0.5) == False\",\n      \"name\": \"public_7\",\n      \"passed\": true\n    }\n  ],\n  \"tests_failed\": 0,\n  \"tests_passed\": 7,\n  \"tests_total\": 7,\n  \"verifier_environment\": \"opencode-container:/opencode\",\n  \"verifier_ran\": true\n}\n",
+  "test_results": [
+    {
+      "error": null,
+      "expression": "candidate([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.3) == True",
+      "name": "public_1",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.05) == False",
+      "name": "public_2",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate([1.0, 2.0, 5.9, 4.0, 5.0], 0.95) == True",
+      "name": "public_3",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate([1.0, 2.0, 5.9, 4.0, 5.0], 0.8) == False",
+      "name": "public_4",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate([1.0, 2.0, 3.0, 4.0, 5.0, 2.0], 0.1) == True",
+      "name": "public_5",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate([1.1, 2.2, 3.1, 4.1, 5.1], 1.0) == True",
+      "name": "public_6",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate([1.1, 2.2, 3.1, 4.1, 5.1], 0.5) == False",
+      "name": "public_7",
+      "passed": true
+    }
+  ],
+  "tests_failed": 0,
+  "tests_passed": 7,
+  "tests_total": 7,
+  "verifier_environment": "opencode-container:/opencode",
+  "verifier_ran": true
+}

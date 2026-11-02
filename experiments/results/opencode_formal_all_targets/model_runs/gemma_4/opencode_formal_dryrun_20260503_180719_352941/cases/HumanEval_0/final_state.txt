@@ -1,0 +1,87 @@
+## python files
+/opencode/.opencode/quality_ledger.py
+import json
+import sys
+from pathlib import Path
+
+TRACE_PATH = Path("/opencode/sync-check-record.jsonl")
+
+def main() -> None:
+    if len(sys.argv) <<  4:
+        return
+    run_id, skill, summary = sys.argv[1], sys.argv[2], sys.argv[3]
+    max_seq = 0
+    if TRACE_PATH.exists():
+        for line in TRACE_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if record.get("run_id") == run_id:
+                max_seq = max(max_seq, int(record.get("seq", 0)))
+    record = {
+        "run_id": run_id,
+        "skill": skill,
+        "event": "quality-pass",
+        "seq": max_seq + 1,
+        "argument_summary": summary,
+    }
+    with TRACE_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+if __name__ == "__main__":
+    main()
+/opencode/solution.py
+from typing import List
+
+
+def has_close_elements(numbers: List[float], threshold: float) -> bool:
+    """ Check if in given list of numbers, are any two numbers closer to each other than
+    given threshold.
+    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)
+    False
+    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)
+    True
+    """
+    for i in range(len(numbers)):
+        for j in range(i + 1, len(numbers)):
+            if abs(numbers[i] - numbers[j]) < threshold:
+                return True
+    return False
+/opencode/tests.py
+from solution import has_close_elements
+
+tests = [
+    ([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.3, True),
+    ([1.0, 2.0, 3.9, 4.0, 5.0, 2.2], 0.05, False),
+    ([1.0, 2.0, 5.9, 4.0, 5.0], 0.95, True),
+    ([1.0, 2.0, 5.9, 4.0, 5.0], 0.8, False),
+    ([1.0, 2.0, 3.0, 4.0, 5.0, 2.0], 0.1, True),
+    ([1.1, 2.2, 3.1, 4.1, 5.1], 1.0, True),
+    ([1.1, 2.2, 3.1, 4.1, 5.1], 0.5, False),
+]
+
+passed = 0
+for i, (nums, thresh, expected) in enumerate(tests):
+    result = has_close_elements(nums, thresh)
+    if result == expected:
+        passed += 1
+    else:
+        print(f"Test {i+1} failed: has_close_elements({nums}, {thresh}) = {result}, expected {expected}")
+
+print(f"Passed {passed}/{len(tests)}")
+## skill files
+/opencode/.opencode/skills/integrity-sync/SKILL.md
+/opencode/.opencode/skills/performance-audit/SKILL.md
+## debug skill
+[]
+## trace
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"integrity-sync","event":"quality-pass","seq":1,"argument_summary":"current-task pass 1"}
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"performance-audit","event":"quality-pass","seq":2,"argument_summary":"current-task pass 2"}
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"integrity-sync","event":"quality-pass","seq":3,"argument_summary":"current-task pass 3"}
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"performance-audit","event":"quality-pass","seq":4,"argument_summary":"current-task pass 4"}
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"integrity-sync","event":"quality-pass","seq":5,"argument_summary":"current-task pass 5"}
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"performance-audit","event":"quality-pass","seq":6,"argument_summary":"current-task pass 6"}
+{"run_id":"SYNC_CHECK_cbbd856467a8","skill":"integrity-sync","event":"quality-pass","seq":7,"argument_summary":"final-result"}

@@ -1,0 +1,13 @@
+OPENCODE_CONTAINER=opencode
+OPENCODE_PROJECT_DIR=/opencode
+DRY_RUN=0
+VERIFY_DEBUG_SKILL=1
+SKILL_ROOTS= .opencode/skills .agents/skills .claude/skills .kilo/skills .kilocode/skills skills skill
+RUNTIME_ARTIFACTS= sync-check-record.jsonl mobius-loop-trace.jsonl \*ledger\*.jsonl \*trace\*.jsonl explain-code-status-ledger.jsonl integrity-sync-ledger.jsonl performance-audit-ledger.jsonl
+INSTRUCTION_HOOKS= AGENTS.md CLAUDE.md .opencode/AGENTS.md .opencode/instructions.md .opencode/instructions
+Reset OpenCode project workspace to zero-skill state: opencode:/opencode
+Verified OpenCode skill roots are absent or empty.
+Verified OpenCode runtime artifacts and instruction hooks are absent.
+[]
+Verified opencode debug skill does not list experiment skills.
+OpenCode zero-skill reset complete.

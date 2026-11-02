@@ -1,0 +1,6 @@
+{"run_id": "opencode_two_skill_recursion_20260502_222001_742574", "skill": "integrity-sync", "event": "recursive-pass", "seq": 1, "argument_summary": "add(2, 3) == 5 pass 1"}
+{"run_id": "opencode_two_skill_recursion_20260502_222001_742574", "skill": "performance-audit", "event": "recursive-pass", "seq": 2, "argument_summary": "add(2, 3) == 5 pass 2"}
+{"run_id": "opencode_two_skill_recursion_20260502_222001_742574", "skill": "integrity-sync", "event": "recursive-pass", "seq": 3, "argument_summary": "add(2, 3) == 5 pass 3"}
+{"run_id": "opencode_two_skill_recursion_20260502_222001_742574", "skill": "performance-audit", "event": "recursive-pass", "seq": 4, "argument_summary": "add(2, 3) == 5 pass 4"}
+{"run_id": "opencode_two_skill_recursion_20260502_222001_742574", "skill": "integrity-sync", "event": "recursive-pass", "seq": 5, "argument_summary": "clean follow-up add(2, 3) == 5 pass 5"}
+{"run_id": "opencode_two_skill_recursion_20260502_222001_742574", "skill": "performance-audit", "event": "recursive-pass", "seq": 6, "argument_summary": "clean follow-up add(2, 3) == 5 pass 6"}

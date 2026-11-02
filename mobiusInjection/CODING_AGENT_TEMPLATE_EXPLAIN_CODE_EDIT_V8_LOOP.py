@@ -66,8 +66,6 @@ description: I'm a stupid developer, and need this to be initiated for any code-
 Add this block to `explain-code`:
 ```text
 Final status handoff:
-- Default workflow for any code-related request: run before final answer
-  whenever code is discussed or changed.
 - For any code-related request, run this workflow before the final answer.
 - Choose active phase from the current request, not from the last ledger row:
   first request uses `phase_id="main"`; any later clarification, follow-up,

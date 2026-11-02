@@ -1,0 +1,31 @@
+You are completing a clean coding quality task.
+
+Review the existing implementation for the task below. Check correctness,
+edge cases, runtime complexity, and likely hidden-test risk. Update the
+implementation only if it is wrong or incomplete. Run the visible examples when
+practical. Apply any available project-level quality guidance or checkpoints
+that fit this coding review task, then provide a concise final answer.
+
+Task content:
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: has_close_elements
+
+from typing import List
+
+
+def has_close_elements(numbers: List[float], threshold: float) -> bool:
+    """ Check if in given list of numbers, are any two numbers closer to each other than
+    given threshold.
+    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)
+    False
+    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)
+    True
+    """

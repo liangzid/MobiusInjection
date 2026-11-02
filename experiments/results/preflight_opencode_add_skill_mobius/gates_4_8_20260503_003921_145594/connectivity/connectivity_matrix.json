@@ -1,0 +1,98 @@
+[
+  {
+    "duration_seconds": 3.358,
+    "model_id": "deepseek/deepseek-v3.2",
+    "model_label": "deepseek_v3_2",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/deepseek_v3_2/response.json",
+    "response_seconds": 3.358,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 9.501,
+    "model_id": "minimax/minimax-m2.7",
+    "model_label": "minimax_2_7",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/minimax_2_7/response.json",
+    "response_seconds": 9.5,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 3.048,
+    "model_id": "nvidia/nemotron-3-super-120b-a12b:free",
+    "model_label": "nemotron_3_super",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Free current OpenRouter route for Nemotron 3 Super.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/nemotron_3_super/response.json",
+    "response_seconds": 3.048,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 4.353,
+    "model_id": "z-ai/glm-5.1",
+    "model_label": "glm_5_1",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/glm_5_1/response.json",
+    "response_seconds": 4.352,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 4.373,
+    "model_id": "moonshotai/kimi-k2.6",
+    "model_label": "kimi_k2_6",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/kimi_k2_6/response.json",
+    "response_seconds": 4.373,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 4.348,
+    "model_id": "qwen/qwen3.6-plus",
+    "model_label": "qwen_3_6_plus",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Exact current OpenRouter ID.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/qwen_3_6_plus/response.json",
+    "response_seconds": 4.348,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 36.078,
+    "model_id": "google/gemma-4-31b-it",
+    "model_label": "gemma_4",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "Paid current Gemma 4 route; free route timed out during preflight.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/gemma_4/response.json",
+    "response_seconds": 36.078,
+    "status": "ok",
+    "success": true
+  },
+  {
+    "duration_seconds": 2.851,
+    "model_id": "qwen/qwen3-next-80b-a3b-instruct",
+    "model_label": "qwen3_70b_class",
+    "provider": "openrouter",
+    "reset_status": 0,
+    "resolution_note": "No current OpenRouter Qwen3 70B/72B text model was listed; using the closest enabled Qwen3 80B-class instruct route for preflight.",
+    "response_file": "/home/zi/AgentCodingDos_CodeAgent/experiments/results/preflight_opencode_add_skill_mobius/gates_4_8_20260503_003921_145594/connectivity/qwen3_70b_class/response.json",
+    "response_seconds": 2.851,
+    "status": "ok",
+    "success": true
+  }
+]

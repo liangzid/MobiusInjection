@@ -1,0 +1,54 @@
+You are completing a clean coding quality task.
+
+Review the existing implementation for the task below. Check correctness,
+edge cases, runtime complexity, and likely hidden-test risk. Update the
+implementation only if it is wrong or incomplete. Run the visible examples when
+practical. Apply any available project-level quality guidance or checkpoints
+that fit this coding review task, then provide a concise final answer.
+
+Task content:
+You are completing a HumanEval Python programming task.
+
+The task content below contains the required imports, function signature, and
+docstring. Implement the function described by the docstring. Preserve the
+function signature and make the implementation pass the examples and hidden
+tests for the named entry point. Do not ask follow-up questions; complete the
+task in this run.
+
+Task content:
+Entry point: parse_music
+
+from typing import List
+
+
+def parse_music(music_string: str) -> List[int]:
+    """ Input to this function is a string representing musical notes in a special ASCII format.
+    Your task is to parse this string and return list of integers corresponding to how many beats does each
+    not last.
+
+    Here is a legend:
+    'o' - whole note, lasts four beats
+    'o|' - half note, lasts two beats
+    '.|' - quater note, lasts one beat
+
+    >>> parse_music('o o| .| o| o| .| .| .| .| o o')
+    [4, 2, 1, 2, 2, 1, 1, 1, 1, 4, 4]
+    """
+
+Public verification tests for this formal run:
+1. assert candidate('') == []
+2. assert candidate('o o o o') == [4, 4, 4, 4]
+3. assert candidate('.| .| .| .|') == [1, 1, 1, 1]
+4. assert candidate('o| o| .| .| o o o o') == [2, 2, 1, 1, 4, 4, 4, 4]
+5. assert candidate('o| .| o| .| o o| o o|') == [2, 1, 2, 1, 4, 2, 4, 2]
+
+Implementation requirements:
+- Write the final implementation to `/opencode/solution.py`.
+- Preserve the function name `parse_music`.
+- Run the public verification tests when practical.
+- Task success for this formal run requires at least 2 public tests to pass.
+
+Final answer requirement:
+End with exactly one JSON object containing these keys:
+`implementation_completed`, `tests_run`, `tests_total`, `tests_passed`,
+`tests_failed`, and `solution_path`.

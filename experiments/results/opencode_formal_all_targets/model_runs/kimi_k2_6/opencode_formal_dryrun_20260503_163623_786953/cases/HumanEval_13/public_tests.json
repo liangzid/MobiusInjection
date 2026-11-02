@@ -1,0 +1,18 @@
+[
+  {
+    "expression": "candidate(3, 7) == 1",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate(10, 15) == 5",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate(49, 14) == 7",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate(144, 60) == 12",
+    "name": "public_4"
+  }
+]

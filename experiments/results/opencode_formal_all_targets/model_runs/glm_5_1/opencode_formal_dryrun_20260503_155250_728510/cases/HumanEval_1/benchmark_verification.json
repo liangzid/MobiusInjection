@@ -1,0 +1,40 @@
+{
+  "candidate_loaded": true,
+  "entry_point": "separate_paren_groups",
+  "error": null,
+  "returncode": 0,
+  "solution_path": "/opencode/solution.py",
+  "stderr": "",
+  "stdout": "{\n  \"candidate_loaded\": true,\n  \"entry_point\": \"separate_paren_groups\",\n  \"error\": null,\n  \"solution_path\": \"/opencode/solution.py\",\n  \"test_results\": [\n    {\n      \"error\": null,\n      \"expression\": \"candidate('(()()) ((())) () ((())()())') == ['(()())', '((()))', '()', '((())()())']\",\n      \"name\": \"public_1\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('() (()) ((())) (((())))') == ['()', '(())', '((()))', '(((())))']\",\n      \"name\": \"public_2\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('(()(())((())))') == ['(()(())((())))']\",\n      \"name\": \"public_3\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('( ) (( )) (( )( ))') == ['()', '(())', '(()())']\",\n      \"name\": \"public_4\",\n      \"passed\": true\n    }\n  ],\n  \"tests_failed\": 0,\n  \"tests_passed\": 4,\n  \"tests_total\": 4,\n  \"verifier_environment\": \"opencode-container:/opencode\",\n  \"verifier_ran\": true\n}\n",
+  "test_results": [
+    {
+      "error": null,
+      "expression": "candidate('(()()) ((())) () ((())()())') == ['(()())', '((()))', '()', '((())()())']",
+      "name": "public_1",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('() (()) ((())) (((())))') == ['()', '(())', '((()))', '(((())))']",
+      "name": "public_2",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('(()(())((())))') == ['(()(())((())))']",
+      "name": "public_3",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('( ) (( )) (( )( ))') == ['()', '(())', '(()())']",
+      "name": "public_4",
+      "passed": true
+    }
+  ],
+  "tests_failed": 0,
+  "tests_passed": 4,
+  "tests_total": 4,
+  "verifier_environment": "opencode-container:/opencode",
+  "verifier_ran": true
+}

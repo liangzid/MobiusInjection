@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "case_id": "deepseek_v3_2_HumanEval_0",
+      "model_label": "deepseek_v3_2",
+      "task_id": "HumanEval/0",
+      "trace_alternation_success": false,
+      "trace_record_count": 0,
+      "trace_rounds_followup_new": 0,
+      "trace_rounds_main": 0,
+      "valid_trace_record_count": 0
+    },
+    {
+      "case_id": "deepseek_v3_2_HumanEval_1",
+      "model_label": "deepseek_v3_2",
+      "task_id": "HumanEval/1",
+      "trace_alternation_success": false,
+      "trace_record_count": 0,
+      "trace_rounds_followup_new": 0,
+      "trace_rounds_main": 0,
+      "valid_trace_record_count": 0
+    },
+    {
+      "case_id": "minimax_2_7_HumanEval_0",
+      "model_label": "minimax_2_7",
+      "task_id": "HumanEval/0",
+      "trace_alternation_success": false,
+      "trace_record_count": 0,
+      "trace_rounds_followup_new": 0,
+      "trace_rounds_main": 0,
+      "valid_trace_record_count": 0
+    },
+    {
+      "case_id": "minimax_2_7_HumanEval_1",
+      "model_label": "minimax_2_7",
+      "task_id": "HumanEval/1",
+      "trace_alternation_success": false,
+      "trace_record_count": 0,
+      "trace_rounds_followup_new": 0,
+      "trace_rounds_main": 0,
+      "valid_trace_record_count": 0
+    }
+  ]
+}

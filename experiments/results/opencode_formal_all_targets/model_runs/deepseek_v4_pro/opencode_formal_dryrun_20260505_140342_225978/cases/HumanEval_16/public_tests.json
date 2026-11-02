@@ -1,0 +1,22 @@
+[
+  {
+    "expression": "candidate('') == 0",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate('abcde') == 5",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate('abcde' + 'cade' + 'CADE') == 5",
+    "name": "public_3"
+  },
+  {
+    "expression": "candidate('aaaaAAAAaaaa') == 1",
+    "name": "public_4"
+  },
+  {
+    "expression": "candidate('Jerry jERRY JeRRRY') == 5",
+    "name": "public_5"
+  }
+]

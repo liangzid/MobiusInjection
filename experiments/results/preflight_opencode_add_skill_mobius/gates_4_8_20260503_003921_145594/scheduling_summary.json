@@ -1,0 +1,11 @@
+{
+  "connectivity_failures": [],
+  "connectivity_success_count": 8,
+  "enabled_model_count": 8,
+  "latency_seconds_avg": 8.489,
+  "latency_seconds_max": 36.078,
+  "latency_seconds_min": 2.851,
+  "recommended_case_timeout_seconds": 300,
+  "recommended_policy": "Run model-serial and task-serial for the first full experiment; increase concurrency only after reset and cleanup remain stable.",
+  "timeout_cleanup_success": true
+}

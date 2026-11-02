@@ -1,0 +1,9 @@
+{
+  "duration": 3.357654571533203,
+  "error": null,
+  "output": "=== STDOUT ===\n{\"type\":\"step_start\",\"timestamp\":1777739966159,\"sessionID\":\"ses_21670e167ffe31301By2ljSK4y\",\"part\":{\"id\":\"prt_de98f26cc0014Lmt9KNaGTuiOE\",\"messageID\":\"msg_de98f1f05001u1lEmK7rQu1H5x\",\"sessionID\":\"ses_21670e167ffe31301By2ljSK4y\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1777739966168,\"sessionID\":\"ses_21670e167ffe31301By2ljSK4y\",\"part\":{\"id\":\"prt_de98f26ce00188RLt0TTXvaJny\",\"messageID\":\"msg_de98f1f05001u1lEmK7rQu1H5x\",\"sessionID\":\"ses_21670e167ffe31301By2ljSK4y\",\"type\":\"text\",\"text\":\"CONNECTIVITY_OK deepseek_v3_2\",\"time\":{\"start\":1777739966158,\"end\":1777739966165}}}\n{\"type\":\"step_finish\",\"timestamp\":1777739966171,\"sessionID\":\"ses_21670e167ffe31301By2ljSK4y\",\"part\":{\"id\":\"prt_de98f26d9001DKU1F1FqKjnHzh\",\"reason\":\"stop\",\"messageID\":\"msg_de98f1f05001u1lEmK7rQu1H5x\",\"sessionID\":\"ses_21670e167ffe31301By2ljSK4y\",\"type\":\"step-finish\",\"tokens\":{\"total\":10479,\"input\":3246,\"output\":11,\"reasoning\":0,\"cache\":{\"write\":0,\"read\":7222}},\"cost\":0.00091328}}\n",
+  "returncode": 0,
+  "stderr": "",
+  "success": true,
+  "task_id": "connectivity_deepseek_v3_2"
+}

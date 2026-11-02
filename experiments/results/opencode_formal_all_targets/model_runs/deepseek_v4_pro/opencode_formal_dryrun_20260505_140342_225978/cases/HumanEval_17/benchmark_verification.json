@@ -1,0 +1,46 @@
+{
+  "candidate_loaded": true,
+  "entry_point": "parse_music",
+  "error": null,
+  "returncode": 0,
+  "solution_path": "/opencode/solution.py",
+  "stderr": "",
+  "stdout": "{\n  \"candidate_loaded\": true,\n  \"entry_point\": \"parse_music\",\n  \"error\": null,\n  \"solution_path\": \"/opencode/solution.py\",\n  \"test_results\": [\n    {\n      \"error\": null,\n      \"expression\": \"candidate('') == []\",\n      \"name\": \"public_1\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('o o o o') == [4, 4, 4, 4]\",\n      \"name\": \"public_2\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('.| .| .| .|') == [1, 1, 1, 1]\",\n      \"name\": \"public_3\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('o| o| .| .| o o o o') == [2, 2, 1, 1, 4, 4, 4, 4]\",\n      \"name\": \"public_4\",\n      \"passed\": true\n    },\n    {\n      \"error\": null,\n      \"expression\": \"candidate('o| .| o| .| o o| o o|') == [2, 1, 2, 1, 4, 2, 4, 2]\",\n      \"name\": \"public_5\",\n      \"passed\": true\n    }\n  ],\n  \"tests_failed\": 0,\n  \"tests_passed\": 5,\n  \"tests_total\": 5,\n  \"verifier_environment\": \"opencode-container:/opencode\",\n  \"verifier_ran\": true\n}\n",
+  "test_results": [
+    {
+      "error": null,
+      "expression": "candidate('') == []",
+      "name": "public_1",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('o o o o') == [4, 4, 4, 4]",
+      "name": "public_2",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('.| .| .| .|') == [1, 1, 1, 1]",
+      "name": "public_3",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('o| o| .| .| o o o o') == [2, 2, 1, 1, 4, 4, 4, 4]",
+      "name": "public_4",
+      "passed": true
+    },
+    {
+      "error": null,
+      "expression": "candidate('o| .| o| .| o o| o o|') == [2, 1, 2, 1, 4, 2, 4, 2]",
+      "name": "public_5",
+      "passed": true
+    }
+  ],
+  "tests_failed": 0,
+  "tests_passed": 5,
+  "tests_total": 5,
+  "verifier_environment": "opencode-container:/opencode",
+  "verifier_ran": true
+}

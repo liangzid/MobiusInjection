@@ -36,9 +36,11 @@ def test_kilo_build_command_uses_project_dir_and_prompt_env():
 
     assert run_id == "kilo-eval-task-123"
     assert command[:4] == ["docker", "exec", "-e", "OPENROUTER_API_KEY=test-key"]
-    assert "KILO_PROMPT_B64=" in command[5]
-    assert "KILO_EVAL_RUN_ID=kilo-eval-task-123" in command[7]
-    assert command[8:11] == ["kilo_code", "bash", "-lc"]
+    assert any(part.startswith("KILO_EVAL_OPENROUTER_KEY_B64=") for part in command)
+    assert any(part.startswith("KILO_PROMPT_B64=") for part in command)
+    assert "KILO_EVAL_RUN_ID=kilo-eval-task-123" in command
+    assert "kilo_code" in command
+    assert command[-2:] == ["bash", "-lc"] or command[-3] == "kilo_code"
     assert f"cd {caller.PROJECT_DIR}" in command[-1]
     assert f"kilo run --dir {caller.PROJECT_DIR}" in command[-1]
     assert "-m openrouter/free" in command[-1]
@@ -46,6 +48,52 @@ def test_kilo_build_command_uses_project_dir_and_prompt_env():
     assert "--format json" in command[-1]
     assert "--title \"$KILO_EVAL_RUN_ID\"" in command[-1]
     assert "Say hello from a long prompt." not in command[-1]
+    assert "PYKILOOR" in command[-1]
+    assert "opencode.json" in command[-1]
+    assert "kilo.json" in command[-1]
+    assert "KILO_EVAL_OPENROUTER_KEY_B64" in command[-1]
+
+
+def test_kilo_build_command_supports_local_ollama_provider(monkeypatch):
+    monkeypatch.setenv("KILO_BASE_URL", "http://127.0.0.1:11435/v1")
+    monkeypatch.setenv("KILO_PROVIDER_ID", "ollama")
+    monkeypatch.setenv("KILO_PROVIDER_NAME", "Ollama local")
+    monkeypatch.setenv("KILO_CONTAINER_NAME", "kilo_code_local")
+    monkeypatch.setenv("KILO_PROJECT_DIR", "/kilo_local_workspace")
+    caller = KiloCodeCaller()
+
+    command, run_id = caller._build_kilo_command(
+        "Say hello.",
+        "ollama/qwen2.5:14b",
+        "local-key",
+        "task 456",
+        90,
+    )
+
+    provider_env = next(part for part in command if part.startswith("KILO_LOCAL_PROVIDER_B64="))
+    provider = json.loads(base64.b64decode(provider_env.split("=", 1)[1]).decode())
+    assert run_id == "kilo-eval-task-456"
+    assert "OLLAMA_API_KEY=ollama-local" in command
+    assert "kilo_code_local" in command
+    assert "cd /kilo_local_workspace" in command[-1]
+    assert "-m ollama/qwen2.5:14b" in command[-1]
+    assert "PYKILOLOCAL" in command[-1]
+    assert "PYKILOOR" not in command[-1]
+    assert provider["id"] == "ollama"
+    assert provider["api"] == "http://127.0.0.1:11435/v1"
+    assert provider["npm"] == "@ai-sdk/openai-compatible"
+    assert "qwen2.5:14b" in provider["models"]
+
+
+def test_kilo_prepare_prompt_mentions_project_skills():
+    caller = KiloCodeCaller()
+    prompt = caller._prepare_prompt("Implement the function.")
+
+    assert "Kilo Code environment note" in prompt
+    assert "/kilo_eval_workspace/AGENTS.md" in prompt
+    assert "/kilo_eval_workspace/.kilo/skills" in prompt
+    assert "load/use explain-code before" in prompt
+    assert prompt.endswith("Implement the function.")
 
 
 def test_kilo_build_command_supports_local_ollama_provider(monkeypatch):
@@ -133,3 +181,30 @@ def test_kilo_runner_cleans_on_host_timeout(monkeypatch):
     assert "partial stdout" in response.output
     assert "partial stderr" in response.output
     assert cleanup_calls == ["kilo-eval-host-timeout"]
+
+
+def test_kilo_runner_treats_empty_exit_zero_as_failure():
+    caller = KiloCodeCaller()
+    command = [sys.executable, "-c", "raise SystemExit(0)"]
+
+    response = caller._run_kilo_command(command, "empty-success", 5, "kilo-eval-empty")
+
+    assert response.success is False
+    assert response.returncode == 0
+    assert response.error == "Kilo Code returned no output"
+
+
+def test_kilo_runner_treats_json_api_error_as_failure():
+    caller = KiloCodeCaller()
+    payload = json.dumps({"type": "error", "error": {"name": "APIError"}})
+    command = [
+        sys.executable,
+        "-c",
+        f"import sys; sys.stdout.write({payload!r})",
+    ]
+
+    response = caller._run_kilo_command(command, "api-error", 5, "kilo-eval-api-error")
+
+    assert response.success is False
+    assert response.returncode == 0
+    assert response.error == "Kilo Code API error"

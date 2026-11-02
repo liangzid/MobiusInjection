@@ -1,0 +1,14 @@
+[
+  {
+    "expression": "candidate('111000', '101010') == '010010'",
+    "name": "public_1"
+  },
+  {
+    "expression": "candidate('1', '1') == '0'",
+    "name": "public_2"
+  },
+  {
+    "expression": "candidate('0101', '0000') == '0101'",
+    "name": "public_3"
+  }
+]

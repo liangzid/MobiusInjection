@@ -1,0 +1,84 @@
+{
+  "model": "openrouter/qwen/qwen3.6-plus",
+  "baseline": {
+    "humaneval": {
+      "opencode": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_baseline_no_injection_20260427/humaneval/models/openrouter_qwen_qwen3.6-plus"
+      },
+      "kilo_code": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_baseline_no_injection_20260427/humaneval/models/openrouter_qwen_qwen3.6-plus"
+      },
+      "claude_code": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_claude_baseline_raw_limit20_20260427/humaneval/models/openrouter_qwen_qwen3.6-plus"
+      }
+    },
+    "swebench": {
+      "opencode": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_baseline_no_injection_20260427/swebench/models/openrouter_qwen_qwen3.6-plus"
+      },
+      "kilo_code": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_baseline_no_injection_20260427/swebench/models/openrouter_qwen_qwen3.6-plus"
+      },
+      "claude_code": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_claude_baseline_raw_limit20_20260427/swebench/models/openrouter_qwen_qwen3.6-plus"
+      }
+    }
+  },
+  "injection": {
+    "humaneval": {
+      "opencode": {
+        "limit": 50,
+        "source": "experiments/logs/qwen36plus_sequential_20260424_183454/humaneval/models/openrouter_qwen_qwen3.6-plus"
+      },
+      "kilo_code": {
+        "limit": 50,
+        "source": "experiments/logs/qwen36plus_sequential_20260424_183454/humaneval/models/openrouter_qwen_qwen3.6-plus"
+      },
+      "claude_code": {
+        "limit": 20,
+        "source": "experiments/logs/qwen36plus_claude_code_injection_reparse_limit20_20260427/humaneval/models/openrouter_qwen_qwen3.6-plus"
+      }
+    },
+    "swebench": {
+      "opencode": {
+        "limit": 50,
+        "sources": [
+          "experiments/logs/qwen36plus_sequential_20260424_183454/swebench/models/openrouter_qwen_qwen3.6-plus/manifest.json",
+          "experiments/logs/qwen36plus_sequential_20260424_183454/swebench/models/openrouter_qwen_qwen3.6-plus/manifest_supplement_20260426.json"
+        ]
+      },
+      "kilo_code": {
+        "limit": 50,
+        "sources": [
+          "experiments/logs/qwen36plus_sequential_20260424_183454/swebench/models/openrouter_qwen_qwen3.6-plus/manifest.json",
+          "experiments/logs/qwen36plus_sequential_20260424_183454/swebench/models/openrouter_qwen_qwen3.6-plus/manifest_supplement_20260426.json"
+        ]
+      },
+      "claude_code": {
+        "limit": 20,
+        "sources": [
+          {
+            "source": "experiments/logs/qwen36plus_claude_code_injection_reparse_limit20_swebench_20260428/swebench/models/openrouter_qwen_qwen3.6-plus",
+            "exclude_tasks": [
+              "DataDog__integrations-core-2041",
+              "DataDog__integrations-core-2282"
+            ]
+          },
+          {
+            "source": "experiments/logs/qwen36plus_claude_code_injection_reparse_limit20_swebench_patch_20260428/swebench/models/openrouter_qwen_qwen3.6-plus",
+            "tasks": [
+              "DataDog__integrations-core-2041",
+              "DataDog__integrations-core-2282"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

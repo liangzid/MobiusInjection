@@ -1,0 +1,27 @@
+{
+  "artifact_success": true,
+  "clean_followup_native_skill_call_counts": {
+    "integrity-sync": 0,
+    "performance-audit": 0
+  },
+  "clean_followup_seq_values": [],
+  "clean_followup_success": false,
+  "clean_followup_trace_record_count": 0,
+  "direct_recursion_marker_success": false,
+  "invalid_trace_line_count": 14,
+  "native_recursive_call_success": false,
+  "native_skill_call_counts": {
+    "integrity-sync": 0,
+    "performance-audit": 0
+  },
+  "seq_values": [
+    1
+  ],
+  "skills_seen_in_trace": [
+    "integrity-sync"
+  ],
+  "trace_alternation_success": false,
+  "trace_file_success": false,
+  "trace_record_count": 1,
+  "trace_rounds": 0
+}

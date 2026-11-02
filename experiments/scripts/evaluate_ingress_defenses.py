@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,6 +33,8 @@ SWEBENCH_ISSUES = (
     CODEAGENT_ROOT
     / "experiments/AgentCallInterface/coding_datasets/swebench_data/swebench_80.json"
 )
+SWEBENCH_LITE_DATASET = "princeton-nlp/SWE-bench_Lite"
+CALIBRATED_GUARD_NAME = "Prompt-Guard-86M (5% calibrated FPR)"
 OPEN_MODEL_LABELS = {
     "deepseek_v3_2",
     "deepseek_v4_pro",
@@ -65,6 +69,9 @@ class GuardScore:
     ingress_detected: bool
     benign_score: float
     benign_detected: bool
+
+
+EXTERNAL_FPR_CORPUS = "swebench_issue_bodies"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -212,9 +219,11 @@ def evaluate_guard(guard, cases: list[IngressCase]) -> list[dict[str, object]]:
                 "task_id": case.task_id,
                 "run_dir": str(case.run_dir),
                 "ingress_score": ingress_score,
-                "ingress_detected": guard.detect(case.ingress_text),
+                "ingress_detected": guard.detected_score(ingress_score),
                 "benign_score": benign_score,
-                "benign_detected": guard.detect(case.benign_text) if case.benign_text else False,
+                "benign_detected": (
+                    guard.detected_score(benign_score) if case.benign_text else False
+                ),
                 "p_asr": case.p_asr,
                 "t_asr": case.t_asr,
                 "r_asr": case.r_asr,
@@ -225,10 +234,13 @@ def evaluate_guard(guard, cases: list[IngressCase]) -> list[dict[str, object]]:
     return rows
 
 
-def summarize_guard(rows: list[dict[str, object]]) -> dict[str, object]:
+def summarize_guard(
+    rows: list[dict[str, object]],
+    external_fpr: dict[str, object],
+    threshold: float | None,
+) -> dict[str, object]:
     total = len(rows)
     detect_count = sum(bool(row["ingress_detected"]) for row in rows)
-    fpr_count = sum(bool(row["benign_detected"]) for row in rows)
     residual = [row for row in rows if not row["ingress_detected"]]
     residual_p = sum(bool(row["p_asr"]) for row in residual)
     residual_t = sum(bool(row["t_asr"]) for row in residual)
@@ -239,7 +251,10 @@ def summarize_guard(rows: list[dict[str, object]]) -> dict[str, object]:
         "guard": rows[0]["guard"],
         "N": total,
         "detect_count": detect_count,
-        "fpr_count": fpr_count,
+        "threshold": threshold if threshold is not None else "",
+        "fpr_corpus": external_fpr["external_corpus"],
+        "fpr_N": external_fpr["N"],
+        "fpr_count": external_fpr["fpr_count"],
         "p_count": residual_p,
         "t_count": residual_t,
         "r_count": residual_r,
@@ -248,20 +263,52 @@ def summarize_guard(rows: list[dict[str, object]]) -> dict[str, object]:
     }
 
 
-def summarize_external_fpr(guard, texts: list[str]) -> dict[str, object]:
-    detected = sum(guard.detect(text) for text in texts)
+def summarize_external_fpr(
+    guard, texts: list[str]
+) -> tuple[dict[str, object], list[float]]:
+    scores = [guard.score(text) for text in texts]
+    detected = sum(guard.detected_score(score) for score in scores)
     return {
         "guard": guard.name,
-        "external_corpus": "swebench_issue_bodies",
+        "external_corpus": EXTERNAL_FPR_CORPUS,
         "N": len(texts),
         "fpr_count": detected,
-    }
+    }, scores
+
+
+def calibration_threshold(scores: list[float], target_fpr: float) -> float:
+    """Return a threshold with empirical calibration FPR <= target_fpr."""
+    if not scores:
+        raise ValueError("calibration scores cannot be empty")
+    if not 0 <= target_fpr < 1:
+        raise ValueError("target FPR must be in [0, 1)")
+    allowed = math.floor(target_fpr * len(scores))
+    descending = sorted(scores, reverse=True)
+    return math.nextafter(descending[allowed], math.inf)
+
+
+def load_calibration_documents(test_items: list[dict[str, object]]) -> list[dict[str, str]]:
+    from datasets import load_dataset
+
+    test_ids = {str(item["instance_id"]) for item in test_items}
+    dataset = load_dataset(SWEBENCH_LITE_DATASET, split="test")
+    documents = [
+        {
+            "instance_id": str(item["instance_id"]),
+            "text": str(item["problem_statement"]),
+        }
+        for item in dataset
+        if str(item["instance_id"]) not in test_ids
+    ]
+    if len(documents) != 240:
+        raise ValueError(f"expected 240 disjoint calibration issues, got {len(documents)}")
+    return documents
 
 
 def write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -276,24 +323,66 @@ def main() -> None:
     )
     parser.add_argument("--device", default="cuda:2")
     parser.add_argument("--skip-prompt-guard", action="store_true")
+    parser.add_argument("--calibration-target-fpr", type=float, default=0.05)
     args = parser.parse_args()
 
     cases = load_ingress_cases()
-    guards = [RegexPromptBoundaryGuard()]
-    if not args.skip_prompt_guard:
-        guards.append(PromptGuard86M(device=args.device))
-
     all_rows: list[dict[str, object]] = []
     summaries: list[dict[str, object]] = []
     external_fprs: list[dict[str, object]] = []
-    swebench_texts = [
-        item["problem_statement"] for item in json.loads(SWEBENCH_ISSUES.read_text(encoding="utf-8"))
-    ]
+    external_score_rows: list[dict[str, object]] = []
+    test_items = json.loads(SWEBENCH_ISSUES.read_text(encoding="utf-8"))
+    swebench_texts = [str(item["problem_statement"]) for item in test_items]
+    guards = [RegexPromptBoundaryGuard()]
+    calibration_rows: list[dict[str, object]] = []
+    calibration_summary: dict[str, object] | None = None
+    if not args.skip_prompt_guard:
+        default_guard = PromptGuard86M(device=args.device)
+        calibration_documents = load_calibration_documents(test_items)
+        calibration_scores = [
+            default_guard.score(document["text"]) for document in calibration_documents
+        ]
+        calibrated_guard = copy.copy(default_guard)
+        calibrated_guard.name = CALIBRATED_GUARD_NAME
+        calibrated_guard.threshold = calibration_threshold(
+            calibration_scores, args.calibration_target_fpr
+        )
+        calibration_rows = [
+            {
+                "instance_id": document["instance_id"],
+                "score": score,
+                "threshold": calibrated_guard.threshold,
+                "detected": calibrated_guard.detected_score(score),
+            }
+            for document, score in zip(calibration_documents, calibration_scores)
+        ]
+        calibration_summary = {
+            "corpus": SWEBENCH_LITE_DATASET,
+            "N": len(calibration_scores),
+            "target_fpr": args.calibration_target_fpr,
+            "threshold": calibrated_guard.threshold,
+            "fpr_count": sum(row["detected"] for row in calibration_rows),
+        }
+        guards.extend([default_guard, calibrated_guard])
+
     for guard in guards:
         rows = evaluate_guard(guard, cases)
+        external_fpr, external_scores = summarize_external_fpr(guard, swebench_texts)
         all_rows.extend(rows)
-        summaries.append(summarize_guard(rows))
-        external_fprs.append(summarize_external_fpr(guard, swebench_texts))
+        summaries.append(
+            summarize_guard(rows, external_fpr, getattr(guard, "threshold", None))
+        )
+        external_fprs.append(external_fpr)
+        external_score_rows.extend(
+            {
+                "guard": guard.name,
+                "external_corpus": EXTERNAL_FPR_CORPUS,
+                "document_index": index,
+                "score": score,
+                "detected": guard.detected_score(score),
+            }
+            for index, score in enumerate(external_scores)
+        )
 
     score_fields = [
         "guard",
@@ -311,12 +400,27 @@ def main() -> None:
         "tsr",
     ]
     write_csv(args.output_dir / "ingress_defense_scores.csv", all_rows, score_fields)
-    write_csv(args.output_dir / "ingress_defense_summary.csv", summaries, list(summaries[0]))
-    (args.output_dir / "ingress_defense_summary.json").write_text(
-        json.dumps({"replay": summaries, "external_fpr": external_fprs}, indent=2) + "\n",
-        encoding="utf-8",
+    write_csv(
+        args.output_dir / "ingress_defense_external_fpr_scores.csv",
+        external_score_rows,
+        ["guard", "external_corpus", "document_index", "score", "detected"],
     )
-    print(json.dumps({"replay": summaries, "external_fpr": external_fprs}, indent=2))
+    if calibration_rows:
+        write_csv(
+            args.output_dir / "ingress_defense_calibration_scores.csv",
+            calibration_rows,
+            ["instance_id", "score", "threshold", "detected"],
+        )
+    write_csv(args.output_dir / "ingress_defense_summary.csv", summaries, list(summaries[0]))
+    report = {
+        "calibration": calibration_summary,
+        "replay": summaries,
+        "external_fpr": external_fprs,
+    }
+    (args.output_dir / "ingress_defense_summary.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":

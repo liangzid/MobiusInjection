@@ -1,0 +1,9 @@
+{
+  "duration": 3.0476315021514893,
+  "error": null,
+  "output": "=== STDOUT ===\n{\"type\":\"step_start\",\"timestamp\":1777739981834,\"sessionID\":\"ses_21670a302ffeNbWZqCCuwtJVQ6\",\"part\":{\"id\":\"prt_de98f6406001he635k65uaIsbq\",\"messageID\":\"msg_de98f5d76001plYvMwpQiB7zd2\",\"sessionID\":\"ses_21670a302ffeNbWZqCCuwtJVQ6\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1777739981849,\"sessionID\":\"ses_21670a302ffeNbWZqCCuwtJVQ6\",\"part\":{\"id\":\"prt_de98f640d001BgaK2LsVK8kf6R\",\"messageID\":\"msg_de98f5d76001plYvMwpQiB7zd2\",\"sessionID\":\"ses_21670a302ffeNbWZqCCuwtJVQ6\",\"type\":\"text\",\"text\":\"CONNECTIVITY_OK nemotron_3_super\",\"time\":{\"start\":1777739981837,\"end\":1777739981840}}}\n{\"type\":\"step_finish\",\"timestamp\":1777739981849,\"sessionID\":\"ses_21670a302ffeNbWZqCCuwtJVQ6\",\"part\":{\"id\":\"prt_de98f6416001EE94acQ103XZvn\",\"reason\":\"stop\",\"messageID\":\"msg_de98f5d76001plYvMwpQiB7zd2\",\"sessionID\":\"ses_21670a302ffeNbWZqCCuwtJVQ6\",\"type\":\"step-finish\",\"tokens\":{\"total\":10602,\"input\":10558,\"output\":12,\"reasoning\":32,\"cache\":{\"write\":0,\"read\":0}},\"cost\":0}}\n",
+  "returncode": 0,
+  "stderr": "",
+  "success": true,
+  "task_id": "connectivity_nemotron_3_super"
+}

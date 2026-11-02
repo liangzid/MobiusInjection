@@ -1,0 +1,9 @@
+{
+  "duration": 3.094041585922241,
+  "error": "Timeout after 3s",
+  "output": "",
+  "returncode": null,
+  "stderr": "",
+  "success": false,
+  "task_id": "timeout_cleanup_deepseek_v3_2"
+}
