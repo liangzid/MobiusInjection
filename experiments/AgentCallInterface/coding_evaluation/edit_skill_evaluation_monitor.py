@@ -186,11 +186,11 @@ def _count_tool_events(value: Any, auxiliary_skill: str) -> int:
 
 
 def _tool_name(value: dict[str, Any]) -> str:
-    if value.get("type") == "tool_use":
-        return str(value.get("name", "")).strip().lower()
     part = value.get("part")
     if isinstance(part, dict) and part.get("type") == "tool":
         return str(part.get("tool", "")).strip().lower()
+    if value.get("type") == "tool_use":
+        return str(value.get("name", "")).strip().lower()
     return ""
 
 

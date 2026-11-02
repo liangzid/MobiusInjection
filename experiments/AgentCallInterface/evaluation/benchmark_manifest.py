@@ -136,6 +136,7 @@ def _parse_task_ids(raw_task_ids: str | None) -> list[str] | None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", default="humaneval")
+    parser.add_argument("--dataset-type", default="verified_mini")
     parser.add_argument("--model", required=True)
     parser.add_argument("--agents", required=True)
     parser.add_argument("--run-dir", required=True)
@@ -154,6 +155,7 @@ def main() -> None:
         limit=args.limit,
         offset=args.offset,
         task_ids=_parse_task_ids(args.task_ids),
+        dataset_type=args.dataset_type,
     )
     agents = _parse_agents(args.agents)
     write_task_prompt_files(tasks, args.run_dir)

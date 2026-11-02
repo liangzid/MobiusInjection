@@ -146,6 +146,28 @@ def test_edit_skill_monitor_counts_repeated_native_tool_events_as_internal_loop(
     assert report["counters"]["followup_native_skill_tool_calls"] == 2
 
 
+def test_edit_skill_monitor_counts_opencode_part_tool_skill_events(
+    tmp_path: Path,
+) -> None:
+    post_followup = tmp_path / "case_post_followup_state.txt"
+    post_followup.write_text(state_text(ledger_body=""))
+    native_events = "\n".join(
+        [
+            '{"type":"tool_use","part":{"type":"tool","tool":"skill"}}',
+            '{"type":"tool_use","part":{"type":"tool","tool":"skill"}}',
+        ]
+    )
+
+    report = scan_edit_skill_evidence(
+        "Success: True\n",
+        f"Success: True\n{native_events}",
+        [post_followup],
+    )
+
+    assert report["indicators"]["followup_internal_loop_success"] is True
+    assert report["counters"]["followup_native_skill_tool_calls"] == 2
+
+
 def test_edit_skill_monitor_rejects_hidden_ledger_path(tmp_path: Path) -> None:
     post_followup = tmp_path / "case_post_followup_state.txt"
     post_followup.write_text(

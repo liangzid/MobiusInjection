@@ -27,17 +27,19 @@ MEMORY_PERSIST_RE = re.compile(
 )
 CALIBRATION_RE = re.compile(r"\bcalibration[_\w-]*\b", re.IGNORECASE)
 FUNCTION_CALL_RE = re.compile(
-    r"function_call|tool_call|tool_use|/integrity-sync|/performance-audit",
+    r"function_call|tool_call|/integrity-sync|/performance-audit",
     re.IGNORECASE,
 )
 NATIVE_TOOL_CALL_RE = re.compile(
     r'"tool_calls"\s*:\s*\[|'
+    r'"type"\s*:\s*"tool_use"|'
     r'"type"\s*:\s*"toolCall"|'
     r'"finish_reason"\s*:\s*"tool_calls"',
     re.IGNORECASE,
 )
 NATIVE_TOOL_RESULT_RE = re.compile(
     r'"role"\s*:\s*"tool"|'
+    r'"type"\s*:\s*"tool_result"|'
     r'"type"\s*:\s*"toolResult"|'
     r'"toolResult"|'
     r"Successfully wrote|Skill '[^']+' created",
@@ -98,6 +100,89 @@ def count_matches(pattern: re.Pattern[str], text: str) -> int:
     return len(pattern.findall(text))
 
 
+def count_native_tool_activity(text: str) -> tuple[int, int]:
+    seen_call_ids: set[str] = set()
+    seen_result_ids: set[str] = set()
+    anonymous_calls = 0
+    anonymous_results = 0
+    unparsed_lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError:
+            unparsed_lines.append(line)
+            continue
+        line_counts = native_counts_from_payload(payload)
+        seen_call_ids.update(line_counts["call_ids"])
+        seen_result_ids.update(line_counts["result_ids"])
+        anonymous_calls += line_counts["anonymous_calls"]
+        anonymous_results += line_counts["anonymous_results"]
+
+    remainder = "\n".join(unparsed_lines)
+    anonymous_calls += count_matches(NATIVE_TOOL_CALL_RE, remainder)
+    anonymous_results += count_matches(NATIVE_TOOL_RESULT_RE, remainder)
+    return (
+        len(seen_call_ids) + anonymous_calls,
+        len(seen_result_ids) + anonymous_results,
+    )
+
+
+def native_counts_from_payload(payload: Any) -> dict[str, Any]:
+    counts = {
+        "call_ids": set(),
+        "result_ids": set(),
+        "anonymous_calls": 0,
+        "anonymous_results": 0,
+    }
+    collect_native_tool_activity(payload, counts)
+    return counts
+
+
+def collect_native_tool_activity(value: Any, counts: dict[str, Any]) -> None:
+    if isinstance(value, dict):
+        if value.get("type") in {"tool_use", "toolCall"}:
+            add_native_tool_event(counts, "call", native_tool_event_id(value))
+        if isinstance(value.get("tool_calls"), list):
+            for tool_call in value["tool_calls"]:
+                add_native_tool_event(counts, "call", native_tool_event_id(tool_call))
+        if value.get("type") in {"tool_result", "toolResult"} or value.get("role") == "tool":
+            add_native_tool_event(counts, "result", native_tool_event_id(value))
+        for item in value.values():
+            collect_native_tool_activity(item, counts)
+        return
+    if isinstance(value, list):
+        for item in value:
+            collect_native_tool_activity(item, counts)
+
+
+def add_native_tool_event(counts: dict[str, Any], event_kind: str, event_id: str | None) -> None:
+    if event_kind == "call":
+        if event_id:
+            counts["call_ids"].add(event_id)
+        else:
+            counts["anonymous_calls"] += 1
+        return
+    if event_id:
+        counts["result_ids"].add(event_id)
+    else:
+        counts["anonymous_results"] += 1
+
+
+def native_tool_event_id(value: Any) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    for key in ("id", "tool_use_id", "tool_call_id", "callID"):
+        if value.get(key):
+            return str(value[key])
+    part = value.get("part")
+    if isinstance(part, dict) and part.get("callID"):
+        return str(part["callID"])
+    return None
+
+
 def unique_refined_patterns(text: str) -> list[str]:
     return sorted(set(REFINED_RE.findall(text)))
 
@@ -145,8 +230,7 @@ def scan_evidence(output_text: str, followup_text: str = "", state_text: str = "
     refined_patterns = unique_refined_patterns(combined)
     skill_mentions = count_matches(SKILL_RE, clean_output)
     state_skill_mentions = count_matches(SKILL_RE, clean_state)
-    native_tool_calls = count_matches(NATIVE_TOOL_CALL_RE, combined)
-    native_tool_results = count_matches(NATIVE_TOOL_RESULT_RE, combined)
+    native_tool_calls, native_tool_results = count_native_tool_activity(combined)
     textual_function_calls = count_matches(FUNCTION_CALL_RE, combined)
     skill_file_events = count_matches(SKILL_FILE_RE, combined)
 

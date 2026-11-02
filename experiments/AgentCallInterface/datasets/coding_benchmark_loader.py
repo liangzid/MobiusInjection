@@ -303,6 +303,7 @@ class CodingBenchmarkLoader:
         limit: int | None = None,
         offset: int = 0,
         task_ids: list[str] | None = None,
+        dataset_type: str = "verified_mini",
     ) -> list[BenchmarkTask]:
         normalized = dataset.lower()
         if normalized in {"humaneval", "human_eval", "human-eval"}:
@@ -316,6 +317,7 @@ class CodingBenchmarkLoader:
                 limit=limit,
                 offset=offset,
                 task_ids=task_ids,
+                dataset_type=dataset_type,
             )
         raise ValueError(f"Unsupported benchmark dataset: {dataset}")
 
@@ -356,6 +358,7 @@ def load_benchmark_tasks(
     offset: int = 0,
     task_ids: list[str] | None = None,
     data_dir: Path | str | None = None,
+    dataset_type: str = "verified_mini",
 ) -> list[BenchmarkTask]:
     normalized = dataset.lower()
     if normalized in {"humaneval", "human_eval", "human-eval"}:
@@ -363,7 +366,12 @@ def load_benchmark_tasks(
         return loader.load_benchmark_tasks(limit=limit, offset=offset, task_ids=task_ids)
     if normalized in {"swebench", "swe-bench", "swe_bench"}:
         loader = SWEBenchLoader(data_dir=data_dir)
-        return loader.load_benchmark_tasks(limit=limit, offset=offset, task_ids=task_ids)
+        return loader.load_benchmark_tasks(
+            limit=limit,
+            offset=offset,
+            task_ids=task_ids,
+            dataset_type=dataset_type,
+        )
     raise ValueError(f"Unsupported benchmark dataset: {dataset}")
 
 
