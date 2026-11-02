@@ -84,6 +84,14 @@ def test_coding_eval_opencode_container_name_is_configurable():
     assert 'docker exec "$OPENCODE_CONTAINER_NAME" bash -lc' in script
 
 
+
+
+def test_coding_eval_skips_openrouter_key_file_for_local_opencode_provider():
+    script = read_script()
+
+    assert 'if [ -z "${OPENCODE_BASE_URL:-}" ] && [ ! -f "$API_KEY_FILE" ]; then' in script
+
+
 def test_coding_eval_threads_lifecycle_state_files_into_analysis():
     script = read_script()
 

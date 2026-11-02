@@ -848,7 +848,7 @@ if [ ! -f "$INJECTION_DIR/${INJECTION_TEMPLATE_MODULE}.py" ]; then
 fi
 
 API_KEY_FILE="${OPENROUTER_API_KEY_FILE:-$PROJECT_ROOT/privacy_secret_openrouter_API_key.txt}"
-if [ ! -f "$API_KEY_FILE" ]; then
+if [ -z "${OPENCODE_BASE_URL:-}" ] && [ ! -f "$API_KEY_FILE" ]; then
     echo -e "${RED}ERROR: API key file not found${NC}"
     exit 1
 fi
