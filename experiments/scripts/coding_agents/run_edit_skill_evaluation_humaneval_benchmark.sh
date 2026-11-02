@@ -28,6 +28,7 @@ OFFSET="${OFFSET:-0}"
 TASK_IDS="${TASK_IDS:-}"
 
 BENCHMARK_DATASET="${BENCHMARK_DATASET:-humaneval}"
+SWEBENCH_DATASET_TYPE="${SWEBENCH_DATASET_TYPE:-verified_mini}"
 BENCHMARK_ROOT="${BENCHMARK_ROOT:-$PROJECT_ROOT/experiments/logs/edit_skill_evaluation_humaneval}"
 BENCHMARK_RUN_ID="${BENCHMARK_RUN_ID:-edit_skill_evaluation_$(date +%Y%m%d_%H%M%S)}"
 BENCHMARK_RUN_DIR="${BENCHMARK_RUN_DIR:-$BENCHMARK_ROOT/$BENCHMARK_RUN_ID}"
@@ -50,6 +51,7 @@ print_config() {
     printf 'BENCHMARK_RUN_DIR=%s\n' "$BENCHMARK_RUN_DIR"
     printf 'MANIFEST_FILE=%s\n' "$MANIFEST_FILE"
     printf 'DATASET=%s\n' "$BENCHMARK_DATASET"
+    printf 'SWEBENCH_DATASET_TYPE=%s\n' "$SWEBENCH_DATASET_TYPE"
     printf 'MODEL=%s\n' "$MINIMAX_MODEL"
     printf 'CODING_EVAL_AGENTS=%s\n' "$CODING_EVAL_AGENTS"
     printf 'INJECTION_TEMPLATE_MODULE=%s\n' "$INJECTION_TEMPLATE_MODULE"
@@ -74,6 +76,7 @@ build_manifest() {
     local args=(
         -m experiments.AgentCallInterface.coding_evaluation.benchmark_manifest
         --dataset "$BENCHMARK_DATASET"
+        --dataset-type "$SWEBENCH_DATASET_TYPE"
         --model "$MINIMAX_MODEL"
         --agents "$CODING_EVAL_AGENTS"
         --run-dir "$BENCHMARK_RUN_DIR"

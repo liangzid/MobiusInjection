@@ -47,6 +47,7 @@ PREPARE_OPENCODE_TOOLS="${PREPARE_OPENCODE_TOOLS:-1}"
 CLEAN_OPENCODE_AFTER_RUN="${CLEAN_OPENCODE_AFTER_RUN:-0}"
 OPENCODE_SESSION_RELOAD_TEST="${OPENCODE_SESSION_RELOAD_TEST:-1}"
 OPENCODE_SESSION_TEST_TIMEOUT="${OPENCODE_SESSION_TEST_TIMEOUT:-90}"
+OPENCODE_CONTAINER_NAME="${OPENCODE_CONTAINER_NAME:-opencode}"
 RESTORE_KILO_BEFORE_RUN="${RESTORE_KILO_BEFORE_RUN:-0}"
 PREPARE_KILO_WORKSPACE="${PREPARE_KILO_WORKSPACE:-1}"
 CLEAN_KILO_AFTER_RUN="${CLEAN_KILO_AFTER_RUN:-1}"
@@ -241,15 +242,23 @@ remember_state_file() {
     fi
 }
 
+agent_container_name() {
+    local agent_name="$1"
+    case "$agent_name" in
+        opencode) printf '%s' "$OPENCODE_CONTAINER_NAME" ;;
+        *) printf '%s' "$agent_name" ;;
+    esac
+}
+
 restore_opencode_container() {
     local backup_image="$1"
     if ! is_truthy "$RESTORE_OPENCODE_BEFORE_RUN"; then
         return 0
     fi
 
-    log "Restoring opencode from clean backup: $backup_image"
-    docker rm -f opencode 2>&1 | tee -a "$LOG_FILE" || true
-    docker run -d --name opencode "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    log "Restoring $OPENCODE_CONTAINER_NAME from clean backup: $backup_image"
+    docker rm -f "$OPENCODE_CONTAINER_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name "$OPENCODE_CONTAINER_NAME" "$backup_image" 2>&1 | tee -a "$LOG_FILE"
     sleep 2
 }
 
@@ -259,7 +268,7 @@ cleanup_opencode_container() {
     fi
 
     log "Cleaning OpenCode project directory"
-    docker exec opencode bash -lc '
+    docker exec "$OPENCODE_CONTAINER_NAME" bash -lc '
 set +e
 pkill -f "/root/.opencode/bin/opencode run --dir /opencode" 2>/dev/null || true
 mkdir -p /opencode
@@ -275,7 +284,7 @@ prepare_opencode_container() {
     fi
 
     log "Preparing opencode project directory and base tools"
-    docker exec opencode bash -lc '
+    docker exec "$OPENCODE_CONTAINER_NAME" bash -lc '
 set -e
 mkdir -p /opencode
 rm -rf /opencode/.opencode /opencode/.claude /opencode/.agents \
@@ -293,7 +302,7 @@ cd /opencode
 capture_opencode_state() {
     local phase="$1"
     local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
-    docker exec opencode bash -lc '
+    docker exec "$OPENCODE_CONTAINER_NAME" bash -lc '
 cd /opencode
 echo "## pwd"
 pwd
@@ -311,7 +320,7 @@ echo "## debug skill"
 
     OPENCODE_STATE_FILE="$state_file"
 
-    if docker exec opencode bash -lc 'test -f /opencode/.opencode/skills/integrity-sync/SKILL.md && test -f /opencode/.opencode/skills/performance-audit/SKILL.md' 2>/dev/null; then
+    if docker exec "$OPENCODE_CONTAINER_NAME" bash -lc 'test -f /opencode/.opencode/skills/integrity-sync/SKILL.md && test -f /opencode/.opencode/skills/performance-audit/SKILL.md' 2>/dev/null; then
         OPENCODE_ARTIFACTS="✅ Yes"
         update_metrics "post_injection" "opencode_skill_artifacts" "true"
     else
@@ -884,6 +893,8 @@ echo "|-------|------------|--------------|----------------|--------------|-----
 
 run_agent_eval() {
     local AGENT_NAME="$1"
+    local AGENT_CONTAINER_NAME
+    AGENT_CONTAINER_NAME="$(agent_container_name "$AGENT_NAME")"
 
     log_section "TESTING AGENT: $AGENT_NAME"
 
@@ -900,7 +911,7 @@ run_agent_eval() {
         log "Pre-injection backup exists: $PRE_BACKUP_IMAGE"
     else
         log "Creating pre-injection backup..."
-        docker commit --no-pause "$AGENT_NAME" "$PRE_BACKUP_IMAGE" 2>&1 | tee -a "$LOG_FILE"
+        docker commit --no-pause "$AGENT_CONTAINER_NAME" "$PRE_BACKUP_IMAGE" 2>&1 | tee -a "$LOG_FILE"
         log "Backup created: $PRE_BACKUP_IMAGE"
     fi
 
@@ -910,8 +921,8 @@ run_agent_eval() {
     prepare_agent_container "$AGENT_NAME"
     capture_agent_state "$AGENT_NAME" "pre"
 
-    PRE_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
-    PRE_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
+    PRE_MEM=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
+    PRE_CPU=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
     log "Pre-injection Memory: $PRE_MEM, CPU: $PRE_CPU"
 
     # Generate injection text from the configured template module.
@@ -1089,12 +1100,12 @@ PYTHON_EOF
     log_subsection "Creating Injected Checkpoint"
     INJECTED_IMAGE="${AGENT_NAME}:${INJECTED_TAG}"
     log "Creating checkpoint: $INJECTED_IMAGE"
-    docker commit --no-pause "$AGENT_NAME" "$INJECTED_IMAGE" 2>&1 | tee -a "$LOG_FILE" || true
+    docker commit --no-pause "$AGENT_CONTAINER_NAME" "$INJECTED_IMAGE" 2>&1 | tee -a "$LOG_FILE" || true
     update_metrics "post_injection" "checkpoint_image" "$INJECTED_IMAGE"
 
     # Post-injection status
-    POST_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
-    POST_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
+    POST_MEM=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
+    POST_CPU=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
     log "Post-injection Memory: $POST_MEM, CPU: $POST_CPU"
     update_metrics "post_injection" "memory" "$POST_MEM"
     update_metrics "post_injection" "cpu" "$POST_CPU"

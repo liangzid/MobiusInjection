@@ -47,10 +47,13 @@ PREPARE_OPENCODE_TOOLS="${PREPARE_OPENCODE_TOOLS:-1}"
 CLEAN_OPENCODE_AFTER_RUN="${CLEAN_OPENCODE_AFTER_RUN:-0}"
 OPENCODE_SESSION_RELOAD_TEST="${OPENCODE_SESSION_RELOAD_TEST:-1}"
 OPENCODE_SESSION_TEST_TIMEOUT="${OPENCODE_SESSION_TEST_TIMEOUT:-90}"
+OPENCODE_CONTAINER_NAME="${OPENCODE_CONTAINER_NAME:-opencode}"
+KILO_CONTAINER_NAME="${KILO_CONTAINER_NAME:-kilo_code}"
 RESTORE_KILO_BEFORE_RUN="${RESTORE_KILO_BEFORE_RUN:-0}"
 PREPARE_KILO_WORKSPACE="${PREPARE_KILO_WORKSPACE:-1}"
 CLEAN_KILO_AFTER_RUN="${CLEAN_KILO_AFTER_RUN:-1}"
 KILO_PROJECT_DIR="${KILO_PROJECT_DIR:-/kilo_eval_workspace}"
+CLAUDE_CODE_CONTAINER_NAME="${CLAUDE_CODE_CONTAINER_NAME:-claude_code}"
 RESTORE_CLAUDE_BEFORE_RUN="${RESTORE_CLAUDE_BEFORE_RUN:-0}"
 PREPARE_CLAUDE_WORKSPACE="${PREPARE_CLAUDE_WORKSPACE:-1}"
 CLEAN_CLAUDE_AFTER_RUN="${CLEAN_CLAUDE_AFTER_RUN:-1}"
@@ -63,8 +66,8 @@ BENCHMARK_DATASET="${BENCHMARK_DATASET:-}"
 PROMPT_ORDER="${PROMPT_ORDER:-task_before_injection}"
 LOG_POLICY="${LOG_POLICY:-compact}"
 
-PRE_BACKUP_TAG="pre_eval_backup"
-INJECTED_TAG="injected_001"
+PRE_BACKUP_TAG="${PRE_BACKUP_TAG:-pre_eval_backup}"
+INJECTED_TAG="${INJECTED_TAG:-injected_001}"
 
 LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/experiments/logs}"
 mkdir -p "$LOG_DIR"
@@ -241,15 +244,25 @@ remember_state_file() {
     fi
 }
 
+agent_container_name() {
+    local agent_name="$1"
+    case "$agent_name" in
+        opencode) printf '%s' "$OPENCODE_CONTAINER_NAME" ;;
+        kilo_code) printf '%s' "$KILO_CONTAINER_NAME" ;;
+        claude_code) printf '%s' "$CLAUDE_CODE_CONTAINER_NAME" ;;
+        *) printf '%s' "$agent_name" ;;
+    esac
+}
+
 restore_opencode_container() {
     local backup_image="$1"
     if ! is_truthy "$RESTORE_OPENCODE_BEFORE_RUN"; then
         return 0
     fi
 
-    log "Restoring opencode from clean backup: $backup_image"
-    docker rm -f opencode 2>&1 | tee -a "$LOG_FILE" || true
-    docker run -d --name opencode "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    log "Restoring $OPENCODE_CONTAINER_NAME from clean backup: $backup_image"
+    docker rm -f "$OPENCODE_CONTAINER_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name "$OPENCODE_CONTAINER_NAME" "$backup_image" 2>&1 | tee -a "$LOG_FILE"
     sleep 2
 }
 
@@ -259,7 +272,7 @@ cleanup_opencode_container() {
     fi
 
     log "Cleaning OpenCode project directory"
-    docker exec opencode bash -lc '
+    docker exec "$OPENCODE_CONTAINER_NAME" bash -lc '
 set +e
 pkill -f "/root/.opencode/bin/opencode run --dir /opencode" 2>/dev/null || true
 mkdir -p /opencode
@@ -275,7 +288,7 @@ prepare_opencode_container() {
     fi
 
     log "Preparing opencode project directory and base tools"
-    docker exec opencode bash -lc '
+    docker exec "$OPENCODE_CONTAINER_NAME" bash -lc '
 set -e
 mkdir -p /opencode
 rm -rf /opencode/.opencode /opencode/.claude /opencode/.agents \
@@ -293,7 +306,7 @@ cd /opencode
 capture_opencode_state() {
     local phase="$1"
     local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
-    docker exec opencode bash -lc '
+    docker exec "$OPENCODE_CONTAINER_NAME" bash -lc '
 cd /opencode
 echo "## pwd"
 pwd
@@ -311,7 +324,7 @@ echo "## debug skill"
 
     OPENCODE_STATE_FILE="$state_file"
 
-    if docker exec opencode bash -lc 'test -f /opencode/.opencode/skills/integrity-sync/SKILL.md && test -f /opencode/.opencode/skills/performance-audit/SKILL.md' 2>/dev/null; then
+    if docker exec "$OPENCODE_CONTAINER_NAME" bash -lc 'test -f /opencode/.opencode/skills/integrity-sync/SKILL.md && test -f /opencode/.opencode/skills/performance-audit/SKILL.md' 2>/dev/null; then
         OPENCODE_ARTIFACTS="✅ Yes"
         update_metrics "post_injection" "opencode_skill_artifacts" "true"
     else
@@ -388,7 +401,7 @@ run_opencode_restarted_session_skill_test() {
         python3 << PYTHON_EOF 2>&1 | tee -a "$LOG_FILE" > "$OPENCODE_RESTART_SESSION_OUTPUT"
 import sys
 sys.path.insert(0, '$PROJECT_ROOT')
-from experiments.AgentCallInterface.agents.agent_callers import get_caller
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import get_caller
 
 caller = get_caller('opencode')
 response = caller.call(
@@ -446,9 +459,9 @@ restore_kilo_container() {
         return 0
     fi
 
-    log "Restoring kilo_code from clean backup: $backup_image"
-    docker rm -f kilo_code 2>&1 | tee -a "$LOG_FILE" || true
-    docker run -d --name kilo_code "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    log "Restoring $KILO_CONTAINER_NAME from clean backup: $backup_image"
+    docker rm -f "$KILO_CONTAINER_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name "$KILO_CONTAINER_NAME" "$backup_image" 2>&1 | tee -a "$LOG_FILE"
     sleep 2
 }
 
@@ -458,9 +471,9 @@ restore_claude_container() {
         return 0
     fi
 
-    log "Restoring claude_code from clean backup: $backup_image"
-    docker rm -f claude_code 2>&1 | tee -a "$LOG_FILE" || true
-    docker run -d --name claude_code "$backup_image" 2>&1 | tee -a "$LOG_FILE"
+    log "Restoring $CLAUDE_CODE_CONTAINER_NAME from clean backup: $backup_image"
+    docker rm -f "$CLAUDE_CODE_CONTAINER_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+    docker run -d --name "$CLAUDE_CODE_CONTAINER_NAME" "$backup_image" 2>&1 | tee -a "$LOG_FILE"
     sleep 2
 }
 
@@ -470,7 +483,7 @@ prepare_kilo_container() {
     fi
 
     log "Preparing Kilo Code workspace: $KILO_PROJECT_DIR"
-    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" "$KILO_CONTAINER_NAME" bash -lc '
 set -e
 mkdir -p "$KILO_PROJECT_DIR"
 find "$KILO_PROJECT_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
@@ -488,7 +501,7 @@ prepare_claude_container() {
     fi
 
     log "Preparing Claude Code run root: $CLAUDE_RUN_ROOT"
-    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" "$CLAUDE_CODE_CONTAINER_NAME" bash -lc '
 set -e
 mkdir -p "$CLAUDE_RUN_ROOT"
 find "$CLAUDE_RUN_ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
@@ -503,7 +516,7 @@ fi
 }
 
 kilo_subprocess_count() {
-    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" "$KILO_CONTAINER_NAME" bash -lc '
 count=0
 for d in /proc/[0-9]*; do
     cmd="$(tr "\0" " " < "$d/cmdline" 2>/dev/null || true)"
@@ -518,7 +531,7 @@ printf "%s\n" "$count"
 }
 
 kilo_workspace_file_count() {
-    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" "$KILO_CONTAINER_NAME" bash -lc '
 if [ ! -d "$KILO_PROJECT_DIR" ]; then
     printf "0\n"
     exit 0
@@ -528,7 +541,7 @@ find "$KILO_PROJECT_DIR" -mindepth 1 -print 2>/dev/null | wc -l | tr -d " "
 }
 
 kilo_tmp_test_data_state() {
-    docker exec kilo_code bash -lc '
+    docker exec "$KILO_CONTAINER_NAME" bash -lc '
 if [ -e /tmp/test_data.txt ]; then
     printf "present\n"
 else
@@ -540,7 +553,7 @@ fi
 capture_kilo_state() {
     local phase="$1"
     local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
-    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" "$KILO_CONTAINER_NAME" bash -lc '
 echo "## requested project dir"
 printf "%s\n" "$KILO_PROJECT_DIR"
 echo "## pwd inside project"
@@ -564,7 +577,7 @@ done
 }
 
 claude_subprocess_count() {
-    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" "$CLAUDE_CODE_CONTAINER_NAME" bash -lc '
 count=0
 for d in /proc/[0-9]*; do
     pid="${d#/proc/}"
@@ -581,7 +594,7 @@ printf "%s\n" "$count"
 }
 
 claude_run_file_count() {
-    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" "$CLAUDE_CODE_CONTAINER_NAME" bash -lc '
 if [ ! -d "$CLAUDE_RUN_ROOT" ]; then
     printf "0\n"
     exit 0
@@ -591,7 +604,7 @@ find "$CLAUDE_RUN_ROOT" -mindepth 1 -print 2>/dev/null | wc -l | tr -d " "
 }
 
 claude_tmp_test_data_state() {
-    docker exec claude_code bash -lc '
+    docker exec "$CLAUDE_CODE_CONTAINER_NAME" bash -lc '
 if [ -e /tmp/test_data.txt ]; then
     printf "present\n"
 else
@@ -603,7 +616,7 @@ fi
 capture_claude_state() {
     local phase="$1"
     local state_file="$LOG_DIR/${EVAL_ID}_${AGENT_NAME}_${phase}_state.txt"
-    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" "$CLAUDE_CODE_CONTAINER_NAME" bash -lc '
 echo "## requested run root"
 printf "%s\n" "$CLAUDE_RUN_ROOT"
 echo "## run root tree"
@@ -638,7 +651,7 @@ cleanup_kilo_container() {
     fi
 
     log "Cleaning Kilo Code workspace and eval subprocesses"
-    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" kilo_code bash -lc '
+    docker exec -e KILO_PROJECT_DIR="$KILO_PROJECT_DIR" "$KILO_CONTAINER_NAME" bash -lc '
 set +e
 terminate_matches() {
     signal="$1"
@@ -669,7 +682,7 @@ cleanup_claude_container() {
     fi
 
     log "Cleaning Claude Code run root and eval subprocesses"
-    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" claude_code bash -lc '
+    docker exec -e CLAUDE_RUN_ROOT="$CLAUDE_RUN_ROOT" "$CLAUDE_CODE_CONTAINER_NAME" bash -lc '
 set +e
 terminate_matches() {
     signal="$1"
@@ -884,6 +897,8 @@ echo "|-------|------------|--------------|----------------|--------------|-----
 
 run_agent_eval() {
     local AGENT_NAME="$1"
+    local AGENT_CONTAINER_NAME
+    AGENT_CONTAINER_NAME="$(agent_container_name "$AGENT_NAME")"
 
     log_section "TESTING AGENT: $AGENT_NAME"
 
@@ -900,7 +915,7 @@ run_agent_eval() {
         log "Pre-injection backup exists: $PRE_BACKUP_IMAGE"
     else
         log "Creating pre-injection backup..."
-        docker commit --no-pause "$AGENT_NAME" "$PRE_BACKUP_IMAGE" 2>&1 | tee -a "$LOG_FILE"
+        docker commit --no-pause "$AGENT_CONTAINER_NAME" "$PRE_BACKUP_IMAGE" 2>&1 | tee -a "$LOG_FILE"
         log "Backup created: $PRE_BACKUP_IMAGE"
     fi
 
@@ -910,8 +925,8 @@ run_agent_eval() {
     prepare_agent_container "$AGENT_NAME"
     capture_agent_state "$AGENT_NAME" "pre"
 
-    PRE_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
-    PRE_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
+    PRE_MEM=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
+    PRE_CPU=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
     log "Pre-injection Memory: $PRE_MEM, CPU: $PRE_CPU"
 
     # Generate injection text from the configured template module.
@@ -991,7 +1006,7 @@ import time
 import json
 from pathlib import Path
 sys.path.insert(0, '$PROJECT_ROOT')
-from experiments.AgentCallInterface.agents.agent_callers import get_caller, AgentResponse
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import get_caller, AgentResponse
 
 caller = get_caller('$AGENT_NAME')
 task_input = Path('$TASK_INPUT_FILE').read_text()
@@ -1019,6 +1034,7 @@ response = caller.call(
     model='$MODEL_NAME'
 )
 duration = time.time() - start_time
+recorded_output = getattr(response, 'raw_output', '') or response.output
 
 metrics = {
     'api_calls': api_call_count,
@@ -1026,6 +1042,7 @@ metrics = {
     'success': response.success,
     'returncode': response.returncode,
     'output_chars': len(response.output),
+    'recorded_output_chars': len(recorded_output),
     'stderr_chars': len(getattr(response, 'stderr', '') or '')
 }
 
@@ -1037,7 +1054,7 @@ print(f'Success: {response.success}')
 print(f'Duration: {duration:.2f}s')
 print(f'API Calls: {api_call_count}')
 print('---Output---')
-print(response.output)
+print(recorded_output)
 if response.error:
     print('---Error---')
     print(response.error)
@@ -1087,12 +1104,12 @@ PYTHON_EOF
     log_subsection "Creating Injected Checkpoint"
     INJECTED_IMAGE="${AGENT_NAME}:${INJECTED_TAG}"
     log "Creating checkpoint: $INJECTED_IMAGE"
-    docker commit --no-pause "$AGENT_NAME" "$INJECTED_IMAGE" 2>&1 | tee -a "$LOG_FILE" || true
+    docker commit --no-pause "$AGENT_CONTAINER_NAME" "$INJECTED_IMAGE" 2>&1 | tee -a "$LOG_FILE" || true
     update_metrics "post_injection" "checkpoint_image" "$INJECTED_IMAGE"
 
     # Post-injection status
-    POST_MEM=$(docker stats "$AGENT_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
-    POST_CPU=$(docker stats "$AGENT_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
+    POST_MEM=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.MemUsage}}" 2>/dev/null || echo "N/A")
+    POST_CPU=$(docker stats "$AGENT_CONTAINER_NAME" --no-stream --format "{{.CPUPerc}}" 2>/dev/null || echo "N/A")
     log "Post-injection Memory: $POST_MEM, CPU: $POST_CPU"
     update_metrics "post_injection" "memory" "$POST_MEM"
     update_metrics "post_injection" "cpu" "$POST_CPU"
@@ -1107,7 +1124,7 @@ PYTHON_EOF
     python3 << PYTHON_EOF 2>&1 | tee -a "$LOG_FILE" > "$FOLLOWUP_OUTPUT"
 import sys
 sys.path.insert(0, '$PROJECT_ROOT')
-from experiments.AgentCallInterface.agents.agent_callers import get_caller
+from experiments.AgentCallInterface.coding_agents.coding_agent_callers import get_caller
 
 caller = get_caller('$AGENT_NAME')
 response = caller.call(
@@ -1119,11 +1136,12 @@ response = caller.call(
     timeout=$FOLLOWUP_TIMEOUT_SECONDS,
     model='$MODEL_NAME'
 )
+recorded_output = getattr(response, 'raw_output', '') or response.output
 
 print('===FOLLOWUP_START===')
 print(f'Success: {response.success}')
 print('---Output---')
-print(response.output)
+print(recorded_output)
 if response.error:
     print('---Error---')
     print(response.error)
