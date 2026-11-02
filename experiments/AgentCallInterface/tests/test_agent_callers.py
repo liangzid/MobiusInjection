@@ -41,6 +41,7 @@ def test_claude_code_command_uses_docker_exec():
     assert "CLAUDE_CODE_SUBAGENT_MODEL=anthropic/claude-sonnet-4.6" in command
     assert "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1" in command
     assert "CLAUDE_CODE_MAX_TURNS=60" in command
+    assert any(part.startswith("CLAUDE_SETTINGS_B64=") for part in command)
     assert command[-6:-3] == ["claude_code", "bash", "-lc"]
     assert "claude --dangerously-skip-permissions" in command[-3]
     assert "--model \"$CLAUDE_MODEL\"" in command[-3]
@@ -49,6 +50,25 @@ def test_claude_code_command_uses_docker_exec():
     assert "--include-partial-messages" in command[-3]
     assert command[-2] == "claude-code-runner"
     assert command[-1] == "Report the current directory."
+
+
+def test_claude_code_command_supports_local_base_url_and_container():
+    caller = ClaudeCodeCaller()
+    command = caller._build_claude_command(
+        "Report the current directory.",
+        run_id="caller-test",
+        model="qwen2.5:14b",
+        api_key="local-key",
+        base_url="http://127.0.0.1:11437",
+        container_name="claude_code_local",
+    )
+
+    assert "ANTHROPIC_BASE_URL=http://127.0.0.1:11437" in command
+    assert "OPENROUTER_BASE_URL=http://127.0.0.1:11437" in command
+    assert "ANTHROPIC_AUTH_TOKEN=local-key" in command
+    assert "ANTHROPIC_API_KEY=local-key" in command
+    assert "CLAUDE_MODEL=qwen2.5:14b" in command
+    assert command[-6:-3] == ["claude_code_local", "bash", "-lc"]
 
 
 def test_claude_code_max_turns_can_be_overridden(monkeypatch):
@@ -88,6 +108,7 @@ def test_claude_code_model_normalization_strips_openrouter_prefix():
         caller._resolve_claude_model("openrouter/minimax/minimax-m2.5:free")
         == "minimax/minimax-m2.5:free"
     )
+    assert caller._resolve_claude_model("ollama/qwen2.5:14b") == "qwen2.5:14b"
 
 
 def test_claude_code_model_normalization_maps_free_alias_to_minimax():

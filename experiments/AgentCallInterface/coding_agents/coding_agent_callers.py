@@ -30,7 +30,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from experiments.AgentCallInterface.utils.api_keys import get_openrouter_api_key
+from experiments.AgentCallInterface.utils.api_keys import (
+    get_aigocode_api_key,
+    get_aigocode_base_url,
+    get_aigocode_provider_api_key,
+    get_openrouter_api_key,
+)
 
 
 DEFAULT_MODEL = "openrouter/free"
@@ -495,6 +500,9 @@ class ClaudeCodeCaller(AgentCaller):
     OPENROUTER_PREFIX = "openrouter/"
     DEFAULT_OPENROUTER_MODEL = "minimax/minimax-m2.5:free"
     DEFAULT_MAX_TURNS = "60"
+    LOCAL_BASE_URL_ENV = "CLAUDE_CODE_BASE_URL"
+    LOCAL_API_KEY_ENV = "CLAUDE_CODE_API_KEY"
+    CONTAINER_NAME_ENV = "CLAUDE_CODE_CONTAINER_NAME"
 
     def call(
         self,
@@ -507,13 +515,33 @@ class ClaudeCodeCaller(AgentCaller):
 
         prompt = self._build_task_prompt(task_input)
         run_id = str(task_input.get("run_id", task_input.get("task_id", "claude-code-run")))
-        api_key = get_openrouter_api_key()
-        cmd = self._build_claude_command(prompt, run_id, claude_model, api_key)
+        base_url = self._base_url()
+        api_key = self._api_key() if self._local_base_url() else get_openrouter_api_key()
+        container_name = os.environ.get(self.CONTAINER_NAME_ENV, self.CONTAINER_NAME)
+        cmd = self._build_claude_command(
+            prompt,
+            run_id,
+            claude_model,
+            api_key,
+            base_url=base_url,
+            container_name=container_name,
+        )
         return self._run_claude_command(cmd, task_id, timeout)
+
+    def _local_base_url(self) -> str:
+        return os.environ.get(self.LOCAL_BASE_URL_ENV, "").strip()
+
+    def _base_url(self) -> str:
+        return self._local_base_url() or self.DEFAULT_BASE_URL
+
+    def _api_key(self) -> str:
+        return os.environ.get(self.LOCAL_API_KEY_ENV, "ollama-local").strip()
 
     def _resolve_claude_model(self, model: str) -> str:
         if model.startswith(self.OPENROUTER_PREFIX):
             model = model[len(self.OPENROUTER_PREFIX) :]
+        if model.startswith("ollama/"):
+            model = model[len("ollama/") :]
 
         if model in {"free", "auto"}:
             return self.DEFAULT_OPENROUTER_MODEL
@@ -550,17 +578,29 @@ class ClaudeCodeCaller(AgentCaller):
         run_id: str = "claude-code-run",
         model: str = DEFAULT_MODEL,
         api_key: str = "",
+        base_url: str | None = None,
+        container_name: str = CONTAINER_NAME,
     ) -> list[str]:
         safe_run_id = self._safe_run_id(run_id)
         max_turns = os.environ.get("CLAUDE_CODE_MAX_TURNS", self.DEFAULT_MAX_TURNS)
         run_dir = f"{self.RUN_ROOT}/{safe_run_id}"
         runtime_home = f"{run_dir}/home"
         runtime_workspace = f"{run_dir}/workspace"
+        resolved_base_url = base_url or self.DEFAULT_BASE_URL
+        anthropic_api_key = api_key if resolved_base_url != self.DEFAULT_BASE_URL else ""
+        settings = {
+            "env": {
+                "ANTHROPIC_BASE_URL": resolved_base_url,
+                "OPENROUTER_BASE_URL": resolved_base_url,
+            }
+        }
         shell_command = (
             'set -e; '
             'export HOME="$CLAUDE_RUNTIME_HOME"; '
             'mkdir -p "$HOME/.claude" "$HOME/.cache" "$HOME/.config" "$CLAUDE_WORKSPACE"; '
-            'if [ -f /home/zi/.claude/settings.json ] && [ ! -f "$HOME/.claude/settings.json" ]; then '
+            'if [ -n "${CLAUDE_SETTINGS_B64:-}" ]; then '
+            'printf %s "$CLAUDE_SETTINGS_B64" | base64 -d > "$HOME/.claude/settings.json"; '
+            'elif [ -f /home/zi/.claude/settings.json ] && [ ! -f "$HOME/.claude/settings.json" ]; then '
             'cp /home/zi/.claude/settings.json "$HOME/.claude/settings.json"; '
             'fi; '
             'cd "$CLAUDE_WORKSPACE"; '
@@ -583,13 +623,13 @@ class ClaudeCodeCaller(AgentCaller):
             "-e",
             f"CLAUDE_WORKSPACE={runtime_workspace}",
             "-e",
-            f"ANTHROPIC_BASE_URL={self.DEFAULT_BASE_URL}",
+            f"ANTHROPIC_BASE_URL={resolved_base_url}",
             "-e",
-            f"OPENROUTER_BASE_URL={self.DEFAULT_BASE_URL}",
+            f"OPENROUTER_BASE_URL={resolved_base_url}",
             "-e",
             f"ANTHROPIC_AUTH_TOKEN={api_key}",
             "-e",
-            "ANTHROPIC_API_KEY=",
+            f"ANTHROPIC_API_KEY={anthropic_api_key}",
             "-e",
             f"CLAUDE_MODEL={model}",
             "-e",
@@ -608,7 +648,9 @@ class ClaudeCodeCaller(AgentCaller):
             "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
             "-e",
             f"CLAUDE_CODE_MAX_TURNS={max_turns}",
-            self.CONTAINER_NAME,
+            "-e",
+            f"CLAUDE_SETTINGS_B64={_encode_text(json.dumps(settings))}",
+            container_name,
             "bash",
             "-lc",
             shell_command,
@@ -766,8 +808,17 @@ class CursorCaller(AgentCaller):
 
 
 class OpenCodeCaller(AgentCaller):
+    CONTAINER_NAME = "opencode"
     PROJECT_DIR = "/opencode"
     DEFAULT_OPENCODE_MODEL = "openrouter/minimax/minimax-m2.5:free"
+    AIGOCODE_PROFILE_NAME = "aigocode"
+    AIGOCODE_PROVIDER_PREFIXES = ("anthropic/", "openai/", "gemini/")
+    AIGOCODE_PROFILE_ENV = "OPENCODE_PROVIDER_PROFILE"
+    LOCAL_BASE_URL_ENV = "OPENCODE_BASE_URL"
+    LOCAL_PROVIDER_ID_ENV = "OPENCODE_PROVIDER_ID"
+    LOCAL_PROVIDER_NAME_ENV = "OPENCODE_PROVIDER_NAME"
+    LOCAL_API_KEY_ENV = "OPENCODE_API_KEY"
+    CONTAINER_NAME_ENV = "OPENCODE_CONTAINER_NAME"
     MODEL_ALIASES = {
         "openrouter/free": DEFAULT_OPENCODE_MODEL,
         "nvidia/nemotron-3-super-120b-a12b:free": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
@@ -777,6 +828,11 @@ class OpenCodeCaller(AgentCaller):
     def _resolve_model(self, model: str) -> str:
         if model in self.MODEL_ALIASES:
             return self.MODEL_ALIASES[model]
+        if self._is_aigocode_model(model):
+            return model
+        local_provider_id = self._local_provider_id()
+        if local_provider_id and model.startswith(f"{local_provider_id}/"):
+            return model
         if model.startswith(("opencode/", "openrouter/")):
             return model
         if "/" in model:
@@ -784,6 +840,156 @@ class OpenCodeCaller(AgentCaller):
         if "/" not in model:
             return f"opencode/{model}"
         return model
+
+    def _local_provider_id(self) -> str:
+        return os.environ.get(self.LOCAL_PROVIDER_ID_ENV, "ollama").strip()
+
+    def _local_base_url(self) -> str:
+        return os.environ.get(self.LOCAL_BASE_URL_ENV, "").strip()
+
+    def _local_api_key(self) -> str:
+        return os.environ.get(self.LOCAL_API_KEY_ENV, "ollama-local").strip()
+
+    def _provider_profile(self) -> str:
+        return os.environ.get(self.AIGOCODE_PROFILE_ENV, "").strip().lower()
+
+    def _is_aigocode_model(self, model: str) -> bool:
+        return self._provider_profile() == self.AIGOCODE_PROFILE_NAME
+
+    def _aigocode_model_id(self, resolved_model: str, provider: str) -> str | None:
+        prefix = f"{provider}/"
+        if resolved_model.startswith(prefix):
+            return resolved_model.split("/", 1)[1]
+        return None
+
+    def _aigocode_provider_keys(self, fallback_api_key: str) -> dict[str, str]:
+        keys = {
+            "anthropic": fallback_api_key,
+            "openai": fallback_api_key,
+            "gemini": fallback_api_key,
+        }
+        if self._provider_profile() != self.AIGOCODE_PROFILE_NAME:
+            return keys
+        for provider in keys:
+            try:
+                keys[provider] = get_aigocode_provider_api_key(provider)
+            except FileNotFoundError:
+                keys[provider] = fallback_api_key
+        return keys
+
+    def _aigocode_provider_config(self, resolved_model: str, api_key: str) -> dict[str, Any] | None:
+        if not self._is_aigocode_model(resolved_model):
+            return None
+        base_url = get_aigocode_base_url()
+        provider_keys = self._aigocode_provider_keys(api_key)
+        anthropic_model = self._aigocode_model_id(resolved_model, "anthropic")
+        openai_model = self._aigocode_model_id(resolved_model, "openai")
+        gemini_model = self._aigocode_model_id(resolved_model, "gemini")
+        if not any((anthropic_model, openai_model, gemini_model)):
+            raise ValueError(
+                "AiGoCode OpenCode models must use one of these prefixes: "
+                "anthropic/, openai/, gemini/."
+            )
+
+        provider: dict[str, Any] = {
+            "anthropic": {
+                "npm": "@ai-sdk/anthropic",
+                "options": {
+                    "baseURL": f"{base_url}/v1",
+                    "apiKey": provider_keys["anthropic"],
+                },
+                "models": {},
+            },
+            "openai": {
+                "options": {
+                    "baseURL": f"{base_url}/v1",
+                    "apiKey": provider_keys["openai"],
+                },
+                "models": {},
+            },
+            "gemini": {
+                "npm": "@ai-sdk/google",
+                "options": {
+                    "baseURL": f"{base_url}/v1beta",
+                    "apiKey": provider_keys["gemini"],
+                },
+                "models": {},
+            },
+        }
+        if openai_model:
+            provider["openai"]["models"][openai_model] = {
+                "name": openai_model,
+                "options": {"store": False},
+            }
+        if anthropic_model:
+            provider["anthropic"]["models"][anthropic_model] = {
+                "name": anthropic_model,
+                "family": "claude-opus" if "opus" in anthropic_model else "claude-sonnet",
+                "attachment": True,
+                "reasoning": True,
+                "tool_call": True,
+                "temperature": True,
+                "modalities": {"input": ["text", "image", "pdf"], "output": ["text"]},
+                "limit": {"context": 1000000, "output": 128000},
+            }
+        if gemini_model:
+            provider["gemini"]["models"][gemini_model] = {
+                "name": gemini_model,
+                "options": {
+                    "thinking": {
+                        "budgetTokens": 24576,
+                        "type": "enabled",
+                    }
+                },
+            }
+        if not provider["openai"]["models"]:
+            provider["openai"].pop("models")
+        if not provider["anthropic"]["models"]:
+            provider["anthropic"].pop("models")
+        if not provider["gemini"]["models"]:
+            provider["gemini"].pop("models")
+        return {
+            "$schema": "https://opencode.ai/config.json",
+            "provider": provider,
+            "agent": {
+                "build": {"options": {"store": False}},
+                "plan": {"options": {"store": False}},
+            },
+        }
+
+    def _local_provider_config(self, resolved_model: str) -> dict[str, Any] | None:
+        base_url = self._local_base_url()
+        provider_id = self._local_provider_id()
+        if not base_url:
+            return None
+        if not provider_id or not resolved_model.startswith(f"{provider_id}/"):
+            raise ValueError(
+                f"{self.LOCAL_BASE_URL_ENV} requires an OpenCode model under "
+                f"the configured provider prefix: {provider_id}/..."
+            )
+        model_id = resolved_model.split("/", 1)[1]
+        provider_name = os.environ.get(
+            self.LOCAL_PROVIDER_NAME_ENV,
+            f"{provider_id} (local)",
+        ).strip()
+        return {
+            "$schema": "https://opencode.ai/config.json",
+            "provider": {
+                provider_id: {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "name": provider_name,
+                    "options": {
+                        "baseURL": base_url,
+                        "apiKey": self._local_api_key(),
+                    },
+                    "models": {
+                        model_id: {
+                            "name": model_id,
+                        },
+                    },
+                },
+            },
+        }
 
     def _prepare_prompt(self, prompt: str) -> str:
         return (
@@ -800,23 +1006,42 @@ class OpenCodeCaller(AgentCaller):
             + prompt
         )
 
-    def _build_opencode_command(self, prompt: str, model: str, api_key: str) -> list[str]:
+    def _build_opencode_command(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        container_name: str = CONTAINER_NAME,
+    ) -> list[str]:
         prepared_prompt = self._prepare_prompt(prompt)
+        resolved_model = self._resolve_model(model)
+        env_vars = {
+            "OPENROUTER_API_KEY": api_key,
+            "OPENCODE_PROMPT_B64": _encode_text(prepared_prompt),
+        }
+        config = (
+            self._aigocode_provider_config(resolved_model, api_key)
+            or self._local_provider_config(resolved_model)
+        )
+        config_script = ""
+        if config is not None:
+            env_vars["OPENCODE_CONFIG_B64"] = _encode_text(json.dumps(config))
+            config_script = (
+                f"printf %s \"$OPENCODE_CONFIG_B64\" | base64 -d > {self.PROJECT_DIR}/opencode.json && "
+            )
         script = (
             f"mkdir -p {self.PROJECT_DIR} && cd {self.PROJECT_DIR} && "
+            f"{config_script}"
             f"/root/.opencode/bin/opencode run --dir {self.PROJECT_DIR} "
-            f"-m {shlex.quote(self._resolve_model(model))} "
+            f"-m {shlex.quote(resolved_model)} "
             "--format json "
             "--dangerously-skip-permissions "
             f"\"{_decode_b64('OPENCODE_PROMPT_B64')}\""
         )
         return _docker_bash_command(
-            "opencode",
+            container_name,
             script,
-            {
-                "OPENROUTER_API_KEY": api_key,
-                "OPENCODE_PROMPT_B64": _encode_text(prepared_prompt),
-            },
+            env_vars,
         )
 
     def _combine_output(self, stdout: str | bytes | None, stderr: str | bytes | None) -> str:
@@ -836,24 +1061,27 @@ class OpenCodeCaller(AgentCaller):
             return value.decode(errors="replace")
         return value
 
-    def _looks_like_error(self, stderr: str) -> bool:
+    def _looks_like_error(self, output_text: str) -> bool:
         error_markers = (
-            "Error:",
+            "APIError",
             "ProviderModelNotFoundError",
             "Model not found",
             "API Error:",
+            '"type":"error"',
+            '"name":"APIError"',
+            "permission_error",
         )
-        return any(marker in stderr for marker in error_markers)
+        return any(marker in output_text for marker in error_markers)
 
-    def _cleanup_after_timeout(self, cmd: list[str]) -> None:
-        if "docker" not in cmd[:1] or "opencode" not in cmd:
+    def _cleanup_after_timeout(self, cmd: list[str], container_name: str) -> None:
+        if "docker" not in cmd[:1] or container_name not in cmd:
             return
         try:
             subprocess.run(
                 [
                     "docker",
                     "exec",
-                    "opencode",
+                    container_name,
                     "bash",
                     "-lc",
                     "pkill -f '/root/.opencode/bin/opencode run --dir /opencode' || true",
@@ -866,7 +1094,11 @@ class OpenCodeCaller(AgentCaller):
             pass
 
     def _run_opencode_command(
-        self, cmd: list[str], task_id: str, timeout: int
+        self,
+        cmd: list[str],
+        task_id: str,
+        timeout: int,
+        container_name: str = CONTAINER_NAME,
     ) -> AgentResponse:
         start = time.time()
         try:
@@ -875,7 +1107,7 @@ class OpenCodeCaller(AgentCaller):
             stdout = self._to_text(exc.stdout)
             stderr = self._to_text(exc.stderr)
             combined = self._combine_output(stdout, stderr)
-            self._cleanup_after_timeout(cmd)
+            self._cleanup_after_timeout(cmd, container_name)
             return AgentResponse(
                 success=False,
                 output=combined,
@@ -888,7 +1120,7 @@ class OpenCodeCaller(AgentCaller):
 
         stderr = result.stderr or ""
         combined = self._combine_output(result.stdout, stderr)
-        success = result.returncode == 0 and not self._looks_like_error(stderr)
+        success = result.returncode == 0 and not self._looks_like_error(combined)
         return AgentResponse(
             success=success,
             output=combined,
@@ -906,9 +1138,22 @@ class OpenCodeCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
-        api_key = get_openrouter_api_key()
-        cmd = self._build_opencode_command(prompt, model, api_key)
-        return self._run_opencode_command(cmd, task_input.get("task_id", ""), timeout)
+        default_container = os.environ.get(self.CONTAINER_NAME_ENV, self.CONTAINER_NAME)
+        container_name = _container_name_from(task_input, default_container)
+        resolved_model = self._resolve_model(model)
+        if self._is_aigocode_model(resolved_model):
+            api_key = get_aigocode_api_key()
+        elif self._local_base_url():
+            api_key = self._local_api_key()
+        else:
+            api_key = get_openrouter_api_key()
+        cmd = self._build_opencode_command(prompt, model, api_key, container_name)
+        return self._run_opencode_command(
+            cmd,
+            task_input.get("task_id", ""),
+            timeout,
+            container_name,
+        )
 
 
 class KiloCodeCaller(AgentCaller):
@@ -916,13 +1161,41 @@ class KiloCodeCaller(AgentCaller):
     PROJECT_DIR = "/kilo_eval_workspace"
     INNER_TIMEOUT_GRACE_SECONDS = 5
     HOST_TIMEOUT_GRACE_SECONDS = 10
+    LOCAL_BASE_URL_ENV = "KILO_BASE_URL"
+    LOCAL_PROVIDER_ID_ENV = "KILO_PROVIDER_ID"
+    LOCAL_PROVIDER_NAME_ENV = "KILO_PROVIDER_NAME"
+    LOCAL_API_KEY_ENV = "KILO_API_KEY"
+    CONTAINER_NAME_ENV = "KILO_CONTAINER_NAME"
+    PROJECT_DIR_ENV = "KILO_PROJECT_DIR"
 
     def _normalize_model(self, model: str) -> str:
+        local_provider_id = self._local_provider_id()
+        if local_provider_id and model.startswith(f"{local_provider_id}/"):
+            return model
         if model.startswith(("kilo/", "openrouter/")):
             return model
         if "/" in model:
             return f"openrouter/{model}"
         return f"kilo/{model}"
+
+    def _local_base_url(self) -> str:
+        return os.environ.get(self.LOCAL_BASE_URL_ENV, "").strip()
+
+    def _local_provider_id(self) -> str:
+        return os.environ.get(self.LOCAL_PROVIDER_ID_ENV, "ollama").strip()
+
+    def _local_provider_name(self) -> str:
+        provider_id = self._local_provider_id()
+        return os.environ.get(self.LOCAL_PROVIDER_NAME_ENV, f"{provider_id} (local)").strip()
+
+    def _local_api_key(self) -> str:
+        return os.environ.get(self.LOCAL_API_KEY_ENV, "ollama-local").strip()
+
+    def _project_dir(self) -> str:
+        return os.environ.get(self.PROJECT_DIR_ENV, self.PROJECT_DIR).strip() or self.PROJECT_DIR
+
+    def _container_name(self) -> str:
+        return os.environ.get(self.CONTAINER_NAME_ENV, self.CONTAINER_NAME).strip() or self.CONTAINER_NAME
 
     def _run_id(self, task_id: str) -> str:
         safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in task_id)
@@ -935,41 +1208,137 @@ class KiloCodeCaller(AgentCaller):
         api_key: str,
         task_id: str,
         timeout: int,
+        container_name: str | None = None,
+        project_dir: str | None = None,
     ) -> tuple[list[str], str]:
         run_id = self._run_id(task_id)
-        project_dir = shlex.quote(self.PROJECT_DIR)
-        quoted_model = shlex.quote(self._normalize_model(model))
+        raw_project_dir = project_dir or self._project_dir()
+        project_dir_q = shlex.quote(raw_project_dir)
+        normalized_model = self._normalize_model(model)
+        quoted_model = shlex.quote(normalized_model)
         quoted_timeout = shlex.quote(str(timeout))
         prepared_prompt = self._prepare_prompt(prompt)
+        config_script, config_env = self._local_provider_setup(normalized_model)
+        remote_config_script = "" if config_script else self._openrouter_project_config_script()
         script = (
             "set -u; "
-            f"mkdir -p {project_dir}; "
-            f"cd {project_dir}; "
+            f"{config_script}"
+            f"mkdir -p {project_dir_q}; "
+            f"cd {project_dir_q}; "
+            f"{remote_config_script}"
             'KILO_PROMPT="$(printf %s "$KILO_PROMPT_B64" | base64 -d)"; '
             f"timeout --kill-after={self.INNER_TIMEOUT_GRACE_SECONDS}s {quoted_timeout}s "
-            f"kilo run --dir {project_dir} -m {quoted_model} --auto "
+            f"kilo run --dir {project_dir_q} -m {quoted_model} --auto "
             "--format json "
             '--title "$KILO_EVAL_RUN_ID" "$KILO_PROMPT"'
         )
+        env_vars = {
+            "OPENROUTER_API_KEY": api_key,
+            "KILO_EVAL_OPENROUTER_KEY_B64": _encode_text(api_key),
+            "KILO_PROMPT_B64": _encode_text(prepared_prompt),
+            "KILO_EVAL_RUN_ID": run_id,
+        }
+        env_vars.update(config_env)
         return (
             _docker_bash_command(
-                self.CONTAINER_NAME,
+                container_name or self._container_name(),
                 script,
-                {
-                    "OPENROUTER_API_KEY": api_key,
-                    "KILO_PROMPT_B64": _encode_text(prepared_prompt),
-                    "KILO_EVAL_RUN_ID": run_id,
-                },
+                env_vars,
             ),
             run_id,
         )
 
+    def _local_provider_setup(self, normalized_model: str) -> tuple[str, dict[str, str]]:
+        base_url = self._local_base_url()
+        if not base_url:
+            return "", {}
+        provider_id = self._local_provider_id()
+        if not provider_id or not normalized_model.startswith(f"{provider_id}/"):
+            raise ValueError(
+                f"{self.LOCAL_BASE_URL_ENV} requires a Kilo model under "
+                f"the configured provider prefix: {provider_id}/..."
+            )
+        model_id = normalized_model.split("/", 1)[1]
+        env_name = f"{provider_id.upper().replace('-', '_')}_API_KEY"
+        provider = {
+            "id": provider_id,
+            "env": [env_name],
+            "npm": "@ai-sdk/openai-compatible",
+            "api": base_url,
+            "name": self._local_provider_name(),
+            "doc": "local Ollama-compatible API",
+            "models": {
+                model_id: {
+                    "id": model_id,
+                    "name": model_id,
+                    "attachment": False,
+                    "reasoning": False,
+                    "tool_call": True,
+                    "temperature": True,
+                    "open_weights": True,
+                    "cost": {"input": 0, "output": 0},
+                    "limit": {"context": 32768, "output": 8192},
+                },
+            },
+        }
+        script = (
+            "python3 - <<'PYKILOLOCAL'\n"
+            "import base64, json, os\n"
+            "from pathlib import Path\n"
+            "path = Path('/root/.cache/kilo/models.json')\n"
+            "path.parent.mkdir(parents=True, exist_ok=True)\n"
+            "data = {}\n"
+            "if path.exists():\n"
+            "    try:\n"
+            "        data = json.loads(path.read_text(encoding='utf-8'))\n"
+            "    except json.JSONDecodeError:\n"
+            "        data = {}\n"
+            "provider = json.loads(base64.b64decode(os.environ['KILO_LOCAL_PROVIDER_B64']).decode())\n"
+            "data[provider['id']] = provider\n"
+            "path.write_text(json.dumps(data), encoding='utf-8')\n"
+            "PYKILOLOCAL\n"
+        )
+        return script, {
+            "KILO_LOCAL_PROVIDER_B64": _encode_text(json.dumps(provider)),
+            env_name: self._local_api_key(),
+        }
+
+    def _openrouter_project_config_script(self) -> str:
+        return (
+            "python3 - <<'PYKILOOR'\n"
+            "import base64\n"
+            "import json\n"
+            "import os\n"
+            "from pathlib import Path\n"
+            "raw = os.environ.get('KILO_EVAL_OPENROUTER_KEY_B64', '')\n"
+            "api_key = base64.b64decode(raw).decode() if raw else ''\n"
+            "cfg = {'provider': {'openrouter': {'options': {'apiKey': api_key}}}}\n"
+            "text = json.dumps(cfg)\n"
+            "Path('opencode.json').write_text(text, encoding='utf-8')\n"
+            "Path('kilo.json').write_text(text, encoding='utf-8')\n"
+            "PYKILOOR\n"
+        )
+
+    def _kilo_output_is_api_error(self, combined: str) -> bool:
+        for line in combined.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("{"):
+                continue
+            try:
+                payload = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("type") == "error":
+                return True
+        return False
+
     def _prepare_prompt(self, prompt: str) -> str:
+        project_dir = self._project_dir()
         return (
             "Kilo Code environment note: run inside project directory "
-            f"{self.PROJECT_DIR}. Project instructions in "
-            f"{self.PROJECT_DIR}/AGENTS.md and skills in "
-            f"{self.PROJECT_DIR}/.kilo/skills are mandatory task context. "
+            f"{project_dir}. Project instructions in "
+            f"{project_dir}/AGENTS.md and skills in "
+            f"{project_dir}/.kilo/skills are mandatory task context. "
             "For any code-related request, load/use explain-code before "
             "reading, writing, testing, or final answer when that skill exists.\n\n"
             + prompt
@@ -1015,7 +1384,7 @@ terminate_matches KILL
         try:
             subprocess.run(
                 _docker_bash_command(
-                    self.CONTAINER_NAME,
+                    self._container_name(),
                     script,
                     {"KILO_EVAL_RUN_ID": run_id},
                 ),
@@ -1053,10 +1422,16 @@ terminate_matches KILL
         timed_out = result.returncode in (124, 137)
         if timed_out:
             self._cleanup_after_timeout(run_id)
-        success = result.returncode == 0
+        has_output = bool(combined.strip())
+        api_error = self._kilo_output_is_api_error(combined)
+        success = result.returncode == 0 and has_output and not api_error
         error = None
         if timed_out:
             error = f"Timeout after {timeout}s"
+        elif result.returncode == 0 and not has_output:
+            error = "Kilo Code returned no output"
+        elif api_error:
+            error = "Kilo Code API error"
         elif not success:
             error = stderr or stdout or "Kilo Code command failed"
         return AgentResponse(
@@ -1077,7 +1452,7 @@ terminate_matches KILL
     ) -> AgentResponse:
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
         task_id = task_input.get("task_id", "")
-        api_key = get_openrouter_api_key()
+        api_key = self._local_api_key() if self._local_base_url() else get_openrouter_api_key()
         cmd, run_id = self._build_kilo_command(prompt, model, api_key, task_id, timeout)
         return self._run_kilo_command(cmd, task_id, timeout, run_id)
 
