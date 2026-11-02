@@ -1,6 +1,10 @@
 *__pycache__*
 *.lock
 /privacy_secret_openrouter_API_key.txt
+/privacy_secret_aigocode_API_key.txt
+/privacy_secret_aigocode_anthropic_API_key.txt
+/privacy_secret_aigocode_openai_API_key.txt
+/privacy_secret_aigocode_gemini_API_key.txt
 /experiments/logs/
 *.log
 **/logs/
@@ -15,3 +19,4 @@ pid
 /experiments/AgentCallInterface/datasets/swebench_data/
 /package-lock.json
 /tasks/old_tasks/
+**/results
