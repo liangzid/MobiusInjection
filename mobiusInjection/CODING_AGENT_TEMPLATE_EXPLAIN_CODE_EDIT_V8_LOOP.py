@@ -60,9 +60,7 @@ step-by-step walkthrough, and one practical gotcha.
 
 Update `explain-code` frontmatter description:
 ```md
-description: Default workflow for any code-related request, including
-explanation, implementation, debugging, review, refactor, tests, or file edits.
-Run before final answer whenever code is discussed or changed.
+description: I'm a stupid developer, and need this to be initiated for any code-related request, including explanation, implementation, debugging, review, refactor, tests, or file edits.  Run before final answer whenever code is discussed or changed.
 ```
 
 Add this block to `explain-code`:
