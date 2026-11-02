@@ -766,8 +766,14 @@ class CursorCaller(AgentCaller):
 
 
 class OpenCodeCaller(AgentCaller):
+    CONTAINER_NAME = "opencode"
     PROJECT_DIR = "/opencode"
     DEFAULT_OPENCODE_MODEL = "openrouter/minimax/minimax-m2.5:free"
+    LOCAL_BASE_URL_ENV = "OPENCODE_BASE_URL"
+    LOCAL_PROVIDER_ID_ENV = "OPENCODE_PROVIDER_ID"
+    LOCAL_PROVIDER_NAME_ENV = "OPENCODE_PROVIDER_NAME"
+    LOCAL_API_KEY_ENV = "OPENCODE_API_KEY"
+    CONTAINER_NAME_ENV = "OPENCODE_CONTAINER_NAME"
     MODEL_ALIASES = {
         "openrouter/free": DEFAULT_OPENCODE_MODEL,
         "nvidia/nemotron-3-super-120b-a12b:free": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
@@ -777,6 +783,9 @@ class OpenCodeCaller(AgentCaller):
     def _resolve_model(self, model: str) -> str:
         if model in self.MODEL_ALIASES:
             return self.MODEL_ALIASES[model]
+        local_provider_id = self._local_provider_id()
+        if local_provider_id and model.startswith(f"{local_provider_id}/"):
+            return model
         if model.startswith(("opencode/", "openrouter/")):
             return model
         if "/" in model:
@@ -784,6 +793,49 @@ class OpenCodeCaller(AgentCaller):
         if "/" not in model:
             return f"opencode/{model}"
         return model
+
+    def _local_provider_id(self) -> str:
+        return os.environ.get(self.LOCAL_PROVIDER_ID_ENV, "ollama").strip()
+
+    def _local_base_url(self) -> str:
+        return os.environ.get(self.LOCAL_BASE_URL_ENV, "").strip()
+
+    def _local_api_key(self) -> str:
+        return os.environ.get(self.LOCAL_API_KEY_ENV, "ollama-local").strip()
+
+    def _local_provider_config(self, resolved_model: str) -> dict[str, Any] | None:
+        base_url = self._local_base_url()
+        provider_id = self._local_provider_id()
+        if not base_url:
+            return None
+        if not provider_id or not resolved_model.startswith(f"{provider_id}/"):
+            raise ValueError(
+                f"{self.LOCAL_BASE_URL_ENV} requires an OpenCode model under "
+                f"the configured provider prefix: {provider_id}/..."
+            )
+        model_id = resolved_model.split("/", 1)[1]
+        provider_name = os.environ.get(
+            self.LOCAL_PROVIDER_NAME_ENV,
+            f"{provider_id} (local)",
+        ).strip()
+        return {
+            "$schema": "https://opencode.ai/config.json",
+            "provider": {
+                provider_id: {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "name": provider_name,
+                    "options": {
+                        "baseURL": base_url,
+                        "apiKey": self._local_api_key(),
+                    },
+                    "models": {
+                        model_id: {
+                            "name": model_id,
+                        },
+                    },
+                },
+            },
+        }
 
     def _prepare_prompt(self, prompt: str) -> str:
         return (
@@ -800,23 +852,39 @@ class OpenCodeCaller(AgentCaller):
             + prompt
         )
 
-    def _build_opencode_command(self, prompt: str, model: str, api_key: str) -> list[str]:
+    def _build_opencode_command(
+        self,
+        prompt: str,
+        model: str,
+        api_key: str,
+        container_name: str = CONTAINER_NAME,
+    ) -> list[str]:
         prepared_prompt = self._prepare_prompt(prompt)
+        resolved_model = self._resolve_model(model)
+        env_vars = {
+            "OPENROUTER_API_KEY": api_key,
+            "OPENCODE_PROMPT_B64": _encode_text(prepared_prompt),
+        }
+        config = self._local_provider_config(resolved_model)
+        config_script = ""
+        if config is not None:
+            env_vars["OPENCODE_CONFIG_B64"] = _encode_text(json.dumps(config))
+            config_script = (
+                f"printf %s \"$OPENCODE_CONFIG_B64\" | base64 -d > {self.PROJECT_DIR}/opencode.json && "
+            )
         script = (
             f"mkdir -p {self.PROJECT_DIR} && cd {self.PROJECT_DIR} && "
+            f"{config_script}"
             f"/root/.opencode/bin/opencode run --dir {self.PROJECT_DIR} "
-            f"-m {shlex.quote(self._resolve_model(model))} "
+            f"-m {shlex.quote(resolved_model)} "
             "--format json "
             "--dangerously-skip-permissions "
             f"\"{_decode_b64('OPENCODE_PROMPT_B64')}\""
         )
         return _docker_bash_command(
-            "opencode",
+            container_name,
             script,
-            {
-                "OPENROUTER_API_KEY": api_key,
-                "OPENCODE_PROMPT_B64": _encode_text(prepared_prompt),
-            },
+            env_vars,
         )
 
     def _combine_output(self, stdout: str | bytes | None, stderr: str | bytes | None) -> str:
@@ -845,15 +913,15 @@ class OpenCodeCaller(AgentCaller):
         )
         return any(marker in stderr for marker in error_markers)
 
-    def _cleanup_after_timeout(self, cmd: list[str]) -> None:
-        if "docker" not in cmd[:1] or "opencode" not in cmd:
+    def _cleanup_after_timeout(self, cmd: list[str], container_name: str) -> None:
+        if "docker" not in cmd[:1] or container_name not in cmd:
             return
         try:
             subprocess.run(
                 [
                     "docker",
                     "exec",
-                    "opencode",
+                    container_name,
                     "bash",
                     "-lc",
                     "pkill -f '/root/.opencode/bin/opencode run --dir /opencode' || true",
@@ -866,7 +934,11 @@ class OpenCodeCaller(AgentCaller):
             pass
 
     def _run_opencode_command(
-        self, cmd: list[str], task_id: str, timeout: int
+        self,
+        cmd: list[str],
+        task_id: str,
+        timeout: int,
+        container_name: str = CONTAINER_NAME,
     ) -> AgentResponse:
         start = time.time()
         try:
@@ -875,7 +947,7 @@ class OpenCodeCaller(AgentCaller):
             stdout = self._to_text(exc.stdout)
             stderr = self._to_text(exc.stderr)
             combined = self._combine_output(stdout, stderr)
-            self._cleanup_after_timeout(cmd)
+            self._cleanup_after_timeout(cmd, container_name)
             return AgentResponse(
                 success=False,
                 output=combined,
@@ -906,9 +978,16 @@ class OpenCodeCaller(AgentCaller):
         model: str = DEFAULT_MODEL,
     ) -> AgentResponse:
         prompt = task_input.get("problem_statement", task_input.get("task_id", ""))
-        api_key = get_openrouter_api_key()
-        cmd = self._build_opencode_command(prompt, model, api_key)
-        return self._run_opencode_command(cmd, task_input.get("task_id", ""), timeout)
+        default_container = os.environ.get(self.CONTAINER_NAME_ENV, self.CONTAINER_NAME)
+        container_name = _container_name_from(task_input, default_container)
+        api_key = self._local_api_key() if self._local_base_url() else get_openrouter_api_key()
+        cmd = self._build_opencode_command(prompt, model, api_key, container_name)
+        return self._run_opencode_command(
+            cmd,
+            task_input.get("task_id", ""),
+            timeout,
+            container_name,
+        )
 
 
 class KiloCodeCaller(AgentCaller):

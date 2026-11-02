@@ -1,6 +1,11 @@
+import base64
+import json
 import sys
 
 from experiments.AgentCallInterface.coding_agents.coding_agent_callers import OpenCodeCaller
+from experiments.AgentCallInterface.agents.agent_callers import (
+    OpenCodeCaller as BenchmarkOpenCodeCaller,
+)
 
 
 def test_opencode_resolves_eval_default_model_to_available_alias():
@@ -42,6 +47,49 @@ def test_opencode_build_command_uses_resolved_model():
     assert "-m openrouter/minimax/minimax-m2.5:free" in command[-1]
     assert "--format json" in command[-1]
     assert "--dangerously-skip-permissions" in command[-1]
+
+
+def test_opencode_build_command_supports_local_ollama_provider(monkeypatch):
+    monkeypatch.setenv("OPENCODE_BASE_URL", "http://127.0.0.1:11436/v1")
+    monkeypatch.setenv("OPENCODE_PROVIDER_ID", "ollama")
+    caller = OpenCodeCaller()
+
+    command = caller._build_opencode_command(
+        "Say hello.",
+        "ollama/qwen3.6:27b",
+        "unused-openrouter-key",
+        "opencode_plan_a_ollama",
+    )
+
+    config_env = next(part for part in command if part.startswith("OPENCODE_CONFIG_B64="))
+    config = json.loads(base64.b64decode(config_env.split("=", 1)[1]).decode())
+    assert command[0:2] == ["docker", "exec"]
+    assert "opencode_plan_a_ollama" in command
+    assert "-m ollama/qwen3.6:27b" in command[-1]
+    assert "opencode.json" in command[-1]
+    assert config["provider"]["ollama"]["npm"] == "@ai-sdk/openai-compatible"
+    assert config["provider"]["ollama"]["options"]["baseURL"] == "http://127.0.0.1:11436/v1"
+    assert "qwen3.6:27b" in config["provider"]["ollama"]["models"]
+
+
+def test_benchmark_opencode_caller_supports_local_ollama_provider(monkeypatch):
+    monkeypatch.setenv("OPENCODE_BASE_URL", "http://127.0.0.1:11436/v1")
+    monkeypatch.setenv("OPENCODE_PROVIDER_ID", "ollama")
+    caller = BenchmarkOpenCodeCaller()
+
+    command = caller._build_opencode_command(
+        "Say hello.",
+        "ollama/qwen3.6:27b",
+        "unused-openrouter-key",
+        "opencode_plan_a_ollama",
+    )
+
+    config_env = next(part for part in command if part.startswith("OPENCODE_CONFIG_B64="))
+    config = json.loads(base64.b64decode(config_env.split("=", 1)[1]).decode())
+    assert "opencode_plan_a_ollama" in command
+    assert "-m ollama/qwen3.6:27b" in command[-1]
+    assert config["provider"]["ollama"]["options"]["baseURL"] == "http://127.0.0.1:11436/v1"
+    assert "qwen3.6:27b" in config["provider"]["ollama"]["models"]
 
 
 def test_opencode_prompt_mentions_official_skill_location():
