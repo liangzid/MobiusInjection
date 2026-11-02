@@ -18,6 +18,7 @@ EVAL_SCRIPT="$SCRIPT_DIR/1.0.1.run_basic_coding_agent_eval_v3.sh"
 MODEL_NAMES="${MODEL_NAMES:-openrouter/minimax/minimax-m2.5:free,openrouter/qwen/qwen3-coder:free,openrouter/deepseek/deepseek-r1-distill-qwen-32b:free}"
 CODING_EVAL_AGENTS="${CODING_EVAL_AGENTS:-opencode,kilo_code,claude_code}"
 BENCHMARK_DATASET="${BENCHMARK_DATASET:-humaneval}"
+SWEBENCH_DATASET_TYPE="${SWEBENCH_DATASET_TYPE:-verified_mini}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-300}"
 FOLLOWUP_TIMEOUT_SECONDS="${FOLLOWUP_TIMEOUT_SECONDS:-60}"
 SLEEP_BETWEEN="${SLEEP_BETWEEN:-0}"
@@ -62,6 +63,7 @@ print_config() {
     printf 'EVAL_SCRIPT_SNAPSHOT=%s\n' "$EVAL_SCRIPT_SNAPSHOT"
     printf 'BENCHMARK_RUN_DIR=%s\n' "$BENCHMARK_RUN_DIR"
     printf 'DATASET=%s\n' "$BENCHMARK_DATASET"
+    printf 'SWEBENCH_DATASET_TYPE=%s\n' "$SWEBENCH_DATASET_TYPE"
     printf 'MODEL_NAMES=%s\n' "$MODEL_NAMES"
     printf 'CODING_EVAL_AGENTS=%s\n' "$CODING_EVAL_AGENTS"
     printf 'LIMIT=%s\n' "$LIMIT"
@@ -99,6 +101,7 @@ build_manifest_for_model() {
     local args=(
         -m experiments.AgentCallInterface.evaluation.benchmark_manifest
         --dataset "$BENCHMARK_DATASET"
+        --dataset-type "$SWEBENCH_DATASET_TYPE"
         --model "$model"
         --agents "$CODING_EVAL_AGENTS"
         --run-dir "$run_dir"
